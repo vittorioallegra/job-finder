@@ -1,7 +1,14 @@
 {
   "app": {
     "name": "Job Finder",
-    "notFound": "This page does not exist."
+    "notFound": "This page does not exist.",
+    "notices": {
+      "engineFailed": "The search engine stopped. Restart Job Finder to resume scans and scoring.",
+      "updateAvailable": "Job Finder {{version}} is available.",
+      "openRelease": "Open release page",
+      "dismiss": "Dismiss",
+      "openFailed": "Opening the update page failed."
+    }
   },
   "home": {
     "title": "Job Finder",

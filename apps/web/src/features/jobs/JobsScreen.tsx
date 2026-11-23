@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import {
   DEFAULT_JOB_FILTER,
   isCloudAiEndpoint,
@@ -141,6 +141,40 @@ export function JobsScreen() {
       }),
     [bridge, readLists, applied, sort],
   );
+
+  // A notification opens `?new=1` (new jobs only) and optionally `saved=<id>` (that saved search).
+  // The link is cleared once applied, so the filter is set once per click. The apply step reads the
+  // current state through a ref, so the effect runs only when the link or the load state changes.
+  const [params, setParams] = useSearchParams();
+  const wantsNew = params.get("new") === "1";
+  const wantedSaved = params.get("saved");
+  const applyLink = useRef<() => void>(() => {});
+  useEffect(() => {
+    applyLink.current = () => {
+      const search =
+        wantedSaved === null
+          ? undefined
+          : saved.status === "ready"
+            ? saved.searches.find((item) => item.id === wantedSaved)
+            : undefined;
+      const base = search ? JobFilterSchema.parse(search.filter) : applied;
+      const filter: JobFilter = wantsNew ? { ...base, newOnly: true } : base;
+      setParams({}, { replace: true });
+      setDraft(draftFromFilter(filter));
+      setFilterInvalid(false);
+      setApplied(filter);
+      void readJobs(filter, sort).then(
+        (jobs) =>
+          setLoad((previous) => (previous.status === "ready" ? { ...previous, jobs } : previous)),
+        () => setLoad({ status: "error" }),
+      );
+    };
+  });
+  useEffect(() => {
+    if (!wantsNew && wantedSaved === null) return;
+    if (load.status !== "ready" || saved.status !== "ready") return;
+    applyLink.current();
+  }, [load.status, saved.status, wantsNew, wantedSaved]);
 
   function retry() {
     setLoad({ status: "loading" });

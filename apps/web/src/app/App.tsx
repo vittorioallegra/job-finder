@@ -2,12 +2,16 @@ import { useEffect } from "react";
 import { RouterProvider } from "react-router";
 import { BridgeProvider, useBridge } from "../lib/bridge/BridgeContext";
 import { i18n, resolveUiLanguage } from "../lib/i18n";
+import { AppNotices } from "./AppNotices";
+import { NewJobsNavigation } from "./NewJobsNavigation";
 import { router } from "./router";
 
 export function App() {
   return (
     <BridgeProvider>
       <LanguageSync />
+      <AppNotices />
+      <NewJobsNavigation />
       <RouterProvider router={router} />
     </BridgeProvider>
   );

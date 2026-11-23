@@ -1,14 +1,15 @@
-// protects=the jobs screen applies the filter form to the job list with the chosen order, refuses an invalid filter with a message, says when no job matches, dismisses a job from its detail, creates and applies saved searches, and scores the jobs the filter lets through with the listed ones first;
+// protects=the jobs screen applies the filter form to the job list with the chosen order, refuses an invalid filter with a message, says when no job matches, dismisses a job from its detail, creates and applies saved searches, scores the jobs the filter lets through with the listed ones first, and a notification link (`new=1`, `saved=<id>`) applies the saved search with the new-only flag once;
 // fails_when=a filter value is dropped before the list is read, an invalid value is applied, the order is not sent, a dismissed job stays listed as not dismissed, a saved search is not stored or not applied to the form, or scoring is asked without the filter and the listed jobs;
 // no_claim=the layout, keyboard order and the engine's filtering are not checked here; the desktop filter tests cover the SQL, and the core tests cover the schema;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CompanyRecord, JobListItem, SavedSearch } from "@job-finder/bridge";
 import { BridgeProvider } from "../../lib/bridge/BridgeContext";
 import { createMemoryBridge } from "../../lib/bridge/memory";
 import { i18n } from "../../lib/i18n";
+import { JobFilterSchema } from "@job-finder/bridge";
 import { JobsScreen } from "./JobsScreen";
 
 const acme: CompanyRecord = {
@@ -249,5 +250,45 @@ describe("jobs screen filters", () => {
         visibleJobIds: ["job-1"],
       }),
     );
+  });
+
+  it("applies a notification link once: the saved search with the new-only flag, cleared from the address", async () => {
+    const search: SavedSearch = {
+      id: "s1",
+      name: "Backend",
+      filter: JobFilterSchema.parse({ keywords: ["backend"] }),
+      updatedAt: 1,
+    };
+    const bridge = createMemoryBridge({
+      companies: [acme],
+      jobs: [posting],
+      savedSearches: [search],
+    });
+    const list = vi.spyOn(bridge.jobs, "list");
+    let location = "";
+    function Probe() {
+      const here = useLocation();
+      location = here.pathname + here.search;
+      return null;
+    }
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/jobs?new=1&saved=s1"]}>
+          <BridgeProvider bridge={bridge}>
+            <JobsScreen />
+            <Routes>
+              <Route path="*" element={<Probe />} />
+            </Routes>
+          </BridgeProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    expect(list).toHaveBeenLastCalledWith({
+      filter: expect.objectContaining({ keywords: ["backend"], newOnly: true }),
+      sort: "affinity",
+    });
+    expect(location).toBe("/jobs");
+    expect(field(container, "Keywords (any of them, comma separated)").value).toBe("backend");
   });
 });
