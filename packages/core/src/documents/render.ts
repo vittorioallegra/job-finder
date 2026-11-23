@@ -1,0 +1,126 @@
+import type { Profile } from "../profile/schema";
+import type { DocumentContent, TailoredCv } from "./schema";
+
+/** Headings and titles of a rendered document, in the document's language (the caller translates them). */
+export interface DocumentLabels {
+  cvTitle: string;
+  coverLetterTitle: string;
+  summary: string;
+  experience: string;
+  education: string;
+  skills: string;
+  /** The opening line of the cover letter, e.g. "Dear hiring team,". */
+  greeting: string;
+}
+
+const PRINT_STYLE = [
+  "@page { size: A4; margin: 16mm; }",
+  "body { margin: 0; color: #111; font-family: -apple-system, 'Segoe UI', Arial, sans-serif; font-size: 10.5pt; line-height: 1.4; }",
+  "h1 { margin: 0 0 2px; font-size: 20pt; }",
+  "h2 { margin: 14px 0 6px; padding-bottom: 2px; border-bottom: 1px solid #999; font-size: 12pt; }",
+  "h3 { margin: 8px 0 1px; font-size: 10.5pt; }",
+  "p { margin: 2px 0; }",
+  "ul { margin: 2px 0 0 18px; padding: 0; }",
+  "li { margin: 1px 0; }",
+  ".contact, .meta { color: #444; }",
+].join("\n");
+
+/** Escapes text for HTML. Every value that reaches the page goes through it. */
+export function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function joinPresent(parts: string[], separator: string): string {
+  return parts.filter((part) => part !== "").join(separator);
+}
+
+function dateRange(start: string, end: string): string {
+  return joinPresent([start, end], " – ");
+}
+
+function contactLine(contact: Profile["contact"]): string {
+  return joinPresent([contact.email, contact.phone, contact.location], " · ");
+}
+
+function cvBody(cv: TailoredCv, labels: DocumentLabels): string {
+  const sections: string[] = [];
+  if (cv.summary !== "") {
+    sections.push(
+      `<section><h2>${escapeHtml(labels.summary)}</h2><p>${escapeHtml(cv.summary)}</p></section>`,
+    );
+  }
+  if (cv.experience.length > 0) {
+    const entries = cv.experience.map((entry) => {
+      const heading = joinPresent([entry.title, entry.company], " — ");
+      const meta = joinPresent([entry.location, dateRange(entry.startDate, entry.endDate)], " · ");
+      const bullets =
+        entry.bullets.length > 0
+          ? `<ul>${entry.bullets.map((bullet) => `<li>${escapeHtml(bullet.text)}</li>`).join("")}</ul>`
+          : "";
+      return `<article><h3>${escapeHtml(heading)}</h3>${meta ? `<p class="meta">${escapeHtml(meta)}</p>` : ""}${bullets}</article>`;
+    });
+    sections.push(
+      `<section><h2>${escapeHtml(labels.experience)}</h2>${entries.join("")}</section>`,
+    );
+  }
+  if (cv.education.length > 0) {
+    const entries = cv.education.map((entry) => {
+      const heading = joinPresent([entry.degree, entry.field], " — ");
+      const meta = joinPresent(
+        [entry.institution, dateRange(entry.startDate, entry.endDate)],
+        " · ",
+      );
+      return `<article><h3>${escapeHtml(heading)}</h3>${meta ? `<p class="meta">${escapeHtml(meta)}</p>` : ""}</article>`;
+    });
+    sections.push(`<section><h2>${escapeHtml(labels.education)}</h2>${entries.join("")}</section>`);
+  }
+  if (cv.skills.length > 0) {
+    const items = cv.skills.map((skill) => `<li>${escapeHtml(skill.name)}</li>`).join("");
+    sections.push(`<section><h2>${escapeHtml(labels.skills)}</h2><ul>${items}</ul></section>`);
+  }
+  return sections.join("");
+}
+
+/**
+ * Renders a document as a plain, single-column HTML page: real headings, lists and paragraphs, no
+ * tables or layout tricks, so applicant tracking systems read it. The printed PDF is this page.
+ */
+export function renderDocumentHtml(
+  content: DocumentContent,
+  contact: Profile["contact"],
+  labels: DocumentLabels,
+  language: string,
+): string {
+  const name = contact.fullName;
+  const title = content.kind === "cv" ? labels.cvTitle : labels.coverLetterTitle;
+  const header = [
+    `<h1>${escapeHtml(name)}</h1>`,
+    contactLine(contact) ? `<p class="contact">${escapeHtml(contactLine(contact))}</p>` : "",
+  ].join("");
+  const body =
+    content.kind === "cv"
+      ? cvBody(content.cv, labels)
+      : [
+          `<p>${escapeHtml(labels.greeting)}</p>`,
+          ...content.letter.paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`),
+        ].join("");
+  return [
+    "<!doctype html>",
+    `<html lang="${escapeHtml(language)}">`,
+    "<head>",
+    '<meta charset="utf-8">',
+    `<title>${escapeHtml(joinPresent([name, title], " — "))}</title>`,
+    `<style>${PRINT_STYLE}</style>`,
+    "</head>",
+    "<body>",
+    `<header>${header}</header>`,
+    `<main>${body}</main>`,
+    "</body>",
+    "</html>",
+  ].join("");
+}

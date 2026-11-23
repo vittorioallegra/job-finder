@@ -1,0 +1,173 @@
+// protects=generateDocument returns a document only after it passes the profile checks, retries once with the rules a first answer broke, reports an answer that still breaks them as invalid-output, and maps provider failures to their codes;
+// fails_when=an answer with an invented employer or a new number is returned, the retry omits the broken rules, a second broken answer is accepted, a provider rejection is reported as invalid-output, or more than two answers are requested;
+// no_claim=every provider answer is a scripted double, not a live model; the quality of real output is not shown;
+import { describe, expect, it } from "vitest";
+import type { AiProviderConfig } from "../ai/provider";
+import { emptyProfile, type Profile } from "../profile/schema";
+import { generateDocument, type GenerateDocumentInput } from "./generate";
+
+const config: AiProviderConfig = {
+  provider: "openai-compatible",
+  model: "local-test",
+  baseUrl: "http://localhost:11434/v1",
+  apiKey: null,
+};
+
+function profile(): Profile {
+  return {
+    ...emptyProfile(),
+    experience: [
+      {
+        company: "Acme",
+        title: "Engineer",
+        location: "Milano",
+        startDate: "2019",
+        endDate: "2024",
+        bullets: ["Cut latency by 40%"],
+      },
+    ],
+  };
+}
+
+function input(overrides: Partial<GenerateDocumentInput> = {}): GenerateDocumentInput {
+  return {
+    kind: "cv",
+    profile: profile(),
+    job: { title: "Backend Engineer", companyName: "Globex", description: "APIs." },
+    language: "en",
+    config,
+    contextSize: 8192,
+    ...overrides,
+  };
+}
+
+const VALID_CV = {
+  summary: "Engineer who cut latency.",
+  experience: [
+    {
+      source: 0,
+      company: "Acme",
+      title: "Engineer",
+      location: "Milano",
+      startDate: "2019",
+      endDate: "2024",
+      bullets: [{ source: 0, text: "Cut latency by 40%" }],
+    },
+  ],
+  education: [],
+  skills: [],
+};
+
+const INVENTED_CV = {
+  ...VALID_CV,
+  experience: [{ ...VALID_CV.experience[0]!, company: "Initech" }],
+};
+
+function chatCompletion(content: string, status = 200): Response {
+  const body =
+    status === 200
+      ? {
+          id: "chatcmpl-test",
+          object: "chat.completion",
+          created: 0,
+          model: "local-test",
+          choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }],
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+        }
+      : { error: { message: "provider secret detail" } };
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+/** Records each request body and answers with the scripted responses in order. */
+function scriptedFetch(answers: Array<() => Response>) {
+  const bodies: string[] = [];
+  const fetchImpl: typeof fetch = async (_input, init) => {
+    bodies.push(typeof init?.body === "string" ? init.body : "");
+    const next = answers[bodies.length - 1];
+    if (!next) {
+      throw new Error("unexpected extra request");
+    }
+    return next();
+  };
+  return { fetchImpl, bodies };
+}
+
+describe("generateDocument", () => {
+  it("returns a CV whose facts pass the profile check, after one call", async () => {
+    const { fetchImpl, bodies } = scriptedFetch([() => chatCompletion(JSON.stringify(VALID_CV))]);
+
+    const outcome = await generateDocument(input(), { fetch: fetchImpl });
+
+    expect(outcome).toEqual({
+      ok: true,
+      content: { kind: "cv", cv: VALID_CV },
+      warnings: [],
+    });
+    expect(bodies).toHaveLength(1);
+  });
+
+  it("sends the rules back once when the first answer invents a fact, and accepts a corrected answer", async () => {
+    const { fetchImpl, bodies } = scriptedFetch([
+      () => chatCompletion(JSON.stringify(INVENTED_CV)),
+      () => chatCompletion(JSON.stringify(VALID_CV)),
+    ]);
+
+    const outcome = await generateDocument(input(), { fetch: fetchImpl });
+
+    expect(outcome.ok).toBe(true);
+    expect(bodies).toHaveLength(2);
+    expect(bodies[1]).toContain("experience.0: field-mismatch");
+  });
+
+  it("reports invalid-output when the retry is still broken, and makes no third call", async () => {
+    const { fetchImpl, bodies } = scriptedFetch([
+      () => chatCompletion(JSON.stringify(INVENTED_CV)),
+      () => chatCompletion(JSON.stringify(INVENTED_CV)),
+    ]);
+
+    const outcome = await generateDocument(input(), { fetch: fetchImpl });
+
+    expect(outcome).toEqual({ ok: false, code: "invalid-output" });
+    expect(bodies).toHaveLength(2);
+  });
+
+  it("checks a cover letter against the profile's numbers", async () => {
+    const letter = { paragraphs: ["I have 25 years of experience."] };
+    const fixed = { paragraphs: ["I cut latency by 40% at Acme."] };
+    const { fetchImpl } = scriptedFetch([
+      () => chatCompletion(JSON.stringify(letter)),
+      () => chatCompletion(JSON.stringify(fixed)),
+    ]);
+
+    const outcome = await generateDocument(input({ kind: "cover-letter" }), { fetch: fetchImpl });
+
+    expect(outcome).toEqual({
+      ok: true,
+      content: { kind: "cover-letter", letter: fixed },
+      warnings: [],
+    });
+  });
+
+  it("maps a rejected key to invalid-key without a retry", async () => {
+    const { fetchImpl, bodies } = scriptedFetch([() => chatCompletion("", 401)]);
+
+    const outcome = await generateDocument(input(), { fetch: fetchImpl });
+
+    expect(outcome).toEqual({ ok: false, code: "invalid-key" });
+    expect(bodies).toHaveLength(1);
+  });
+
+  it("maps a missing base URL to not-configured before any request", async () => {
+    const { fetchImpl, bodies } = scriptedFetch([]);
+
+    const outcome = await generateDocument(input({ config: { ...config, baseUrl: "" } }), {
+      fetch: fetchImpl,
+    });
+
+    expect(outcome).toEqual({ ok: false, code: "not-configured" });
+    expect(bodies).toHaveLength(0);
+  });
+});
