@@ -122,6 +122,8 @@ const DISCOVER = `function (prefix) {
     }
     var style = window.getComputedStyle(el);
     var isHoneypot = false;
+    // A hidden file input is never a honeypot: sites hide the native input behind their own upload
+    // button, and the file is the user's own CV for this application.
     if (kind !== "file") {
       if (hiddenByStyle(el)) continue;
       isHoneypot = honeypot(el, style, rawLabel(el));
