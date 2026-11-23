@@ -8,6 +8,9 @@ Native desktop app (Electron 45 + React 19), pnpm workspace. Full plan: `docs/pl
 - Dev web renderer only: `pnpm dev` (Vite on http://localhost:5173)
 - Dev desktop app: `pnpm desktop:dev`
 - Build desktop: `pnpm desktop:build` (output in `apps/desktop/out`)
+- Package installers for this OS: `pnpm desktop:dist` (output in `apps/desktop/dist`; release steps in `docs/release.md`)
+- Packaged smoke test: `JOB_FINDER_PACKAGED_APP=<executable> pnpm --filter @job-finder/desktop test:e2e:packaged`
+- Release notes preview: `node scripts/release-notes.mjs --version <v> [--previous <tag>] [--assets <dir>]`
 - Typecheck: `pnpm typecheck` (uses TypeScript 7 via `node node_modules/typescript7/bin/tsc`; tooling uses TypeScript 6)
 - Lint: `pnpm lint` (ESLint 10 flat config, `eslint.config.mjs`)
 - Format: `pnpm format` / check only: `pnpm format:check`
@@ -20,12 +23,14 @@ Native desktop app (Electron 45 + React 19), pnpm workspace. Full plan: `docs/pl
 
 ## Folder map
 
-- `apps/desktop/` Electron shell: `src/main` (window, protocol, logging, security, i18n, `db/` SQLite adapter, migrator and operations, `engine/` utility-process supervisor), `src/engine` (engine utility process: entry, typed message protocol, runtime), `drizzle/` (generated SQL migrations), `src/preload`, `e2e/` (Playwright), `electron.vite.config.ts`
+- `apps/desktop/` Electron shell: `build/` (app icon, `after-pack.mjs` fuses hook), `electron-builder.yml` (installers), `src/main` (window, protocol, logging, security, i18n, `db/` SQLite adapter, migrator and operations, `engine/` utility-process supervisor), `src/engine` (engine utility process: entry, typed message protocol, runtime), `drizzle/` (generated SQL migrations), `src/preload`, `e2e/` (Playwright: dev smoke and `packaged.spec.ts`), `electron.vite.config.ts`
+- `scripts/` repo tooling (`release-notes.mjs`, unit-tested)
+- `.github/workflows/` `ci.yml` (typecheck, lint, tests) and `desktop.yml` (installers, packaged smoke, draft release)
 - `apps/web/` React renderer: `src/app` (router, shell), `src/features/<name>` (screens), `src/lib/i18n` (en.json, it.json), `src/styles.css` (tokens)
 - `packages/core/` pure TypeScript domain logic, no Electron or React imports; `src/db/schema.ts` holds the drizzle schema
 - `packages/bridge/` typed contract between preload and renderer
 - `tests/repo/` repository-level conventions tests
-- `docs/` specs, plans; `scripts/` repo tooling
+- `docs/` specs, plans, `release.md` (installers, releases, unsigned apps)
 
 ## Conventions
 
@@ -35,8 +40,9 @@ Native desktop app (Electron 45 + React 19), pnpm workspace. Full plan: `docs/pl
 - Protocol: the renderer loads from `app://renderer/`, served only through `resolveAppRequest` (path-traversal guard).
 - Electron main/preload build as CommonJS (no `"type": "module"` in `apps/desktop`); the preload runs in the sandbox, so it may import only `electron` and types.
 - Only main opens SQLite. The engine asks for database work through the typed `DbCall` batches in `apps/desktop/src/engine/protocol.ts`; main executes them through drizzle's sqlite-proxy over `node:sqlite`.
-- Migrations run from `apps/desktop/drizzle` in development and from `resources/drizzle` when packaged. A backup (`VACUUM INTO`) is written before migrating a populated database.
-- `esbuild` install script is denied in `pnpm-workspace.yaml` (`allowBuilds: esbuild: false`). Never set it to true; esbuild works through its platform binary package. drizzle-kit works without it.
+- Migrations run from `apps/desktop/drizzle` in development and from `resources/drizzle` when packaged (`extraResources` in `electron-builder.yml`). A backup (`VACUUM INTO`) is written before migrating a populated database.
+- Install scripts go through `allowBuilds` in `pnpm-workspace.yaml`. Allowed only when the package cannot work without it (`electron: true`, it downloads the runtime). Denied when the package works without it: `esbuild: false` (it uses its platform binary package), `electron-winstaller: false` (Windows Squirrel only; we build NSIS). Record each change in the plan's Decisions.
+- `build/after-pack.mjs` is an `.mjs` file because `@electron/fuses` is ESM-only; electron-builder loads it through `afterPack`.
 - Import boundaries are enforced by ESLint: `core` and `bridge` never import apps or Electron; only `apps/desktop` imports Electron; `apps/web` never imports desktop.
 - Tooling-only dependencies stay at the root; app dependencies live in the app's own `package.json`.
 - Commit messages use Conventional Commits (`chore:`, `docs:`, `feat:`), no attribution lines.

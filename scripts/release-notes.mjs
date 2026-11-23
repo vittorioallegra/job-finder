@@ -90,8 +90,9 @@ function main(argv) {
     throw new Error("missing --version");
   }
   const range = args.previous ? `${args.previous}..HEAD` : "HEAD";
-  const subjects = execFileSync("git", ["log", "--format=%s", range], { encoding: "utf8" })
-    .split("\n");
+  const subjects = execFileSync("git", ["log", "--format=%s", range], { encoding: "utf8" }).split(
+    "\n",
+  );
   const installers = args.assets
     ? readdirSync(args.assets)
         .filter((name) => INSTALLER_PATTERN.test(name))
