@@ -279,7 +279,7 @@ Approved: yes (2026-11-23)
 - [x] 3. CI and release pipeline — `ci: build, smoke-test and draft-release the desktop installers from v* tags`
 - [x] 4. Bridge, settings and secrets — `feat: add settings screen over the typed bridge`
 - [x] 5. AI layer — `feat: test the AI connection from the settings screen through the engine`
-- [ ] 6. Onboarding and profile
+- [x] 6. Onboarding and profile — `feat: add onboarding and profile editor screens`
 - [ ] 7. Fetch infrastructure and page loader
 - [ ] 8. Normalization and ATS adapters
 - [ ] 9. Ingestion pipeline vertical slice
@@ -353,7 +353,22 @@ Approved: yes (2026-11-23)
 - Step 5: the supervisor sends requests to a ready engine in the same tick, so a crash right after a call still finds the request pending.
 - Step 5: not exercised: real provider calls and a real Ollama server (no keys or local model in this run), the AI test button in the packaged app, and quality of structured output on real models.
 
+- Step 6: the profile schema is `packages/core/src/profile/schema.ts` (subpath `@job-finder/core/profile`, zod only), so the renderer loads it through bridge without Node code. CV readers and the AI import are `packages/core/src/cv` (subpath `@job-finder/core/cv`, Node-only, used by the engine and typed through bridge only).
+- Step 6: tables `profile` (single row id 1: JSON `data`, `version`, `updated_at`) and `profile_versions` (version, scoring snapshot, `created_at`), each in its own drizzle-kit migration (`0001_profile`, `0002_profile_versions`), each with a migration test on a populated database. A save writes a new version only when a scoring field changes: headline, summary, experience, education, skills, languages, certifications. Contact, links, application defaults and standard answers do not start a version.
+- Step 6: `unpdf` 2.2.1 and `mammoth` 1.13.0 (exact) in core, the Architecture versions; both pass the release-age gate (unpdf 2.2.1 published 2026-11-15, mammoth 1.13.0 2026-09-26). No `allowBuilds` change; `pnpm approve` was not run for the `ai` package's agent skills.
+- Step 6: CV flow: the renderer reads the chosen file and sends the bytes (limit 10 MB, checked in the bridge schema and again in the renderer) through `profile:import-cv`. Main checks consent, reads the key, and hands bytes and key to the engine; the engine returns only the draft. The CV file and its text are not stored; nothing is saved until the user saves the reviewed profile.
+- Step 6: cloud providers are Anthropic, OpenAI, and an OpenAI-compatible endpoint unless its host is `localhost`, `127.0.0.1`, `[::1]` or `*.localhost`. An empty or unparseable base URL counts as cloud. Consent is required for cloud providers and enforced in main.
+- Step 6: the AI extraction uses `generateStructured` with the CV text as data under fixed instructions. The extraction schema defaults missing sections to empty, so a sparse answer is valid. An oversized prompt returns a `context-exceeded` warning, shown on the review step.
+- Step 6: dates are free text (CVs write them many ways); skill and language levels are free text; salary period is an enum; links must be http or https and are never fetched (LinkedIn stays plain text). Blank list rows are dropped on save; partly filled link rows are refused.
+- Step 6: application defaults and standard answers live in the profile row, not in their own table; no step needs to query them separately yet.
+- Step 6: a stored profile row that no longer validates makes `profile:get` fail (the screen shows its error with retry) instead of being replaced silently; the next save stores a new version.
+- Step 6: onboarding order is enforced in the UI: Continue unlocks only when the AI settings are saved, and the connection test runs against saved settings. The profile screen links to onboarding when no profile exists; there is no automatic redirect.
+- Step 6: the AI key field and connection test moved from `SettingsScreen` into `features/settings/AiControls.tsx`, so onboarding reuses them. `TextArea` is added to the UI kit at its first use.
+- Step 6: the engine entry starts its runtime only when it has a parent port, and loads the CV readers on the first import. Without the guard the E2E smoke test caught a startup failure: the bundler keeps shared helpers in the engine entry, so main required it and hit `parentPort` undefined.
+- Step 6: `migrate.test.ts` counted the rollback's recorded migrations as a hard-coded 1; it now counts the repo's migrations, since the profile migrations add to them.
+- Step 6: not exercised: real provider calls (no keys here); extraction quality on real models (scripted doubles only, no CV recording); the file picker and CV flow inside the packaged app; PDF and DOCX files from real users (three fixtures only: PDF and DOCX, plus TXT, in English and Italian).
+
 ### Open questions
 
 ### Next
-Step 6: Onboarding and profile (onboarding order AI provider with test connection, then CV upload, then profile review; text extraction with `unpdf` and `mammoth`; AI extraction into the profile zod schema; tables `profile` and `profile_versions`, each in its own migration).
+Step 7: Fetch infrastructure and page loader (`packages/core/src/net/`: HTTP client with a per-host queue at 1 request per second, cached `robots.txt`, response cache, backoff on 429 and 5xx, generic user agent, fixture base-URL override; hidden page loader in main, exposed to the engine as `renderPage(url)`).
