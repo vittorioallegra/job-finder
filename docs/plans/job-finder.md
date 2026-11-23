@@ -285,7 +285,7 @@ Approved: yes (2026-11-23)
 - [x] 9. Ingestion pipeline vertical slice — `docs: record step 9 decisions and tick the step`
 - [x] 10. Discovery A: web search and companies — `docs: record step 10 decisions and tick the step`
 - [x] 11. Discovery B: Common Crawl and keyed providers — `docs: record step 11 decisions and tick the step`
-- [ ] 12. Generic careers page adapter
+- [x] 12. Generic careers page adapter — `docs: record step 12 decisions and tick the step`
 - [ ] 13. Matching and ranking
 - [ ] 14. Search and filters UI
 - [ ] 15. Application tracker
@@ -428,7 +428,22 @@ Approved: yes (2026-11-23)
 - Step 11: no table or migration. Settings toggles and secret rows from step 4 cover the step.
 - Step 11: not exercised: any live call to Common Crawl or a keyed provider (none made, per the rules); the CDX line format on a live response (the parser skips malformed lines); a discovery run from the packaged app (the E2E run covers the window and the engine start only); a real search with a saved key from the app.
 
+- Step 12: no table or migration. A company without a supported board keeps its `companies` row with `ats` and `slug` null; its postings are `job_sources` rows with source `careers-page`.
+- Step 12: add-company accepts any http or https careers link. A supported board is still detected and stored with its ATS and slug; other links are stored as generic careers pages. A link or board that is already stored is refused as a duplicate. The `unsupported-careers-url` code is removed.
+- Step 12: `core/careers` (subpath `@job-finder/core/careers`) reads one generic page through the shared HTTP client. It renders the page through `renderPage` only when its HTML has under 300 characters of visible text. It reduces the page to visible text and at most 300 absolute http(s) links, then asks the model for the postings with `generateStructured`. The answer has a `listingComplete` flag, and each posting has a title, a location and a link.
+- Step 12: the prompt is capped at 60,000 characters and must fit the configured context size. Anything larger fails as `too-large`; the page is never cut and read as complete. More than 200 postings also fail as `too-large`.
+- Step 12: a posting's link is used only when it is one of the page's own links. Otherwise the posting's identity is a hash of its title and location, and it links to the careers page.
+- Step 12: posting pages are read one hop from the careers page, on its host only, up to 25 per company. The description is the visible text of the posting page, cut to 4,000 characters, with no AI call. A posting page that fails keeps its job without a description, since the listing still shows the job.
+- Step 12: a listing with zero postings fails as `no-parseable-jobs`, so it closes nothing. A company whose page really lists no openings keeps its old postings open until the job is removed or a posting shows again. The Companies screen shows its last scan as "No parseable jobs".
+- Step 12: `listingComplete: false` (pagination, "load more", more roles than shown) fails as `incomplete-listing`. A page with a render failure fails as `render-failed`. Failures are added to `AdapterFailureCode`, and their reasons are worded in en and it.
+- Step 12: main reads the AI settings and the saved key when a run starts, and sends them in `ingest-start`. The engine builds the model for that run only and keeps the key in memory. With no usable provider, generic pages fail as `ai-unavailable` with no request made. Companies with a supported board scan as before.
+- Step 12: no consent prompt for the generic scan. It sends only public page text, not profile data, so the CV consent rule does not apply. Revisit if the user wants a gate for cloud providers here too.
+- Step 12: the engine's `ingest-start` message and the `IngestApi` carry the AI settings and `renderPage`. Main's supervisor and ingestion service take the settings as an optional argument, so ATS-only runs are unchanged.
+- Step 12: fixtures are hand-written (a static listing, an empty app shell, a rendered listing, one posting page), not recordings of real sites. The automated tests use a scripted HTTP fetch and a scripted provider behind `createAiModel`, and never reach the network.
+- Step 12: Prettier was applied to the files this step touched. Several files already failed `pnpm format:check` at HEAD and were not touched: `core/discovery/discover.ts`, `core/discovery/keyed.ts`, `core/discovery/commoncrawl.test.ts`, `core/discovery/discover.test.ts`, `core/discovery/keyed.test.ts`, `core/net/http.test.ts`, `desktop/main/discovery/service.ts` and its test. Fixing them is left to a separate change.
+- Step 12: not exercised: real career pages or real model answers (none were requested, per the rules); the hidden window rendering a JavaScript careers page (the E2E run covers the window and the engine start only); a generic company scanned from the packaged app; AI extraction quality on real pages and models; posting-page descriptions on real sites, which can include navigation text.
+
 ### Open questions
 
 ### Next
-Step 12: Generic careers page adapter (fetch or render a careers page, reduce HTML to text and links, AI-extract postings into the normalized model, follow posting links up to a bounded depth; "no parseable jobs" marking).
+Step 13: Matching and ranking (table `job_scores`; affinity score 0-100 with an explanation through the AI layer; cache key of job content hash, profile hash, model and prompt version; computed only for jobs that pass the hard filters; visible and top jobs first; per-run AI budget and concurrency limit; jobs without a score still listed when AI is unavailable).
