@@ -1,0 +1,26 @@
+Maria Rossi
+Backend Engineer
+maria.rossi@example.com | +39 02 1234567 | Milano, Italy
+https://github.com/example-maria
+
+Summary
+Backend engineer with six years of experience building payment APIs in TypeScript and Go.
+
+Experience
+Senior Backend Engineer, Acme Payments, Milano, 2021 - present
+- Led the migration of the ledger service to PostgreSQL, cutting p95 latency by 40 percent.
+- Mentored four engineers.
+Backend Engineer, Globex, Torino, 2018 - 2021
+- Built the invoicing API used by 300 merchants.
+
+Education
+M.Sc. Computer Science, Politecnico di Torino, 2018
+
+Skills
+TypeScript, Go, PostgreSQL, Kubernetes
+
+Languages
+Italian (native), English (fluent)
+
+Certifications
+AWS Certified Solutions Architect, Amazon, 2022
