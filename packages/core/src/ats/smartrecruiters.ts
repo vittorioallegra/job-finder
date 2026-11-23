@@ -41,6 +41,8 @@ function parse(body: string, board: BoardRef): ParsedPage | undefined {
   const data = parseJson(body, schema);
   if (!data) return undefined;
   const next = data.offset + data.content.length;
+  // An empty page while more postings are announced is a broken read, never the end of the listing.
+  if (data.content.length === 0 && next < data.totalFound) return undefined;
   return {
     jobs: data.content
       .filter((posting) => posting.visibility === undefined || posting.visibility === "PUBLIC")
@@ -70,8 +72,7 @@ function parse(body: string, board: BoardRef): ParsedPage | undefined {
           postedAt: toIso(posting.releasedDate),
         });
       }),
-    next:
-      data.content.length > 0 && next < data.totalFound ? endpoint(board.slug, next) : undefined,
+    next: next < data.totalFound ? endpoint(board.slug, next) : undefined,
   };
 }
 

@@ -298,6 +298,7 @@ Approved: yes (2026-11-23)
 
 ### Verification
 - qa: pending
+  - SmartRecruiters adapter ended a scan as complete on an empty page while totalFound was higher, so a partial read could close jobs — `fix: fail a SmartRecruiters scan whose page is empty while more postings are announced`
 - review: pending
 
 ### Decisions
