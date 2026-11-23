@@ -221,3 +221,21 @@ describe("page highlight of AI drafts", () => {
     expect(document.querySelector("#g-auth")?.hasAttribute("data-jf-drafted")).toBe(false);
   });
 });
+
+describe("page scripts on a collapsed, clipped wrapper", () => {
+  it("treats a text field inside a zero-height clipped block as a honeypot and fills only the visible one", () => {
+    document.body.innerHTML = `
+      <form>
+        <label for="email">Email</label><input id="email" name="email" type="email" />
+        <div style="height: 0; overflow: hidden">
+          <label for="work_email">Work email</label><input id="work_email" name="work_email" type="email" />
+        </div>
+      </form>`;
+
+    const { fields } = runPage("generic");
+
+    expect(fields.find((field) => field.name === "work_email")?.honeypot).toBe(true);
+    expect(valueOf("#work_email")).toBe("");
+    expect(valueOf("#email")).toBe("maria@example.com");
+  });
+});

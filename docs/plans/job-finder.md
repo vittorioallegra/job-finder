@@ -298,6 +298,7 @@ Approved: yes (2026-11-23)
 
 ### Verification
 - qa: pending
+  - Autofill filled a field hidden by a zero-height or zero-width ancestor with clipped overflow, a common honeypot trap — `fix: treat fields inside a zero-size clipped block as autofill honeypots`
   - SmartRecruiters adapter ended a scan as complete on an empty page while totalFound was higher, so a partial read could close jobs — `fix: fail a SmartRecruiters scan whose page is empty while more postings are announced`
 - review: pending
 

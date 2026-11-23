@@ -72,9 +72,14 @@ const DISCOVER = `function (prefix) {
     if (offscreenOrInvisible(el)) return true;
     // A field pushed off the page by inline positioning, the usual trap for bots.
     if ((style.position === "absolute" || style.position === "fixed") && parseFloat(style.left) < -500) return true;
-    // Any ancestor made transparent hides the control from people.
+    // Any ancestor made transparent, or collapsed to nothing with its overflow clipped, hides the control from people.
     for (var node = el; node && node.nodeType === 1; node = node.parentElement) {
-      if (parseFloat(window.getComputedStyle(node).opacity) === 0) return true;
+      var nodeStyle = window.getComputedStyle(node);
+      if (parseFloat(nodeStyle.opacity) === 0) return true;
+      var clipped = nodeStyle.overflow === "hidden" || nodeStyle.overflow === "clip" ||
+        nodeStyle.overflowX === "hidden" || nodeStyle.overflowY === "hidden";
+      if (clipped && (nodeStyle.height === "0px" || nodeStyle.maxHeight === "0px" ||
+        nodeStyle.width === "0px" || nodeStyle.maxWidth === "0px")) return true;
     }
     return false;
   }
