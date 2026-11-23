@@ -287,7 +287,7 @@ Approved: yes (2026-11-23)
 - [x] 11. Discovery B: Common Crawl and keyed providers — `docs: record step 11 decisions and tick the step`
 - [x] 12. Generic careers page adapter — `docs: record step 12 decisions and tick the step`
 - [x] 13. Matching and ranking — `docs: record step 13 decisions and tick the step`
-- [ ] 14. Search and filters UI
+- [x] 14. Search and filters UI — `feat: filter, sort and flag jobs, with saved searches`
 - [ ] 15. Application tracker
 - [ ] 16. CV and cover letter
 - [ ] 17. Autofill core and ATS adapters
@@ -457,7 +457,23 @@ Approved: yes (2026-11-23)
 - Step 13: Prettier was applied to the files this step touched. `pnpm format:check` is clean on the whole repo at the end of the step.
 - Step 13: not exercised: real model answers and provider behaviour (scripted doubles only); scores and the budget on a real job set; the 500-job cap with real data; a scoring run in the packaged app (the E2E covers the window and engine start only).
 
+- Step 14 (fix, its own commit): explanations follow the UI language. Main resolves `ui.language` ("system" reads `app.getLocale()` through `resolveMainLanguage`) and sends it in `score-jobs`. The language is stored per score (`job_scores.explanation_language`, migration `0008_score_explanation_language`; step 13 rows read as `en`) and is part of the reuse key. Prompt version 2, so every step 13 score is recomputed once. The column has no SQLite CHECK: the drizzle enum types it, the database does not enforce it. Main follows the OS locale for "system", the renderer its browser language list; the two can differ.
+- Step 14: migrations `0009_saved_searches` (JSON of the typed filter, name, timestamps) and `0010_job_flags` (one row per job: `dismissed_at`, `viewed_at`); each has a populated-fixture test in `filter-migrations.test.ts`.
+- Step 14: `core/filters` holds the zod filter (`@job-finder/core/filters`, re-exported by bridge) and the SQL condition over `jobs` (`@job-finder/core/filters/sql`). Flags, scores and sources are read through subqueries, so any query on `jobs` can use the condition. The web reaches core only through bridge; `@job-finder/core/normalize/job` is a new subpath because the normalize index loads Node's crypto.
+- Step 14: keywords match when any one is in the title or the description; excluded keywords remove a job when any is there. LIKE wildcards are escaped. SQLite `LIKE` is case-insensitive for ASCII only.
+- Step 14: the minimum salary compares only with salaries in the same currency and period, using the posting's maximum (its minimum when no maximum is stated). Other salaries are kept, unless "hide without salary" is on, which keeps only the comparable jobs that meet the minimum. No exchange rates.
+- Step 14: "posted within" and "newest first" both use the posting date, falling back to `first_seen_at`. For unscored jobs this replaces step 13's first-seen order with the same rule.
+- Step 14: the source filter keeps jobs with an open posting from a chosen source (ATS id; generic careers pages are `careers-page`). Companies are filtered by id.
+- Step 14: minimum affinity and new-only are view filters. The hard filters for scoring are all the others, including hide dismissed, so a dismissed job is not scored under the default filter.
+- Step 14: a scoring run takes the filter and the listed job ids. Main builds the candidates from the hard filters, the listed ones first, then the newest, capped at 500. The listed ids only order candidates; they never add a job that fails the filter.
+- Step 14: "new" means no viewed mark, so every existing job is new until opened (the spec's rule). Opening a job marks it viewed; the detail lists every source with its open or closed state, and the description is shown as text.
+- Step 14: the results list shows open jobs only and at most 200 of them (the existing cap); a narrower filter reaches the rest. Closed jobs are not listed, so the screen never opens one; the detail query still reads them.
+- Step 14: the form applies on submit ("Apply filters"); an invalid value (number out of range, bad code) is refused with a message and the list is not read. The sort toggle applies at once.
+- Step 14: saved searches can be created from the applied filters, applied to the form, replaced by the applied filters, and deleted. The UI has no rename; the API accepts a name on replace. The scheduler (step 19) will read them.
+- Step 14: the bookmark action and the "hide applied" filter need `applications`, so they move to step 15.
+- Step 14: not exercised: real postings and real scores (the fixture set is hand-written, 7 jobs); the screen in a browser for layout and keyboard order (jsdom only); the packaged app; the desktop E2E covers the window and engine start only.
+
 ### Open questions
 
 ### Next
-Step 14: Search and filters UI (tables `saved_searches`, `job_flags` (dismissed, new only); filter engine in core (SQL from a typed filter object) covering every spec filter; "posted within" falls back to `first_seen_at` when `posted_at` is missing; minimum salary compares only same currency and period (no FX); results sorted by affinity (toggle newest), job detail with all sources, dismiss / bookmark / "new" badge, saved searches CRUD, run progress and run log). Step 14 also passes the filtered, visible order into the scoring run (step 13 scores newest first).
+Step 15: Application tracker (tables `applications`, `application_events`; bookmark is an application with status `bookmarked`; status machine, events, duplicate guard, list and board views, CSV export; the bookmark action and the "hide applied" filter from step 14 are added with it).
