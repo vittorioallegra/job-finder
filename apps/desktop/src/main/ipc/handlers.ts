@@ -1,5 +1,7 @@
 import {
   IPC_REQUEST_SCHEMAS,
+  type AppStatus,
+  type OpenNewJobsRequest,
   type DocumentExportRequest,
   type DocumentGenerateRequest,
   type DocumentGetRequest,
@@ -12,6 +14,7 @@ import {
   type ApplicationStartRequest,
   type ApplicationUpdateRequest,
   type AppSettingsPatch,
+  type AppSettings,
   type CompanyAddRequest,
   type CvImportRequest,
   type DiscoverySearchRequest,
@@ -41,8 +44,20 @@ import { originOf } from "../security/origin";
 import type { SecretStore } from "../secrets/store";
 import type { SettingsRepository } from "../settings/repository";
 
+/** What the renderer may read of the app's own state, and open. */
+export interface AppStatusService {
+  status(): AppStatus;
+  /** Opens the release page of the newer version in the browser. Resolves false when there is none. */
+  openUpdate(): Promise<boolean>;
+  /** A notification click waiting for the window; taking it clears it. */
+  takePendingOpen(): OpenNewJobsRequest | null;
+}
+
 export interface IpcServices {
   settings: SettingsRepository;
+  app: AppStatusService;
+  /** Runs after a settings update is stored, for the settings that act outside the database. */
+  afterSettingsUpdate: (next: AppSettings) => void;
   secrets: SecretStore;
   ai: AiConnectionService;
   profile: ProfileRepository;
@@ -101,6 +116,7 @@ export async function handleInvoke(
       if (patch.secrets?.allowBasicText !== undefined) {
         await services.secrets.onBasicTextAllowedChanged();
       }
+      services.afterSettingsUpdate(next);
       return next;
     }
     case "secrets:status":
@@ -115,6 +131,12 @@ export async function handleInvoke(
     }
     case "ai:test-connection":
       return services.ai.testConnection();
+    case "app:status":
+      return services.app.status();
+    case "app:open-update":
+      return services.app.openUpdate();
+    case "app:take-pending-open":
+      return services.app.takePendingOpen();
     case "profile:get":
       return services.profile.get();
     case "profile:save":

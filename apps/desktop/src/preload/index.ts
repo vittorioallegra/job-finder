@@ -1,15 +1,20 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
+  AppStatus,
   IngestEvent,
   IpcChannel,
   IpcRequest,
   IpcResponse,
   JobFinderBridge,
+  OpenNewJobsRequest,
   SecretName,
 } from "@job-finder/bridge";
 
 // Repeats INGEST_PROGRESS_CHANNEL from packages/bridge: the sandboxed preload imports nothing else.
 const INGEST_PROGRESS = "ingest:progress";
+// Repeats APP_STATUS_CHANNEL and APP_OPEN_NEW_JOBS_CHANNEL from packages/bridge, for the same reason.
+const APP_STATUS_CHANGED = "app:status-changed";
+const APP_OPEN_NEW_JOBS = "app:open-new-jobs";
 
 // The sandboxed preload may import only `electron` and types, so channel names are written out
 // here. Typing `channel` as `IpcChannel` keeps them in step with the contract in packages/bridge.
@@ -33,6 +38,26 @@ const api: JobFinderBridge = {
   },
   ai: {
     testConnection: () => invoke("ai:test-connection"),
+  },
+  app: {
+    status: () => invoke("app:status"),
+    onStatusChange: (listener: (status: AppStatus) => void) => {
+      const handler = (_event: unknown, payload: unknown) => listener(payload as AppStatus);
+      ipcRenderer.on(APP_STATUS_CHANGED, handler);
+      return () => {
+        ipcRenderer.removeListener(APP_STATUS_CHANGED, handler);
+      };
+    },
+    openUpdate: () => invoke("app:open-update"),
+    takePendingOpen: () => invoke("app:take-pending-open"),
+    onOpenNewJobs: (listener: (request: OpenNewJobsRequest) => void) => {
+      const handler = (_event: unknown, payload: unknown) =>
+        listener(payload as OpenNewJobsRequest);
+      ipcRenderer.on(APP_OPEN_NEW_JOBS, handler);
+      return () => {
+        ipcRenderer.removeListener(APP_OPEN_NEW_JOBS, handler);
+      };
+    },
   },
   profile: {
     get: () => invoke("profile:get"),

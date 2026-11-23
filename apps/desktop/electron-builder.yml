@@ -15,6 +15,9 @@ files:
 extraResources:
   - from: drizzle
     to: drizzle
+  # The tray or menu-bar icon is read from disk at run time (see resolveTrayIconPath).
+  - from: build/icon.png
+    to: icon.png
 asar: true
 icon: build/icon.png
 artifactName: "job-finder-${version}-${arch}.${ext}"

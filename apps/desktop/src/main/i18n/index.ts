@@ -31,9 +31,22 @@ export function resolveMainLanguage(locale: string): MainLanguage {
   return locale.toLowerCase().startsWith("it") ? "it" : "en";
 }
 
+/** Replaces each `{{name}}` with its value; a name without a value is left as written. */
+export function interpolate(
+  template: string,
+  values: Record<string, string | number> = {},
+): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (match, name: string) =>
+    name in values ? String(values[name]) : match,
+  );
+}
+
 /** Returns a translator for the given language, falling back to English per key. */
 export function createTranslator(language: MainLanguage) {
-  return (key: string): string => lookup(dictionaries[language], key) ?? lookup(en, key) ?? key;
+  return (key: string, values?: Record<string, string | number>): string =>
+    interpolate(lookup(dictionaries[language], key) ?? lookup(en, key) ?? key, values);
 }
+
+export type Translate = ReturnType<typeof createTranslator>;
 
 export { dictionaries };

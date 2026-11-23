@@ -23,5 +23,33 @@
       "skills": "Competenze",
       "greeting": "Gentile responsabile delle assunzioni,"
     }
+  },
+  "tray": {
+    "tooltip": "Job Finder",
+    "open": "Apri Job Finder",
+    "searchNow": "Cerca ora",
+    "quit": "Esci",
+    "engineFailed": "Motore di ricerca fermo. Riavvia Job Finder.",
+    "updateAvailable": "È disponibile la versione {{version}}"
+  },
+  "notifications": {
+    "newJobsTitle": "Nuove offerte compatibili",
+    "singleSearch": {
+      "one": "1 nuova offerta per '{{search}}'",
+      "other": "{{count}} nuove offerte per '{{search}}'"
+    },
+    "manySearches": {
+      "one": "1 nuova offerta tra le tue ricerche salvate",
+      "other": "{{count}} nuove offerte tra {{searches}} ricerche salvate"
+    },
+    "topMatch": ", punteggio migliore {{score}}"
+  },
+  "close": {
+    "message": "Vuoi che Job Finder resti attivo in background?",
+    "detail": "Continua a cercare secondo la pianificazione dalla barra di sistema o dalla barra dei menu. Esci lo ferma.",
+    "keepRunning": "Resta attivo",
+    "quit": "Esci",
+    "cancel": "Annulla",
+    "remember": "Ricorda la mia scelta"
   }
 }

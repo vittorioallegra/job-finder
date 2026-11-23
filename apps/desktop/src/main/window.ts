@@ -8,6 +8,8 @@ export interface WindowOptions {
   /** Renderer entry: the Vite dev server in development, `app://renderer/` in production. */
   rendererUrl: string;
   language: MainLanguage;
+  /** False keeps the window hidden when it is ready, for a start at login that stays in the tray. */
+  showWhenReady?: boolean;
 }
 
 /** Creates the single application window with the hardened web preferences. */
@@ -43,7 +45,9 @@ export function createMainWindow(options: WindowOptions): BrowserWindow {
       event.preventDefault();
     }
   });
-  window.once("ready-to-show", () => window.show());
+  if (options.showWhenReady !== false) {
+    window.once("ready-to-show", () => window.show());
+  }
 
   void window.loadURL(options.rendererUrl);
   return window;

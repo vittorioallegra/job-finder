@@ -23,5 +23,33 @@
       "skills": "Skills",
       "greeting": "Dear hiring team,"
     }
+  },
+  "tray": {
+    "tooltip": "Job Finder",
+    "open": "Open Job Finder",
+    "searchNow": "Search now",
+    "quit": "Quit",
+    "engineFailed": "Search engine stopped. Restart Job Finder.",
+    "updateAvailable": "Version {{version}} is available"
+  },
+  "notifications": {
+    "newJobsTitle": "New matching jobs",
+    "singleSearch": {
+      "one": "1 new job for '{{search}}'",
+      "other": "{{count}} new jobs for '{{search}}'"
+    },
+    "manySearches": {
+      "one": "1 new job from your saved searches",
+      "other": "{{count}} new jobs from {{searches}} saved searches"
+    },
+    "topMatch": ", top match {{score}}"
+  },
+  "close": {
+    "message": "Keep Job Finder running in the background?",
+    "detail": "It keeps searching on schedule from the tray or menu bar. Quit stops it.",
+    "keepRunning": "Keep running",
+    "quit": "Quit",
+    "cancel": "Cancel",
+    "remember": "Remember my choice"
   }
 }

@@ -1,4 +1,5 @@
 import {
+  type AppStatus,
   applySettingsPatch,
   canTransition,
   type ApplicationDetail,
@@ -45,6 +46,7 @@ export interface MemoryBridgeOptions {
   latestRun?: LatestRun | null;
   /** Answer to "start a run". Defaults to engine unavailable, since there is no engine here. */
   ingestStart?: IngestStartResult;
+  appStatus?: AppStatus;
   /** Outcome of a scoring run. Defaults to engine unavailable, since there is no engine here. */
   scoring?: ScoreStartResult;
   /** Answer to a discovery search. Defaults to engine unavailable, since there is no engine here. */
@@ -257,6 +259,14 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
     discovery: {
       search: async () =>
         structuredClone(options.discovery ?? { ok: false, code: "engine-unavailable" }),
+    },
+    app: {
+      status: async () => structuredClone(options.appStatus ?? { engine: "running", update: null }),
+      onStatusChange: () => () => {},
+      // The page has no release to open and no notification to receive.
+      openUpdate: async () => false,
+      takePendingOpen: async () => null,
+      onOpenNewJobs: () => () => {},
     },
     ingest: {
       start: async () =>

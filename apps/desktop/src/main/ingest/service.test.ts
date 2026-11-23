@@ -1,4 +1,4 @@
-// protects=an ingestion run starts only when the engine accepts it, one run is active at a time, a company-limited start names its company, progress reaches the windows, and a run whose engine died is reported interrupted;
+// protects=an ingestion run starts only when the engine accepts it, one run is active at a time, a company-limited start names its company, progress reaches the windows, a run whose engine died is reported interrupted, and the run-finished hook fires once for the run this service started;
 // fails_when=a second run starts while one is active, a run is reported started when the engine refused or is gone, a finished run keeps blocking new ones, or a dead engine leaves a run looking active;
 // no_claim=the engine's own run logic and the supervisor's crash handling are not exercised here; the engine and supervisor tests cover them.
 import { describe, expect, it } from "vitest";
@@ -38,6 +38,14 @@ function setup(engine: FakeEngine | null) {
   });
   return { service, broadcast };
 }
+
+const finishedWith = (runId: string, status: "failed" | "succeeded"): IngestEvent => ({
+  runId,
+  seq: 2,
+  at: 9,
+  kind: "run-finished",
+  status,
+});
 
 const finished = (runId: string): IngestEvent => ({
   runId,
@@ -105,6 +113,33 @@ describe("ingestion service", () => {
       expect.objectContaining({ runId: "run-1", kind: "run-finished", status: "interrupted" }),
     ]);
     expect(await service.start()).toEqual({ ok: true, runId: "run-2" });
+  });
+
+  it("tells the owner once how a run it started ended, and ignores runs it did not start", async () => {
+    const engine = fakeEngine();
+    const ended: Array<[string, string]> = [];
+    let runCounter = 0;
+    const service = createIngestionService({
+      engine: () => engine,
+      broadcast: () => {},
+      newRunId: () => `run-${++runCounter}`,
+      onRunFinished: (runId, status) => ended.push([runId, status]),
+    });
+
+    service.handleEngineEvent(finishedWith("someone-else", "failed"));
+    expect(ended).toEqual([]);
+
+    await service.start();
+    service.handleEngineEvent(finishedWith("run-1", "failed"));
+    service.handleEngineEvent(finished("run-1"));
+    expect(ended).toEqual([["run-1", "failed"]]);
+
+    await service.start();
+    service.handleEngineLost();
+    expect(ended).toEqual([
+      ["run-1", "failed"],
+      ["run-2", "interrupted"],
+    ]);
   });
 
   it("passes a cancel on to the engine for the run it names", async () => {

@@ -3,6 +3,9 @@ import {
   BrowserWindow,
   dialog,
   ipcMain,
+  Notification,
+  nativeImage,
+  powerMonitor,
   safeStorage,
   net,
   protocol,
@@ -38,7 +41,7 @@ import { documentFilePath } from "./documents/files";
 import { createPdfRenderer } from "./documents/pdf";
 import { openPdfWindow } from "./documents/pdf-window";
 import { createUtilityProcessLauncher } from "./engine/launcher";
-import { engineEnvironment } from "./engine/fixture-env";
+import { engineEnvironment, FIXTURE_BASE_URL_ENV } from "./engine/fixture-env";
 import { createPageLoader } from "./page-loader/loader";
 import { openPageWindow } from "./page-loader/electron-window";
 import { startEngineSupervisor, type EngineSupervisor } from "./engine/supervisor";
@@ -51,6 +54,28 @@ import { INGEST_PROGRESS_CHANNEL } from "@job-finder/bridge";
 import { createTranslator, resolveMainLanguage } from "./i18n";
 import { buildContentSecurityPolicy } from "./security/csp";
 import { createMainWindow } from "./window";
+import {
+  APP_OPEN_NEW_JOBS_CHANNEL,
+  APP_STATUS_CHANNEL,
+  type CloseBehavior,
+} from "@job-finder/bridge";
+import { createScheduler, type Scheduler } from "./scheduler/scheduler";
+import { findNewMatches } from "./scheduler/matches";
+import { lastFinishedIngestRunAt } from "./scheduler/store";
+import { createNewJobsNotifier, type NotificationSink } from "./notifications/new-jobs";
+import { createOpenNewJobsRelay } from "./navigation/open-new-jobs";
+import {
+  closeAction,
+  closeChoice,
+  closeDialogOptions,
+  rememberedBehavior,
+  type CloseChoice,
+} from "./lifecycle/close";
+import { createTrayController, type TrayController } from "./tray/tray";
+import { resolveTrayIconPath } from "./tray/icon";
+import { createUpdateService, type UpdateService } from "./updates/update-service";
+import { createAppStatusStore } from "./app-status";
+import { applyLaunchAtLogin } from "./login-item";
 
 const isDevelopment = !app.isPackaged && Boolean(process.env["ELECTRON_RENDERER_URL"]);
 const rendererDirectory = join(__dirname, "../renderer");
@@ -63,6 +88,12 @@ protocol.registerSchemesAsPrivileged([
     privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: false },
   },
 ]);
+
+/** Matches `appId` in electron-builder.yml; Windows groups notifications and taskbar entries by it. */
+const APP_USER_MODEL_ID = "dev.job-finder.desktop";
+if (process.platform === "win32") {
+  app.setAppUserModelId(APP_USER_MODEL_ID);
+}
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
@@ -147,6 +178,22 @@ if (gotSingleInstanceLock) {
     // The ingestion service and the supervisor refer to each other: the supervisor forwards engine
     // progress to the service, and the service reaches the engine through `supervisor`.
     const settingsRepository = createSettingsRepository(database.db);
+    const ingestRepository = createIngestRepository(database.db);
+    const savedSearchRepository = createSavedSearchRepository(database.db);
+    let quitting = false;
+    let closePromptOpen = false;
+    let tray: TrayController | null = null;
+    let scheduler: Scheduler | null = null;
+    // Status goes to every window and to the tray; the engine and the update check feed it.
+    const appStatus = createAppStatusStore({ engine: "running", update: null }, (status) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.webContents.send(APP_STATUS_CHANNEL, status);
+      }
+      tray?.update(status);
+    });
+    app.on("before-quit", () => {
+      quitting = true;
+    });
     const secretStore = createSecretStore({
       safeStorage,
       rows: createSettingsSecretRows(database.db),
@@ -154,6 +201,9 @@ if (gotSingleInstanceLock) {
     });
     let supervisor: EngineSupervisor | null = null;
     const ingestion = createIngestionService({
+      onRunFinished: (runId, status) => {
+        void scheduler?.handleRunFinished(runId, status);
+      },
       engine: () => supervisor,
       broadcast: (event) => {
         for (const window of BrowserWindow.getAllWindows()) {
@@ -175,6 +225,7 @@ if (gotSingleInstanceLock) {
       },
     });
     supervisor = startEngineSupervisor({
+      onStateChange: (state) => appStatus.setEngine(state),
       launch: createUtilityProcessLauncher(
         enginePath,
         engineEnvironment(process.env, app.isPackaged),
@@ -188,7 +239,31 @@ if (gotSingleInstanceLock) {
       onIngestEvent: (event) => ingestion.handleEngineEvent(event),
       onEngineLost: () => ingestion.handleEngineLost(),
     });
+    const updates: UpdateService = createUpdateService({
+      engine: () => supervisor,
+      currentVersion: app.getVersion(),
+      // Under the E2E harness without a fixture, the check stays off: a test never reaches GitHub.
+      enabled: async () => {
+        const blocked =
+          Boolean(process.env["JOB_FINDER_E2E"]) &&
+          !engineEnvironment(process.env, app.isPackaged)[FIXTURE_BASE_URL_ENV];
+        return !blocked && (await settingsRepository.get()).updates.checkEnabled;
+      },
+      now: () => Date.now(),
+      onChange: (notice) => appStatus.setUpdate(notice),
+      log: (level, message) => logger.log(level, message),
+    });
+    const ticker = setInterval(() => {
+      void scheduler?.check();
+      void updates.checkIfDue();
+    }, 60_000);
+    powerMonitor.on("resume", () => {
+      void scheduler?.check();
+      void updates.checkIfDue();
+    });
     app.on("will-quit", () => {
+      clearInterval(ticker);
+      tray?.destroy();
       supervisor?.stop();
       database.close();
     });
@@ -202,7 +277,6 @@ if (gotSingleInstanceLock) {
       engine: supervisor,
     });
     const profileRepository = createProfileRepository(database.db);
-    const ingestRepository = createIngestRepository(database.db);
     const cvImport = createCvImportService({
       settings: settingsRepository,
       secrets: secretStore,
@@ -274,9 +348,138 @@ if (gotSingleInstanceLock) {
       settings: settingsRepository,
       secrets: secretStore,
     });
+    /** Creates the main window, or shows the existing one (also from the tray and a notification). */
+    function showMainWindow(): void {
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        mainWindow = openWindow(true);
+        return;
+      }
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.show();
+      mainWindow.focus();
+    }
+
+    function openWindow(showWhenReady: boolean): BrowserWindow {
+      const window = createMainWindow({ preloadPath, rendererUrl, language, showWhenReady });
+      attachCloseHandling(window);
+      return window;
+    }
+
+    /** The close button follows the saved choice; "ask" shows the prompt, which can remember the answer. */
+    function attachCloseHandling(window: BrowserWindow): void {
+      window.on("close", (event) => {
+        if (quitting) return;
+        event.preventDefault();
+        void handleCloseRequest(window);
+      });
+    }
+
+    async function handleCloseRequest(window: BrowserWindow): Promise<void> {
+      if (closePromptOpen) return;
+      let saved: CloseBehavior = "ask";
+      try {
+        saved = (await settingsRepository.get()).app.closeBehavior;
+      } catch {
+        logger.log("warn", "close behaviour unreadable; asking");
+      }
+      const action = closeAction(saved);
+      let choice: CloseChoice = action === "prompt" ? "cancel" : action;
+      if (action === "prompt") {
+        closePromptOpen = true;
+        try {
+          const answer = await dialog.showMessageBox(window, closeDialogOptions(t));
+          choice = closeChoice(answer.response);
+          const remembered = rememberedBehavior(choice, answer.checkboxChecked);
+          if (remembered) {
+            await settingsRepository.update({ app: { closeBehavior: remembered } });
+          }
+        } finally {
+          closePromptOpen = false;
+        }
+      }
+      if (choice === "cancel") return;
+      if (choice === "keep-running") {
+        window.hide();
+        return;
+      }
+      quitting = true;
+      app.quit();
+    }
+
+    // A notification click waits here until a window has taken it (the window may be hidden or loading).
+    const openNewJobs = createOpenNewJobsRelay((request) => {
+      showMainWindow();
+      mainWindow?.webContents.send(APP_OPEN_NEW_JOBS_CHANNEL, request);
+    });
+    const liveNotifications = new Set<Notification>();
+    const notificationSink: NotificationSink = {
+      // Notifications stay off under the E2E harness, which must not raise OS messages.
+      isSupported: () => !process.env["JOB_FINDER_E2E"] && Notification.isSupported(),
+      show: ({ title, body }, onClick) => {
+        const notification = new Notification({ title, body });
+        liveNotifications.add(notification);
+        notification.on("click", onClick);
+        notification.on("close", () => liveNotifications.delete(notification));
+        notification.show();
+      },
+    };
+    const notifyNewJobs = createNewJobsNotifier({
+      translate: t,
+      sink: notificationSink,
+      open: (request) => openNewJobs.open(request),
+    });
+    scheduler = createScheduler({
+      now: () => Date.now(),
+      settings: async () => {
+        const stored = await settingsRepository.get();
+        return {
+          intervalHours: stored.scheduler.intervalHours,
+          notificationsEnabled: stored.notifications.enabled,
+        };
+      },
+      savedSearches: () => savedSearchRepository.list(),
+      lastRunFinishedAt: () => lastFinishedIngestRunAt(database.db),
+      startRun: () => ingestion.start(),
+      newMatches: (searches, since) =>
+        findNewMatches(searches, since, (filter) =>
+          ingestRepository.listJobs({ filter, sort: "newest" }, Date.now(), 500),
+        ),
+      notify: notifyNewJobs,
+      log: (level, message) => logger.log(level, message),
+    });
+
     registerIpcHandlers(
       ipcMain,
       {
+        app: {
+          status: () => appStatus.get(),
+          openUpdate: async () => {
+            const notice = updates.notice();
+            // Only the release page of this repository is opened, never a URL the engine supplied.
+            if (!notice?.url.startsWith("https://github.com/")) return false;
+            await shell.openExternal(notice.url);
+            return true;
+          },
+          takePendingOpen: () => openNewJobs.take(),
+        },
+        afterSettingsUpdate: (next) => {
+          try {
+            applyLaunchAtLogin(next.app.launchAtLogin, {
+              platform: process.platform,
+              isPackaged: app.isPackaged,
+              setOpenAtLogin: (openAtLogin) => app.setLoginItemSettings({ openAtLogin }),
+            });
+          } catch (error) {
+            logger.log("error", `launch at login not applied: ${String(error)}`);
+          }
+          if (next.updates.checkEnabled) {
+            void updates.checkIfDue();
+          } else {
+            void updates.check();
+          }
+        },
         settings: settingsRepository,
         secrets: secretStore,
         ai: aiConnection,
@@ -286,7 +489,7 @@ if (gotSingleInstanceLock) {
         ingestion,
         discovery,
         scoring,
-        savedSearches: createSavedSearchRepository(database.db),
+        savedSearches: savedSearchRepository,
         applications: applicationRepository,
         applicationExport,
         documents,
@@ -298,18 +501,54 @@ if (gotSingleInstanceLock) {
     try {
       registerAppProtocol();
       applySecurityPolicy();
-      mainWindow = createMainWindow({ preloadPath, rendererUrl, language });
+      const stored = await settingsRepository.get();
+      // A start at login stays in the tray; the window stays hidden until the user opens it.
+      const startedAtLogin = app.getLoginItemSettings().wasOpenedAtLogin === true;
+      mainWindow = openWindow(!(startedAtLogin && stored.app.closeBehavior !== "quit"));
+      applyLaunchAtLogin(stored.app.launchAtLogin, {
+        platform: process.platform,
+        isPackaged: app.isPackaged,
+        setOpenAtLogin: (openAtLogin) => app.setLoginItemSettings({ openAtLogin }),
+      });
     } catch (error) {
       logger.log("error", `window creation failed: ${String(error)}`);
       dialog.showErrorBox(t("startup.failedTitle"), t("startup.failedBody"));
       app.quit();
     }
 
-    app.on("activate", () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
-        mainWindow = createMainWindow({ preloadPath, rendererUrl, language });
-      }
-    });
+    try {
+      tray = createTrayController({
+        icon: nativeImage
+          .createFromPath(
+            resolveTrayIconPath({
+              isPackaged: app.isPackaged,
+              resourcesPath: process.resourcesPath,
+              appRoot: resolve(__dirname, "../.."),
+            }),
+          )
+          .resize({ width: 18, height: 18 }),
+        translate: t,
+        initial: appStatus.get(),
+        actions: {
+          open: showMainWindow,
+          searchNow: () => {
+            void scheduler?.runNow().then((outcome) => {
+              if (!outcome.ok)
+                logger.log("warn", `search from the tray not started: ${outcome.code}`);
+            });
+          },
+          quit: () => app.quit(),
+        },
+      });
+    } catch (error) {
+      logger.log("error", `tray unavailable: ${String(error)}`);
+    }
+
+    // Catch-up at start: a saved search that is due runs once now. The update check runs once a day.
+    void scheduler.check();
+    void updates.checkIfDue();
+
+    app.on("activate", showMainWindow);
   });
 
   app.on("window-all-closed", () => {

@@ -23,6 +23,7 @@ import type {
   DocumentSaveRequest,
   DocumentSaveResult,
 } from "./documents";
+import type { AppStatus, OpenNewJobsRequest } from "./app";
 import type { AppSettings, AppSettingsPatch } from "./settings";
 import type { SecretName, SecretsStatus } from "./secrets";
 import type { CvImportRequest, CvImportResult, Profile, ProfileRecord } from "./profile";
@@ -59,6 +60,7 @@ export * from "./jobs";
 export * from "./applications";
 export * from "./documents";
 export * from "./autofill";
+export * from "./app";
 
 /** Shape of the API the preload script exposes as `window.jobFinder`. Values never include secrets. */
 export interface JobFinderBridge {
@@ -148,6 +150,18 @@ export interface JobFinderBridge {
   readonly discovery: {
     /** Searches the web for ATS boards matching the criteria. Found boards are not added until the user adds them. */
     search(input: DiscoverySearchRequest): Promise<DiscoverySearchResult>;
+  };
+  readonly app: {
+    /** The engine state and the newer release, if the update check found one. */
+    status(): Promise<AppStatus>;
+    /** Subscribes to status changes; returns the function that unsubscribes. */
+    onStatusChange(listener: (status: AppStatus) => void): () => void;
+    /** Opens the release page of the newer version in the browser. Resolves false when there is none. */
+    openUpdate(): Promise<boolean>;
+    /** A notification click waiting for the window to open the new jobs; taking it clears it. */
+    takePendingOpen(): Promise<OpenNewJobsRequest | null>;
+    /** Subscribes to notification clicks while the window is open; returns the function that unsubscribes. */
+    onOpenNewJobs(listener: (request: OpenNewJobsRequest) => void): () => void;
   };
   readonly ingest: {
     /** Starts a run over every company, or only over `companyId` (a retry). Progress arrives through `onProgress`. */

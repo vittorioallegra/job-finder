@@ -1,4 +1,4 @@
-import type { IngestEvent } from "@job-finder/core/ingest/events";
+import type { IngestEvent, IngestRunOutcome } from "@job-finder/core/ingest/events";
 import type { IngestStartResult } from "@job-finder/bridge";
 import type { IngestAiSettings } from "../../engine/protocol";
 
@@ -22,6 +22,11 @@ export interface IngestionServiceOptions {
    * Omitted or rejected: the run goes ahead without AI, and generic careers pages fail with `ai-unavailable`.
    */
   aiSettings?: () => Promise<IngestAiSettings | undefined>;
+  /**
+   * Called once when a run this service started ends, with its final status. `interrupted` is
+   * reported when the engine died during the run.
+   */
+  onRunFinished?: (runId: string, status: IngestRunOutcome | "interrupted") => void;
   newRunId?: () => string;
 }
 
@@ -86,6 +91,7 @@ export function createIngestionService(options: IngestionServiceOptions): Ingest
       options.broadcast(event);
       if (event.kind === "run-finished" && event.runId === activeRunId) {
         activeRunId = undefined;
+        options.onRunFinished?.(event.runId, event.status);
       }
     },
 
@@ -100,6 +106,7 @@ export function createIngestionService(options: IngestionServiceOptions): Ingest
         kind: "run-finished",
         status: "interrupted",
       });
+      options.onRunFinished?.(runId, "interrupted");
     },
   };
 }

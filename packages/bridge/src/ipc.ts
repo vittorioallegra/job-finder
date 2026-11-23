@@ -32,6 +32,7 @@ import {
   DocumentGetRequestSchema,
   DocumentSaveRequestSchema,
 } from "./documents";
+import type { AppStatus, OpenNewJobsRequest } from "./app";
 import type { AutofillStartResult } from "./autofill";
 import { AutofillStartRequestSchema } from "./autofill";
 import type { ScoreStartResult } from "./scoring";
@@ -100,6 +101,9 @@ export const IPC_REQUEST_SCHEMAS = {
   "documents:export": DocumentExportRequestSchema,
   "documents:reveal": DocumentExportRequestSchema,
   "autofill:start": AutofillStartRequestSchema,
+  "app:status": z.undefined(),
+  "app:open-update": z.undefined(),
+  "app:take-pending-open": z.undefined(),
 } as const;
 
 export type IpcChannel = keyof typeof IPC_REQUEST_SCHEMAS;
@@ -142,6 +146,9 @@ export interface IpcResponses {
   "documents:export": DocumentExportResult;
   "documents:reveal": boolean;
   "autofill:start": AutofillStartResult;
+  "app:status": AppStatus;
+  "app:open-update": boolean;
+  "app:take-pending-open": OpenNewJobsRequest | null;
 }
 
 export type IpcResponse<C extends IpcChannel> = IpcResponses[C];

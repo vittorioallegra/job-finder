@@ -1,4 +1,4 @@
-// protects=every IPC call passes the top-level app-origin sender check and the payload schema before reaching a service, and the settings update triggers the Linux opt-in follow-up;
+// protects=every IPC call passes the top-level app-origin sender check and the payload schema before reaching a service, the settings update triggers the Linux opt-in follow-up and the settings hook, and the app status channels reach the app service;
 // fails_when=a call from a sub-frame or foreign origin reaches a service, an invalid payload is passed on, or a channel in the contract is not registered;
 // no_claim=Electron's own sender identity and the preload's exposure are not exercised here.
 import { describe, expect, it } from "vitest";
@@ -124,6 +124,12 @@ function spyServices() {
   };
   const services: IpcServices = {
     settings,
+    app: {
+      status: () => ({ engine: "running", update: null }),
+      openUpdate: async () => false,
+      takePendingOpen: () => null,
+    },
+    afterSettingsUpdate: () => {},
     secrets,
     ai,
     profile,
@@ -252,6 +258,37 @@ describe("IPC sender and payload guard", () => {
     expect(calls).toEqual(["settings.update", "secrets.onBasicTextAllowedChanged"]);
   });
 
+  it("answers the app status channels from the app service and runs the settings hook after an update", async () => {
+    const { services } = spyServices();
+    const seen: string[] = [];
+    services.app = {
+      status: () => ({ engine: "failed", update: null }),
+      openUpdate: async () => true,
+      takePendingOpen: () => ({ savedSearchId: "s1" }),
+    };
+    services.afterSettingsUpdate = (next) => seen.push(next.app.closeBehavior);
+
+    expect(await handleInvoke("app:status", services, topFrame(), undefined, APP_ORIGIN)).toEqual({
+      engine: "failed",
+      update: null,
+    });
+    expect(await handleInvoke("app:open-update", services, topFrame(), undefined, APP_ORIGIN)).toBe(
+      true,
+    );
+    expect(
+      await handleInvoke("app:take-pending-open", services, topFrame(), undefined, APP_ORIGIN),
+    ).toEqual({ savedSearchId: "s1" });
+    await handleInvoke(
+      "settings:update",
+      services,
+      topFrame(),
+      { app: { closeBehavior: "quit" } },
+      APP_ORIGIN,
+    );
+    // The hook runs once, with the settings the repository stored.
+    expect(seen).toHaveLength(1);
+  });
+
   it("runs the AI connection test only for the app window", async () => {
     const { services, calls } = spyServices();
     await expect(
@@ -279,6 +316,9 @@ describe("IPC sender and payload guard", () => {
     expect(registered.sort()).toEqual(
       [
         "ai:test-connection",
+        "app:open-update",
+        "app:status",
+        "app:take-pending-open",
         "applications:bookmark",
         "applications:check",
         "applications:detail",
