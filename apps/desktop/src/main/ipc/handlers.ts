@@ -1,12 +1,15 @@
 import {
   IPC_REQUEST_SCHEMAS,
   type AppSettingsPatch,
+  type CompanyAddRequest,
   type CvImportRequest,
   type IpcChannel,
   type SecretName,
 } from "@job-finder/bridge";
 import type { Profile } from "@job-finder/core/profile";
 import type { AiConnectionService } from "../ai/connection";
+import type { IngestRepository } from "../ingest/repository";
+import type { IngestionService } from "../ingest/service";
 import type { CvImportService } from "../profile/cv-import";
 import type { ProfileRepository } from "../profile/repository";
 import { originOf } from "../security/origin";
@@ -19,6 +22,8 @@ export interface IpcServices {
   ai: AiConnectionService;
   profile: ProfileRepository;
   cvImport: CvImportService;
+  repository: IngestRepository;
+  ingestion: IngestionService;
 }
 
 /** The parts of an Electron invoke event that the sender check reads. */
@@ -84,6 +89,19 @@ export async function handleInvoke(
       return services.profile.save(payload as Profile);
     case "profile:import-cv":
       return services.cvImport.importCv(payload as CvImportRequest);
+    case "companies:list":
+      return services.repository.listCompanies();
+    case "companies:add":
+      return services.repository.addCompany(payload as CompanyAddRequest);
+    case "jobs:list":
+      return services.repository.listJobs();
+    case "ingest:start":
+      return services.ingestion.start();
+    case "ingest:cancel":
+      services.ingestion.cancel((payload as { runId: string }).runId);
+      return undefined;
+    case "ingest:latest":
+      return services.repository.latestRun();
   }
 }
 

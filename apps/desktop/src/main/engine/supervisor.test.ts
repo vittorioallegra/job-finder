@@ -1,5 +1,5 @@
-// protects=the engine answers pings and database batches served by main, and a page render it asks for is loaded by main and answered under the same request id, and after a crash the supervisor logs the exit, marks runs left running as interrupted and serves the restarted engine; calls in flight at a crash, or made after the supervisor gave up or stopped, reject with EngineUnavailableError instead of hanging;
-// fails_when=a ping or a batch returns the wrong results, a page render gets no answer or another request's answer, a run stays running after its engine crashed, the exit reason is not logged, no restart happens (including when reconciling runs fails), or a call hangs instead of rejecting;
+// protects=the engine answers pings and database batches served by main, a page render it asks for is loaded by main and answered under the same request id, an ingestion run started through it reports its progress and answer under the same request id, and after a crash the supervisor logs the exit, reports the engine as lost, marks runs left running as interrupted and serves the restarted engine; calls in flight at a crash, or made after the supervisor gave up or stopped, reject with EngineUnavailableError instead of hanging;
+// fails_when=a ping or a batch returns the wrong results, a page render gets no answer or another request's answer, an ingestion answer or progress is lost or sent to another run, a run stays running after its engine crashed, the exit reason is not logged, the owner is not told about a crash, no restart happens (including when reconciling runs fails), or a call hangs instead of rejecting;
 // no_claim=utility-process spawning, the real MessageChannelMain wiring and the bundled engine entry are covered by the desktop E2E smoke, not here.
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -11,6 +11,7 @@ import { openAppDatabase, type AppDatabase } from "../db/database";
 import { executeDbCalls, reconcileInterruptedRuns } from "../db/operations";
 import type { AiProviderConfig } from "@job-finder/core/ai";
 import type { CvImportRequest } from "@job-finder/core/cv";
+import type { IngestEvent } from "@job-finder/core/ingest/events";
 import type { HttpClient } from "@job-finder/core/net";
 import type { PortLike } from "../../engine/port";
 import { createEngineRuntime, type EngineRuntime } from "../../engine/runtime";
@@ -59,6 +60,12 @@ interface Harness {
     cvRequests: CvImportRequest[];
     /** URLs main was asked to render through the page loader. */
     pageUrls: string[];
+    /** Answer the engine gives to a request to start a run. */
+    ingestAnswer: "accepted" | "already-running";
+    ingestStarts: string[];
+    ingestCancels: string[];
+    ingestEvents: IngestEvent[];
+    engineLosses: number;
   };
 }
 
@@ -81,6 +88,11 @@ async function startHarness(): Promise<Harness> {
     aiConfigs: [],
     cvRequests: [],
     pageUrls: [],
+    ingestAnswer: "accepted",
+    ingestStarts: [],
+    ingestCancels: [],
+    ingestEvents: [],
+    engineLosses: 0,
   };
   const launch = (): EngineHandle => {
     const { port1, port2 } = new MessageChannel();
@@ -97,6 +109,20 @@ async function startHarness(): Promise<Harness> {
         control.cvRequests.push(request);
         return { ok: false, code: "invalid-output" };
       },
+      createIngest: (api) => ({
+        start: (runId) => {
+          control.ingestStarts.push(runId);
+          // Progress goes out before the answer, as the real controller does.
+          api.send({
+            type: "ingest-progress",
+            event: { runId, seq: 0, at: 1, kind: "run-started" },
+          });
+          return control.ingestAnswer;
+        },
+        cancel: (runId) => {
+          control.ingestCancels.push(runId);
+        },
+      }),
     });
     const exit = new EventEmitter();
     launches.push({
@@ -139,6 +165,10 @@ async function startHarness(): Promise<Harness> {
     log: (level, message) => logs.push(`${level}: ${message}`),
     restartDelayMs: 1,
     maxRestarts: 3,
+    onIngestEvent: (event) => control.ingestEvents.push(event),
+    onEngineLost: () => {
+      control.engineLosses += 1;
+    },
   });
   const harness = { supervisor, launches, logs, database, control };
   harnesses.push(harness);
@@ -351,5 +381,37 @@ describe("engine supervisor", () => {
       html: "<main>job</main>",
     });
     expect(control.pageUrls).toEqual(["https://jobs.example.test/careers"]);
+  });
+
+  it("starts an ingestion run in the engine, forwards its progress and passes a cancel on", async () => {
+    const { supervisor, control } = await startHarness();
+
+    await expect(supervisor.startIngestion("run-1")).resolves.toBe("accepted");
+    await waitFor(() => control.ingestEvents.length === 1);
+    supervisor.cancelIngestion("run-1");
+    await waitFor(() => control.ingestCancels.length === 1);
+
+    expect(control.ingestStarts).toEqual(["run-1"]);
+    expect(control.ingestEvents).toEqual([
+      expect.objectContaining({ runId: "run-1", kind: "run-started" }),
+    ]);
+    expect(control.ingestCancels).toEqual(["run-1"]);
+  });
+
+  it("reports the engine's answer when a run is already active", async () => {
+    const { supervisor, control } = await startHarness();
+    control.ingestAnswer = "already-running";
+
+    await expect(supervisor.startIngestion("run-2")).resolves.toBe("already-running");
+  });
+
+  it("reports an engine crash to the owner once, and only when the crash is unexpected", async () => {
+    const { supervisor, launches, control } = await startHarness();
+    await supervisor.ping();
+
+    launches[0]?.crash();
+    await supervisor.ping();
+
+    expect(control.engineLosses).toBe(1);
   });
 });

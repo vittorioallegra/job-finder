@@ -5,8 +5,13 @@ import {
   type AiTestResult,
   type AppSettings,
   type AppSettingsPatch,
+  type CompanyRecord,
   type CvImportResult,
+  type IngestEvent,
+  type IngestStartResult,
   type JobFinderBridge,
+  type JobListItem,
+  type LatestRun,
   type Profile,
   ProfileSchema,
   type ProfileRecord,
@@ -25,6 +30,11 @@ export interface MemoryBridgeOptions {
   cvImport?: CvImportResult;
   /** A profile already saved before the page loads. Defaults to none (onboarding not done). */
   profile?: Profile;
+  companies?: CompanyRecord[];
+  jobs?: JobListItem[];
+  latestRun?: LatestRun | null;
+  /** Answer to "start a run". Defaults to engine unavailable, since there is no engine here. */
+  ingestStart?: IngestStartResult;
 }
 
 /**
@@ -40,6 +50,9 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
   >;
 
   const status = async (): Promise<SecretsStatus> => ({ storage, keys: { ...keys } });
+  const companies: CompanyRecord[] = structuredClone(options.companies ?? []);
+  const jobs: JobListItem[] = structuredClone(options.jobs ?? []);
+  const progressListeners = new Set<(event: IngestEvent) => void>();
   let profile: ProfileRecord | null = options.profile
     ? { profile: options.profile, version: 1, updatedAt: 0 }
     : null;
@@ -81,6 +94,37 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
       },
       importCv: async () =>
         structuredClone(options.cvImport ?? { ok: false, code: "engine-unavailable" }),
+    },
+    companies: {
+      list: async () => structuredClone(companies),
+      // No ATS detection here: the company is stored without a board, so it cannot be scanned.
+      add: async (input) => {
+        const company: CompanyRecord = {
+          id: `memory-${companies.length + 1}`,
+          name: input.name,
+          careersUrl: input.careersUrl,
+          ats: null,
+          slug: null,
+          createdAt: Date.now(),
+        };
+        companies.push(company);
+        return { ok: true, company: structuredClone(company) };
+      },
+    },
+    jobs: {
+      list: async () => structuredClone(jobs),
+    },
+    ingest: {
+      start: async () =>
+        structuredClone(options.ingestStart ?? { ok: false, code: "engine-unavailable" }),
+      cancel: async () => {},
+      latest: async () => structuredClone(options.latestRun ?? null),
+      onProgress: (listener) => {
+        progressListeners.add(listener);
+        return () => {
+          progressListeners.delete(listener);
+        };
+      },
     },
   };
 }

@@ -6,6 +6,14 @@ import type { SecretsStatus } from "./secrets";
 import { SecretClearRequestSchema, SecretSetRequestSchema } from "./secrets";
 import type { CvImportResult, ProfileRecord } from "./profile";
 import { CvImportRequestSchema, ProfileSchema } from "./profile";
+import type {
+  CompanyAddResult,
+  CompanyRecord,
+  IngestStartResult,
+  JobListItem,
+  LatestRun,
+} from "./ingest";
+import { CompanyAddRequestSchema, IngestCancelRequestSchema } from "./ingest";
 
 /**
  * Request payload per channel. Main validates every incoming payload with these schemas before
@@ -21,6 +29,12 @@ export const IPC_REQUEST_SCHEMAS = {
   "profile:get": z.undefined(),
   "profile:save": ProfileSchema,
   "profile:import-cv": CvImportRequestSchema,
+  "companies:list": z.undefined(),
+  "companies:add": CompanyAddRequestSchema,
+  "jobs:list": z.undefined(),
+  "ingest:start": z.undefined(),
+  "ingest:cancel": IngestCancelRequestSchema,
+  "ingest:latest": z.undefined(),
 } as const;
 
 export type IpcChannel = keyof typeof IPC_REQUEST_SCHEMAS;
@@ -37,6 +51,12 @@ export interface IpcResponses {
   "profile:get": ProfileRecord | null;
   "profile:save": ProfileRecord;
   "profile:import-cv": CvImportResult;
+  "companies:list": CompanyRecord[];
+  "companies:add": CompanyAddResult;
+  "jobs:list": JobListItem[];
+  "ingest:start": IngestStartResult;
+  "ingest:cancel": void;
+  "ingest:latest": LatestRun | null;
 }
 
 export type IpcResponse<C extends IpcChannel> = IpcResponses[C];

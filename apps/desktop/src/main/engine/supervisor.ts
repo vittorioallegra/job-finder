@@ -1,7 +1,8 @@
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
 import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
+import type { IngestEvent } from "@job-finder/core/ingest/events";
 import type { PageRenderResult } from "@job-finder/core/net";
-import type { DbCall, DbResult, EngineToMainMessage } from "../../engine/protocol";
+import type { DbCall, DbResult, EngineToMainMessage, IngestStartCode } from "../../engine/protocol";
 import type { PortLike } from "../../engine/port";
 
 export type LogLevel = "info" | "warn" | "error";
@@ -36,6 +37,10 @@ export interface EngineSupervisorOptions {
    * the last allowed restart is terminal: with 5, the 6th consecutive crash gives up.
    */
   maxRestarts?: number;
+  /** Progress the engine reports for an ingestion run. */
+  onIngestEvent?: (event: IngestEvent) => void;
+  /** Called when the current engine dies unexpectedly (not when the supervisor is stopped). */
+  onEngineLost?: () => void;
 }
 
 /**
@@ -74,12 +79,24 @@ export interface EngineSupervisor {
   testAiConnection(config: AiProviderConfig): Promise<AiConnectionResult>;
   /** Runs a CV import in the engine. The request carries the key and the CV bytes; neither is logged. */
   importCv(request: CvImportRequest): Promise<CvImportOutcome>;
+  /**
+   * Asks the engine to start an ingestion run. Resolves with its answer (`already-running` when
+   * another run is active) and rejects with EngineUnavailableError when the engine is gone.
+   */
+  startIngestion(runId: string): Promise<"accepted" | "already-running">;
+  /** Asks the engine to stop a run. Ignored when no engine is running. */
+  cancelIngestion(runId: string): void;
   readonly state: EngineSupervisorState;
   stop(): void;
 }
 
 interface Pending {
   resolve: () => void;
+  reject: (error: Error) => void;
+}
+
+interface PendingIngestStart {
+  resolve: (code: IngestStartCode) => void;
   reject: (error: Error) => void;
 }
 
@@ -99,6 +116,7 @@ interface Current {
   pendingPings: Map<number, Pending>;
   pendingAiTests: Map<number, PendingAiTest>;
   pendingCvImports: Map<number, PendingCvImport>;
+  pendingIngestStarts: Map<number, PendingIngestStart>;
 }
 
 /**
@@ -129,6 +147,7 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pendingPings: new Map(),
       pendingAiTests: new Map(),
       pendingCvImports: new Map(),
+      pendingIngestStarts: new Map(),
     };
     current = state;
     phase = "running";
@@ -169,6 +188,10 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pending.reject(new EngineUnavailableError(reason));
     }
     state.pendingCvImports.clear();
+    for (const pending of state.pendingIngestStarts.values()) {
+      pending.reject(new EngineUnavailableError(reason));
+    }
+    state.pendingIngestStarts.clear();
   }
 
   function rejectReadyWaiters(reason: EngineUnavailableReason): void {
@@ -207,6 +230,16 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pending?.resolve(message.outcome);
       return;
     }
+    if (message.type === "ingest-start-result") {
+      const pending = state.pendingIngestStarts.get(message.id);
+      state.pendingIngestStarts.delete(message.id);
+      pending?.resolve(message.code);
+      return;
+    }
+    if (message.type === "ingest-progress") {
+      options.onIngestEvent?.(message.event);
+      return;
+    }
     if (message.type === "page-render") {
       const { id, url } = message;
       void options.pages
@@ -230,6 +263,7 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
     if (stopped) {
       return;
     }
+    options.onEngineLost?.();
     consecutiveCrashes += 1;
     phase = "restarting";
     // A reconcile failure is logged and must not block recovery: restart or give-up still runs.
@@ -295,6 +329,20 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
         ready.pendingCvImports.set(id, { resolve, reject });
         ready.handle.port.postMessage({ type: "cv-import", id, request });
       });
+    },
+    async startIngestion(runId) {
+      const ready = current?.ready ? current : await waitUntilReady();
+      const id = nextRequestId;
+      nextRequestId += 1;
+      return new Promise<IngestStartCode>((resolve, reject) => {
+        ready.pendingIngestStarts.set(id, { resolve, reject });
+        ready.handle.port.postMessage({ type: "ingest-start", id, runId });
+      });
+    },
+    cancelIngestion(runId) {
+      if (current?.ready) {
+        current.handle.port.postMessage({ type: "ingest-cancel", runId });
+      }
     },
     get state() {
       return phase;

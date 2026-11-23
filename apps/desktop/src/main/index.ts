@@ -7,17 +7,20 @@ import { executeDbCalls, reconcileInterruptedRuns } from "./db/operations";
 import { registerIpcHandlers } from "./ipc/handlers";
 import { createAiConnectionService } from "./ai/connection";
 import { createCvImportService } from "./profile/cv-import";
+import { createIngestRepository } from "./ingest/repository";
+import { createIngestionService } from "./ingest/service";
 import { createProfileRepository } from "./profile/repository";
 import { createUtilityProcessLauncher } from "./engine/launcher";
 import { engineEnvironment } from "./engine/fixture-env";
 import { createPageLoader } from "./page-loader/loader";
 import { openPageWindow } from "./page-loader/electron-window";
-import { startEngineSupervisor } from "./engine/supervisor";
+import { startEngineSupervisor, type EngineSupervisor } from "./engine/supervisor";
 import { createFileLogger } from "./logging/file-logger";
 import { originOf } from "./security/origin";
 import { createSecretStore, createSettingsSecretRows } from "./secrets/store";
 import { createSettingsRepository } from "./settings/repository";
 import { APP_HOST, APP_SCHEME, resolveAppRequest } from "./protocol/app-protocol";
+import { INGEST_PROGRESS_CHANNEL } from "@job-finder/bridge";
 import { createTranslator, resolveMainLanguage } from "./i18n";
 import { buildContentSecurityPolicy } from "./security/csp";
 import { createMainWindow } from "./window";
@@ -114,7 +117,18 @@ if (gotSingleInstanceLock) {
         `${interrupted} run(s) left running by a previous session marked interrupted`,
       );
     }
-    const supervisor = startEngineSupervisor({
+    // The ingestion service and the supervisor refer to each other: the supervisor forwards engine
+    // progress to the service, and the service reaches the engine through `supervisor`.
+    let supervisor: EngineSupervisor | null = null;
+    const ingestion = createIngestionService({
+      engine: () => supervisor,
+      broadcast: (event) => {
+        for (const window of BrowserWindow.getAllWindows()) {
+          window.webContents.send(INGEST_PROGRESS_CHANNEL, event);
+        }
+      },
+    });
+    supervisor = startEngineSupervisor({
       launch: createUtilityProcessLauncher(
         enginePath,
         engineEnvironment(process.env, app.isPackaged),
@@ -125,9 +139,11 @@ if (gotSingleInstanceLock) {
       },
       pages: createPageLoader({ openWindow: openPageWindow }),
       log: (level, message) => logger.log(level, message),
+      onIngestEvent: (event) => ingestion.handleEngineEvent(event),
+      onEngineLost: () => ingestion.handleEngineLost(),
     });
     app.on("will-quit", () => {
-      supervisor.stop();
+      supervisor?.stop();
       database.close();
     });
 
@@ -146,6 +162,7 @@ if (gotSingleInstanceLock) {
       engine: supervisor,
     });
     const profileRepository = createProfileRepository(database.db);
+    const ingestRepository = createIngestRepository(database.db);
     const cvImport = createCvImportService({
       settings: settingsRepository,
       secrets: secretStore,
@@ -159,6 +176,8 @@ if (gotSingleInstanceLock) {
         ai: aiConnection,
         profile: profileRepository,
         cvImport,
+        repository: ingestRepository,
+        ingestion,
       },
       originOf(rendererUrl) ?? rendererUrl,
     );

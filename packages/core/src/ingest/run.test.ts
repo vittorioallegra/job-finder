@@ -185,7 +185,11 @@ describe("runIngestion", () => {
     expect(outcome).toBe("succeeded");
     expect(trace.closed).toEqual(["co-b"]);
     expect(trace.events).toContainEqual(
-      expect.objectContaining({ kind: "company-failed", companyId: "co-a", code: "storage-failed" }),
+      expect.objectContaining({
+        kind: "company-failed",
+        companyId: "co-a",
+        code: "storage-failed",
+      }),
     );
   });
 

@@ -79,7 +79,36 @@ function spyServices() {
       return { ok: false as const, code: "consent-required" as const };
     },
   };
-  const services: IpcServices = { settings, secrets, ai, profile, cvImport };
+  const repository = {
+    listCompanies: async () => {
+      calls.push("repository.listCompanies");
+      return [];
+    },
+    addCompany: async () => {
+      calls.push("repository.addCompany");
+      return { ok: false as const, code: "unsupported-careers-url" as const };
+    },
+    listJobs: async () => {
+      calls.push("repository.listJobs");
+      return [];
+    },
+    latestRun: async () => {
+      calls.push("repository.latestRun");
+      return null;
+    },
+  };
+  const ingestion = {
+    start: async () => {
+      calls.push("ingestion.start");
+      return { ok: false as const, code: "engine-unavailable" as const };
+    },
+    cancel: (runId: string) => {
+      calls.push(`ingestion.cancel:${runId}`);
+    },
+    handleEngineEvent: () => {},
+    handleEngineLost: () => {},
+  };
+  const services: IpcServices = { settings, secrets, ai, profile, cvImport, repository, ingestion };
   return { services, calls };
 }
 
@@ -170,6 +199,12 @@ describe("IPC sender and payload guard", () => {
     expect(registered.sort()).toEqual(
       [
         "ai:test-connection",
+        "companies:add",
+        "companies:list",
+        "ingest:cancel",
+        "ingest:latest",
+        "ingest:start",
+        "jobs:list",
         "profile:get",
         "profile:import-cv",
         "profile:save",
@@ -180,6 +215,22 @@ describe("IPC sender and payload guard", () => {
         "settings:update",
       ].sort(),
     );
+  });
+
+  it("routes the ingestion channels to their services, and passes a cancel's run id on", async () => {
+    const { services, calls } = spyServices();
+    await handleInvoke("companies:list", services, topFrame(), undefined, APP_ORIGIN);
+    await handleInvoke("jobs:list", services, topFrame(), undefined, APP_ORIGIN);
+    await handleInvoke("ingest:latest", services, topFrame(), undefined, APP_ORIGIN);
+    await handleInvoke("ingest:start", services, topFrame(), undefined, APP_ORIGIN);
+    await handleInvoke("ingest:cancel", services, topFrame(), { runId: "run-7" }, APP_ORIGIN);
+    expect(calls).toEqual([
+      "repository.listCompanies",
+      "repository.listJobs",
+      "repository.latestRun",
+      "ingestion.start",
+      "ingestion.cancel:run-7",
+    ]);
   });
 
   it("keeps an invalid profile and a CV upload without consent away from their services", async () => {

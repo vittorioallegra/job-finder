@@ -73,9 +73,7 @@ describe("ingestion migrations", () => {
 
     expect(outcome.backupPath).not.toBeNull();
     expect(tableNames(db.raw)).toContain("companies");
-    expect(db.raw.prepare("SELECT value FROM settings").get()?.["value"]).toBe(
-      '{"language":"it"}',
-    );
+    expect(db.raw.prepare("SELECT value FROM settings").get()?.["value"]).toBe('{"language":"it"}');
     expect(count(db.raw, "runs")).toBe(1);
     expect(db.raw.prepare("SELECT data FROM profile WHERE id = 1").get()?.["data"]).toBe(
       '{"headline":"Engineer"}',

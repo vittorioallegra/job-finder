@@ -77,7 +77,13 @@ describe("profile migrations", () => {
       optionsFor(repoMigrations, dir),
     );
 
-    expect(outcome.pending).toBe(1);
+    // Every migration after the first two is pending, including the ingestion tables added later.
+    const repoEntries = (
+      JSON.parse(readFileSync(join(repoMigrations, "meta", "_journal.json"), "utf8")) as {
+        entries: unknown[];
+      }
+    ).entries.length;
+    expect(outcome.pending).toBe(repoEntries - 2);
     expect(outcome.backupPath).not.toBeNull();
     expect(tableNames(raw)).toContain("profile_versions");
     const row = raw.prepare("SELECT data, version FROM profile WHERE id = 1").get();

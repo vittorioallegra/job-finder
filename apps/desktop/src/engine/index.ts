@@ -1,5 +1,6 @@
 import { testAiConnection } from "@job-finder/core/ai";
 import { createHttpClient } from "@job-finder/core/net";
+import { createIngestController } from "./ingest";
 import { fromElectronPort } from "./port";
 import { createEngineRuntime } from "./runtime";
 
@@ -19,8 +20,10 @@ if (parentPort) {
     if (port) {
       // Main sets the override only when it is allowed (not packaged, or under E2E) and points at loopback.
       const fixtureBaseUrl = process.env["JOB_FINDER_FIXTURE_BASE_URL"];
+      const net = createHttpClient({ fixtureBaseUrl });
       createEngineRuntime(fromElectronPort(port), {
-        net: createHttpClient({ fixtureBaseUrl }),
+        net,
+        createIngest: (api) => createIngestController({ ...api, http: net }),
         testAiConnection: (config) =>
           testAiConnection(config, { abortSignal: AbortSignal.timeout(AI_TEST_TIMEOUT_MS) }),
         importCv: async (request) => {

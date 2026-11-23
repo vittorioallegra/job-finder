@@ -148,7 +148,12 @@ export async function runIngestion(options: RunIngestionOptions): Promise<Ingest
           closedCount: result.closedCount,
         });
       } else if (result.kind === "failed") {
-        await record({ kind: "company-failed", companyId: company.id, companyName, code: result.code });
+        await record({
+          kind: "company-failed",
+          companyId: company.id,
+          companyName,
+          code: result.code,
+        });
       } else {
         outcome = "cancelled";
         break;

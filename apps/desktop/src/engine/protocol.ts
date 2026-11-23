@@ -1,6 +1,8 @@
 import type { RunStatus } from "@job-finder/core";
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
 import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
+import type { BatchPlan, LookupRequest } from "@job-finder/core/ingest";
+import type { IngestEvent } from "@job-finder/core/ingest/events";
 import type { PageRenderResult } from "@job-finder/core/net";
 
 /**
@@ -12,9 +14,19 @@ export type DbCall =
   | { name: "settings.set"; key: string; value: string }
   | { name: "runs.start"; id: string; kind: string; startedAt: number }
   | { name: "runs.finish"; id: string; status: Exclude<RunStatus, "running">; finishedAt: number }
-  | { name: "runs.list"; limit: number };
+  | { name: "runs.list"; limit: number }
+  | { name: "companies.list" }
+  /** Existing jobs and source rows for one batch, read before the batch is planned. */
+  | { name: "ingest.lookup"; request: LookupRequest }
+  | { name: "ingest.persist"; plan: BatchPlan }
+  /** Closes the postings of one company that its complete scan did not see; returns how many. */
+  | { name: "ingest.close-missing"; companyId: string; runId: string; at: number }
+  | { name: "run-events.append"; event: IngestEvent };
 
 export type DbResult = { ok: true; value: unknown } | { ok: false; error: string };
+
+/** How the engine answered a request to start an ingestion run. */
+export type IngestStartCode = "accepted" | "already-running";
 
 /**
  * Messages sent by main to the engine over the message port. `ai-test` carries the API key from
@@ -28,7 +40,9 @@ export type MainToEngineMessage =
   /** The CV bytes and the API key travel to the engine only; the outcome carries no CV text. */
   | { type: "cv-import"; id: number; request: CvImportRequest }
   /** The answer to a `page-render` request: the page HTML, or a code. */
-  | { type: "page-render-result"; id: number; result: PageRenderResult };
+  | { type: "page-render-result"; id: number; result: PageRenderResult }
+  | { type: "ingest-start"; id: number; runId: string }
+  | { type: "ingest-cancel"; runId: string };
 
 /** Messages sent by the engine to main over the message port. */
 export type EngineToMainMessage =
@@ -37,4 +51,7 @@ export type EngineToMainMessage =
   | { type: "ai-test-result"; id: number; result: AiConnectionResult }
   | { type: "cv-import-result"; id: number; outcome: CvImportOutcome }
   /** Asks main to load a JavaScript-rendered page in its hidden, hardened loader window. */
-  | { type: "page-render"; id: number; url: string };
+  | { type: "page-render"; id: number; url: string }
+  | { type: "ingest-start-result"; id: number; code: IngestStartCode }
+  /** A run's progress and log entries. The final `run-finished` is sent after the run row is closed. */
+  | { type: "ingest-progress"; event: IngestEvent };

@@ -1,5 +1,8 @@
 // Pure types shared by the engine, main and the renderer bridge. No imports, so the bridge can use them without loading core.
 
+/** Value of `runs.kind` for an ingestion run. */
+export const INGEST_RUN_KIND = "ingest";
+
 /** How a run ends on its own. `interrupted` is not set here: startup reconcile marks runs the engine never finished. */
 export type IngestRunOutcome = "succeeded" | "failed" | "cancelled";
 

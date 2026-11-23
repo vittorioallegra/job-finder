@@ -2,8 +2,18 @@ import type { AiTestResult } from "./ai";
 import type { AppSettings, AppSettingsPatch } from "./settings";
 import type { SecretName, SecretsStatus } from "./secrets";
 import type { CvImportRequest, CvImportResult, Profile, ProfileRecord } from "./profile";
+import type {
+  CompanyAddRequest,
+  CompanyAddResult,
+  CompanyRecord,
+  IngestEvent,
+  IngestStartResult,
+  JobListItem,
+  LatestRun,
+} from "./ingest";
 
 export * from "./ai";
+export * from "./ingest";
 export * from "./settings";
 export * from "./secrets";
 export * from "./ipc";
@@ -31,5 +41,24 @@ export interface JobFinderBridge {
     save(profile: Profile): Promise<ProfileRecord>;
     /** Extracts a profile draft from a CV in the engine. Nothing is saved until `save`. */
     importCv(request: CvImportRequest): Promise<CvImportResult>;
+  };
+  readonly companies: {
+    /** Companies the engine scans, in the order they were added. */
+    list(): Promise<CompanyRecord[]>;
+    /** Adds a company from its careers URL. The ATS and its board are detected from the URL. */
+    add(input: CompanyAddRequest): Promise<CompanyAddResult>;
+  };
+  readonly jobs: {
+    /** Open jobs, newest first. */
+    list(): Promise<JobListItem[]>;
+  };
+  readonly ingest: {
+    /** Starts a run over every company. Progress arrives through `onProgress`. */
+    start(): Promise<IngestStartResult>;
+    cancel(runId: string): Promise<void>;
+    /** The latest run and its log, or null before any run. */
+    latest(): Promise<LatestRun | null>;
+    /** Subscribes to run progress; returns the function that unsubscribes. */
+    onProgress(listener: (event: IngestEvent) => void): () => void;
   };
 }

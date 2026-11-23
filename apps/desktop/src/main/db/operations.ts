@@ -2,6 +2,13 @@ import { desc, eq } from "drizzle-orm";
 import type { SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 import { runs, settings } from "@job-finder/core";
 import type { DbCall, DbResult } from "../../engine/protocol";
+import {
+  appendRunEvent,
+  closeMissingSources,
+  listCompanyRows,
+  lookupExisting,
+  persistPlan,
+} from "./ingest-operations";
 
 export type AppDb = SqliteRemoteDatabase;
 
@@ -40,6 +47,18 @@ async function executeCall(db: AppDb, call: DbCall, now: number): Promise<unknow
       return null;
     case "runs.list":
       return db.select().from(runs).orderBy(desc(runs.startedAt)).limit(call.limit);
+    case "companies.list":
+      return listCompanyRows(db);
+    case "ingest.lookup":
+      return lookupExisting(db, call.request);
+    case "ingest.persist":
+      await persistPlan(db, call.plan);
+      return null;
+    case "ingest.close-missing":
+      return closeMissingSources(db, call.companyId, call.runId, call.at);
+    case "run-events.append":
+      await appendRunEvent(db, call.event);
+      return null;
   }
 }
 

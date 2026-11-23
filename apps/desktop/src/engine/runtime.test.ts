@@ -1,4 +1,4 @@
-// protects=the engine renders pages through main only after the URL is resolved and allowed by robots.txt, and matches main's answer to its request id; the engine answers an AI connection test with the service's result, reports an unexpected service failure as unknown without its message, and keeps answering pings;
+// protects=the engine renders pages through main only after the URL is resolved and allowed by robots.txt, and matches main's answer to its request id; the engine answers an AI connection test with the service's result, reports an unexpected service failure as unknown without its message, relays ingestion start and cancel to its controller and answers the start under its request id, and keeps answering pings;
 // fails_when=a test request gets no reply, a thrown error text is passed back to main, or the reply is sent to a different request id;
 // no_claim=the real provider call and the utility process transport are not exercised here; the supervisor test covers the round trip through main.
 import { describe, expect, it } from "vitest";
@@ -16,6 +16,9 @@ function fakeNet(overrides: Partial<HttpClient> = {}): HttpClient {
     ...overrides,
   };
 }
+
+/** An ingestion controller that answers nothing; the ingestion tests replace it. */
+const noIngest = () => ({ start: () => "accepted" as const, cancel: () => {} });
 
 interface FakePort extends PortLike {
   deliver(message: unknown): void;
@@ -52,6 +55,7 @@ describe("engine runtime", () => {
   it("answers an AI test with the service result under the same request id", async () => {
     const port = fakePort();
     const services: EngineServices = {
+      createIngest: noIngest,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: true, model: "claude-test" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
@@ -69,6 +73,7 @@ describe("engine runtime", () => {
   it("reports an unexpected service failure as unknown, without the error text", async () => {
     const port = fakePort();
     const services: EngineServices = {
+      createIngest: noIngest,
       net: fakeNet(),
       testAiConnection: async () => {
         throw new Error(`boom with ${config.apiKey}`);
@@ -88,6 +93,7 @@ describe("engine runtime", () => {
   it("answers a CV import with the service outcome under the same request id", async () => {
     const port = fakePort();
     const services: EngineServices = {
+      createIngest: noIngest,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async (request) => {
@@ -112,6 +118,7 @@ describe("engine runtime", () => {
   it("reports an unexpected CV import failure as unknown", async () => {
     const port = fakePort();
     const services: EngineServices = {
+      createIngest: noIngest,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => {
@@ -135,6 +142,7 @@ describe("engine runtime", () => {
   it("still answers pings", () => {
     const port = fakePort();
     createEngineRuntime(port, {
+      createIngest: noIngest,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
@@ -149,6 +157,7 @@ describe("engine runtime", () => {
     function servicesWith(net: HttpClient): EngineServices {
       return {
         net,
+        createIngest: noIngest,
         testAiConnection: async () => ({ ok: false, code: "unknown" }),
         importCv: async () => ({ ok: false, code: "unknown" }),
       };
@@ -223,5 +232,33 @@ describe("engine runtime", () => {
       expect(result).toEqual({ ok: false, code: "invalid-url" });
       expect(port.sent).toEqual([]);
     });
+  });
+
+  it("relays an ingestion start and cancel to the controller and answers the start under its id", async () => {
+    const port = fakePort();
+    const started: string[] = [];
+    const cancelled: string[] = [];
+    createEngineRuntime(port, {
+      net: fakeNet(),
+      testAiConnection: async () => ({ ok: false, code: "unknown" }),
+      importCv: async () => ({ ok: false, code: "unknown" }),
+      createIngest: () => ({
+        start: (runId) => {
+          started.push(runId);
+          return "already-running";
+        },
+        cancel: (runId) => {
+          cancelled.push(runId);
+        },
+      }),
+    });
+
+    port.deliver({ type: "ingest-start", id: 4, runId: "run-9" });
+    port.deliver({ type: "ingest-cancel", runId: "run-9" });
+    await settle();
+
+    expect(port.sent).toEqual([{ type: "ingest-start-result", id: 4, code: "already-running" }]);
+    expect(started).toEqual(["run-9"]);
+    expect(cancelled).toEqual(["run-9"]);
   });
 });
