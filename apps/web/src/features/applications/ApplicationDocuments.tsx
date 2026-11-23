@@ -16,7 +16,9 @@ import {
 } from "@job-finder/bridge";
 import { useAiConsent } from "../../lib/useAiConsent";
 import { useBridge } from "../../lib/bridge/BridgeContext";
-import { Button } from "../../components/ui/Button";
+import { Badge } from "../../components/ui/Badge";
+import { Button, buttonClass } from "../../components/ui/Button";
+import { Card, CardTitle } from "../../components/ui/Card";
 import { CheckboxInput } from "../../components/ui/CheckboxInput";
 import { SelectInput } from "../../components/ui/SelectInput";
 import { TextArea } from "../../components/ui/TextArea";
@@ -308,21 +310,26 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
 
   return (
     <section aria-labelledby="application-documents-title" className="flex flex-col gap-4">
-      <h4 id="application-documents-title" className="text-sm font-medium text-app-fg">
+      <h4
+        id="application-documents-title"
+        className="font-display text-xl font-semibold text-app-fg"
+      >
         {t("applications.documents.heading")}
       </h4>
       <p className="text-sm text-app-muted">{t("applications.documents.intro")}</p>
 
       {ai !== null && (!ai.configured || ai.cloud) ? (
-        <div className="flex flex-col gap-3 rounded-lg border border-app-border p-4">
+        <div className="flex flex-col gap-3 rounded-2xl bg-app-fair-soft p-4">
           {!ai.configured ? (
             <>
               <p role="status" className="text-sm text-app-fg">
                 {t("applications.documents.aiUnavailable")}
               </p>
-              <Link to="/settings" className="text-sm text-app-accent underline">
-                {t("applications.documents.openSettings")}
-              </Link>
+              <div>
+                <Link to="/settings" className={buttonClass("secondary", "sm")}>
+                  {t("applications.documents.openSettings")}
+                </Link>
+              </div>
             </>
           ) : null}
           {ai.cloud && ai.configured ? (
@@ -363,35 +370,36 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
         const stale =
           record !== null && record.exportedAt !== null && record.updatedAt > record.exportedAt;
         return (
-          <section
+          <Card
+            as="section"
             key={kind}
             aria-labelledby={`application-documents-${kind}`}
-            className="flex flex-col gap-3 rounded-lg border border-app-border p-4"
+            className="flex flex-col gap-3"
           >
-            <h5 id={`application-documents-${kind}`} className="text-sm font-medium text-app-fg">
+            <CardTitle level={3} id={`application-documents-${kind}`}>
               {t(`applications.documents.kinds.${kind}`)}
-            </h5>
+            </CardTitle>
             {record === null ? (
               <p className="text-sm text-app-muted">{t("applications.documents.notGenerated")}</p>
             ) : (
               <>
-                {record.language !== null ? (
-                  <p className="text-sm text-app-muted">
-                    {t("applications.documents.writtenIn", {
-                      language: t(`applications.documents.language.options.${record.language}`),
-                    })}
-                  </p>
-                ) : null}
-                {record.exportedAt !== null ? (
-                  <p className="text-sm text-app-muted">
-                    {t("applications.documents.exportedAt", {
-                      date: new Date(record.exportedAt).toLocaleString(),
-                    })}
-                  </p>
-                ) : null}
-                {stale ? (
-                  <p className="text-sm text-app-fg">{t("applications.documents.stale")}</p>
-                ) : null}
+                <div className="flex flex-wrap items-center gap-2">
+                  {record.language !== null ? (
+                    <Badge>
+                      {t("applications.documents.writtenIn", {
+                        language: t(`applications.documents.language.options.${record.language}`),
+                      })}
+                    </Badge>
+                  ) : null}
+                  {record.exportedAt !== null ? (
+                    <Badge tone="good">
+                      {t("applications.documents.exportedAt", {
+                        date: new Date(record.exportedAt).toLocaleString(),
+                      })}
+                    </Badge>
+                  ) : null}
+                  {stale ? <Badge tone="fair">{t("applications.documents.stale")}</Badge> : null}
+                </div>
                 {draft ? (
                   <DocumentEditor
                     draft={draft}
@@ -402,6 +410,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
                 <div className="flex flex-wrap gap-2">
                   <Button
                     variant="secondary"
+                    size="sm"
                     disabled={busy !== null || !draft}
                     onClick={() => void save(kind, record)}
                   >
@@ -411,6 +420,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
                   </Button>
                   <Button
                     variant="secondary"
+                    size="sm"
                     disabled={busy !== null}
                     onClick={() => void exportPdf(kind)}
                   >
@@ -419,15 +429,15 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
                       : t("applications.documents.export")}
                   </Button>
                   {record.exportedAt !== null ? (
-                    <Button variant="secondary" onClick={() => void reveal(kind)}>
+                    <Button variant="secondary" size="sm" onClick={() => void reveal(kind)}>
                       {t("applications.documents.reveal")}
                     </Button>
                   ) : null}
                 </div>
               </>
             )}
-            <div>
-              <Button disabled={generateDisabled} onClick={() => void generate(kind)}>
+            <div className="flex justify-end border-t border-app-border pt-3">
+              <Button size="sm" disabled={generateDisabled} onClick={() => void generate(kind)}>
                 {working && busy?.action === "generate"
                   ? t("applications.documents.generating")
                   : record === null
@@ -440,15 +450,19 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
                 role={notice.tone === "error" ? "alert" : "status"}
                 className="flex flex-col items-start gap-2"
               >
-                <p className="text-sm text-app-fg">{notice.text}</p>
+                <p
+                  className={`text-sm ${notice.tone === "error" ? "text-app-danger" : "text-app-good"}`}
+                >
+                  {notice.text}
+                </p>
                 {notice.aiUnavailable ? (
-                  <Link to="/settings" className="text-sm text-app-accent underline">
+                  <Link to="/settings" className={buttonClass("secondary", "sm")}>
                     {t("applications.documents.openSettings")}
                   </Link>
                 ) : null}
               </div>
             ) : null}
-          </section>
+          </Card>
         );
       })}
     </section>
@@ -477,7 +491,7 @@ function DocumentEditor({ draft, content, onDraft }: DocumentEditorProps) {
           const title = `${entry.title} — ${entry.company}`;
           return (
             <fieldset key={`${index}-${entry.company}`} className="flex flex-col gap-2">
-              <legend className="text-sm font-medium text-app-fg">{title}</legend>
+              <legend className="text-[13px] font-semibold text-app-fg">{title}</legend>
               {(draft.bullets[index] ?? []).map((text, bulletIndex) => (
                 <TextArea
                   key={bulletIndex}

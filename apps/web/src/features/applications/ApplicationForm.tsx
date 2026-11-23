@@ -10,7 +10,9 @@ import type {
 import { aiConsentTarget, isCloudAiEndpoint } from "@job-finder/bridge";
 import { useAiConsent } from "../../lib/useAiConsent";
 import { useBridge } from "../../lib/bridge/BridgeContext";
-import { Button } from "../../components/ui/Button";
+import { Badge } from "../../components/ui/Badge";
+import { Button, buttonClass } from "../../components/ui/Button";
+import { Card, CardTitle } from "../../components/ui/Card";
 import { CheckboxInput } from "../../components/ui/CheckboxInput";
 
 interface ApplicationFormProps {
@@ -130,13 +132,10 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
   }
 
   return (
-    <section
-      aria-labelledby="application-form-title"
-      className="flex flex-col gap-3 rounded-lg border border-app-border p-4"
-    >
-      <h4 id="application-form-title" className="text-sm font-medium text-app-fg">
+    <Card as="section" aria-labelledby="application-form-title" className="flex flex-col gap-3">
+      <CardTitle level={3} id="application-form-title">
         {t("applications.form.heading")}
-      </h4>
+      </CardTitle>
       <p className="text-sm text-app-muted">{t("applications.form.intro")}</p>
 
       {!available ? (
@@ -145,11 +144,12 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
         <div className="flex flex-col gap-3">
           {aiLoadFailed ? (
             <div className="flex flex-col items-start gap-2">
-              <p role="alert" className="text-sm text-app-fg">
+              <p role="alert" className="text-sm text-app-danger">
                 {t("applications.form.ai.loadFailed")}
               </p>
               <Button
                 variant="secondary"
+                size="sm"
                 onClick={() => {
                   setAiLoadFailed(false);
                   setAiAttempt((n) => n + 1);
@@ -164,7 +164,7 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
               <p role="status" className="text-sm text-app-fg">
                 {t("applications.form.ai.notConfigured")}
               </p>
-              <Link to="/settings" className="text-sm text-app-accent underline">
+              <Link to="/settings" className={buttonClass("secondary", "sm")}>
                 {t("applications.form.ai.openSettings")}
               </Link>
             </div>
@@ -194,6 +194,7 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
           <div>
             <Button
               variant="secondary"
+              size="sm"
               disabled={openDisabled || (ai === null && !aiLoadFailed)}
               onClick={() => void open()}
             >
@@ -204,23 +205,25 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
       )}
 
       {result !== null && !result.ok ? (
-        <p role="alert" className="text-sm text-app-fg">
+        <p role="alert" className="text-sm text-app-danger">
           {failureText(result.code)}
         </p>
       ) : null}
 
       {result !== null && result.ok ? (
         <div className="flex flex-col gap-2">
-          <p role="status" className="text-sm text-app-fg">
+          <p role="status" className="text-sm text-app-good">
             {t("applications.form.opened")}
           </p>
-          <p className="text-sm text-app-muted">
-            {t("applications.form.provider", {
-              provider: t(`applications.form.providers.${result.provider}`),
-            })}
+          <p>
+            <Badge>
+              {t("applications.form.provider", {
+                provider: t(`applications.form.providers.${result.provider}`),
+              })}
+            </Badge>
           </p>
           {result.ai.state === "unavailable" ? (
-            <p role="alert" className="text-sm text-app-fg">
+            <p role="alert" className="text-sm text-app-danger">
               {t("applications.form.ai.unavailable", { reason: aiReasonText(result.ai.code) })}
             </p>
           ) : null}
@@ -243,7 +246,7 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
               ) : null}
               {result.unfilled.length > 0 ? (
                 <div className="flex flex-col gap-1">
-                  <h5 className="text-sm font-medium text-app-fg">
+                  <h5 className="text-sm font-semibold text-app-fg">
                     {t("applications.form.leftHeading")}
                   </h5>
                   <ul className="flex list-disc flex-col gap-0.5 pl-5 text-sm text-app-muted">
@@ -269,6 +272,7 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
       {result !== null && result.ok && !submitted ? (
         <div className="flex flex-col items-start gap-2">
           <Button
+            size="sm"
             disabled={busy !== null || application.status !== "ready"}
             onClick={() => void confirmSubmitted()}
           >
@@ -282,15 +286,15 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
         </div>
       ) : null}
       {submitted ? (
-        <p role="status" className="text-sm text-app-fg">
+        <p role="status" className="text-sm text-app-good">
           {t("applications.form.confirmed")}
         </p>
       ) : null}
       {submitFailed ? (
-        <p role="alert" className="text-sm text-app-fg">
+        <p role="alert" className="text-sm text-app-danger">
           {t("applications.form.confirmFailed")}
         </p>
       ) : null}
-    </section>
+    </Card>
   );
 }

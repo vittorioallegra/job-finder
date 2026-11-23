@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Briefcase, Download } from "lucide-react";
 import { Link } from "react-router";
 import {
   APPLICATION_STATUSES,
@@ -8,7 +9,11 @@ import {
   type ApplicationSummary,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
-import { Button } from "../../components/ui/Button";
+import { Button, buttonClass } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { Drawer } from "../../components/ui/Drawer";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { PageHeader } from "../../components/ui/PageHeader";
 import { SelectInput, type SelectOption } from "../../components/ui/SelectInput";
 import { ApplicationDetail } from "./ApplicationDetail";
 
@@ -133,20 +138,23 @@ export function ApplicationsScreen() {
     ).map((status) => ({ value: status, label: t(`applications.status.${status}`) }));
   }
 
-  function renderCard(application: ApplicationSummary) {
+  function renderCard(application: ApplicationSummary, layout: "row" | "card") {
     const options = statusOptions(application);
+    const wrapper =
+      layout === "row"
+        ? "grid items-center gap-x-4 gap-y-2 px-5 py-4 sm:grid-cols-[1fr_12rem_auto]"
+        : "flex flex-col gap-2 rounded-xl border border-app-border bg-app-surface p-3.5 shadow-card";
     return (
-      <li
-        key={application.id}
-        className="flex flex-col gap-2 rounded-md border border-app-border p-4"
-      >
-        <p className="font-medium text-app-fg">{application.jobTitle}</p>
-        <p className="text-sm text-app-muted">
-          {application.companyName} ·{" "}
-          {t("applications.changed", {
-            date: new Date(application.statusChangedAt).toLocaleDateString(i18n.language),
-          })}
-        </p>
+      <li key={application.id} className={wrapper}>
+        <div className="min-w-0">
+          <p className="font-display text-base font-semibold text-app-fg">{application.jobTitle}</p>
+          <p className="text-sm text-app-muted">
+            {application.companyName} ·{" "}
+            {t("applications.changed", {
+              date: new Date(application.statusChangedAt).toLocaleDateString(i18n.language),
+            })}
+          </p>
+        </div>
         <SelectInput
           label={t("applications.cardStatus", { title: application.jobTitle })}
           options={options}
@@ -159,6 +167,7 @@ export function ApplicationsScreen() {
         <div>
           <Button
             variant="secondary"
+            size="sm"
             aria-label={t("applications.openDetail", { title: application.jobTitle })}
             onClick={() => setSelectedId(application.id)}
           >
@@ -170,13 +179,23 @@ export function ApplicationsScreen() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 p-8">
-      <nav>
-        <Link to="/jobs" className="text-sm text-app-accent underline">
-          {t("applications.backToJobs")}
-        </Link>
-      </nav>
-      <h1 className="text-3xl font-semibold text-app-fg">{t("applications.title")}</h1>
+    <main className="flex flex-col gap-8">
+      <PageHeader
+        title={t("applications.title")}
+        actions={
+          <>
+            <Link to="/jobs" className={buttonClass("ghost", "sm")}>
+              {t("applications.backToJobs")}
+            </Link>
+            {load.status === "ready" ? (
+              <Button variant="secondary" size="sm" onClick={() => void exportCsv()}>
+                <Download className="size-4" strokeWidth={1.8} aria-hidden="true" />
+                {t("applications.export.button")}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       {load.status === "loading" ? (
         <p role="status" className="text-app-muted">
@@ -186,9 +205,10 @@ export function ApplicationsScreen() {
 
       {load.status === "error" ? (
         <div role="alert" className="flex flex-col items-start gap-3">
-          <p className="text-app-fg">{t("applications.loadFailed")}</p>
+          <p className="text-app-danger">{t("applications.loadFailed")}</p>
           <Button
             variant="secondary"
+            size="sm"
             onClick={() => {
               setLoad({ status: "loading" });
               setAttempt((value) => value + 1);
@@ -204,16 +224,22 @@ export function ApplicationsScreen() {
           <div className="flex flex-wrap items-end gap-4">
             <div role="group" aria-label={t("applications.view.label")} className="flex gap-2">
               {VIEWS.map((option) => (
-                <Button
+                <button
                   key={option}
-                  variant={view === option ? "primary" : "secondary"}
+                  type="button"
                   aria-pressed={view === option}
                   onClick={() => setView(option)}
+                  className={`rounded-full px-3.5 py-1.5 text-[13px] transition-colors ${
+                    view === option
+                      ? "bg-app-accent text-app-accent-fg"
+                      : "bg-app-sunken text-app-muted hover:text-app-fg"
+                  }`}
                 >
                   {t(`applications.view.${option}`)}
-                </Button>
+                </button>
               ))}
             </div>
+            <span className="flex-1" />
             <SelectInput
               label={t("applications.filters.status")}
               value={statusFilter}
@@ -235,52 +261,63 @@ export function ApplicationsScreen() {
                 ...companies.map(([id, name]) => ({ value: id, label: name })),
               ]}
             />
-            <Button variant="secondary" onClick={() => void exportCsv()}>
-              {t("applications.export.button")}
-            </Button>
           </div>
 
           {notice ? (
-            <p role={notice.tone === "error" ? "alert" : "status"} className="text-sm text-app-fg">
+            <p
+              role={notice.tone === "error" ? "alert" : "status"}
+              className={`text-sm ${notice.tone === "error" ? "text-app-danger" : "text-app-good"}`}
+            >
               {notice.text}
             </p>
           ) : null}
 
           {selectedId !== null ? (
-            <ApplicationDetail
-              key={selectedId}
-              applicationId={selectedId}
-              onChanged={(application) =>
-                replace({
-                  id: application.id,
-                  jobId: application.jobId,
-                  jobTitle: application.jobTitle,
-                  companyId: application.companyId,
-                  companyName: application.companyName,
-                  status: application.status,
-                  createdAt: application.createdAt,
-                  statusChangedAt: application.statusChangedAt,
-                  jobUrl: application.jobUrl,
-                  applyUrl: application.applyUrl,
-                })
-              }
-              onClose={() => setSelectedId(null)}
-            />
+            <Drawer label={t("applications.detail.heading")} onClose={() => setSelectedId(null)}>
+              <ApplicationDetail
+                key={selectedId}
+                applicationId={selectedId}
+                onChanged={(application) =>
+                  replace({
+                    id: application.id,
+                    jobId: application.jobId,
+                    jobTitle: application.jobTitle,
+                    companyId: application.companyId,
+                    companyName: application.companyName,
+                    status: application.status,
+                    createdAt: application.createdAt,
+                    statusChangedAt: application.statusChangedAt,
+                    jobUrl: application.jobUrl,
+                    applyUrl: application.applyUrl,
+                  })
+                }
+                onClose={() => setSelectedId(null)}
+              />
+            </Drawer>
           ) : null}
 
           {load.applications.length === 0 ? (
-            <p className="text-app-muted">{t("applications.empty")}</p>
+            <EmptyState
+              icon={<Briefcase className="size-5" strokeWidth={1.8} aria-hidden="true" />}
+              title={t("applications.empty")}
+            />
           ) : null}
           {load.applications.length > 0 && visible.length === 0 ? (
-            <p className="text-app-muted">{t("applications.noMatch")}</p>
+            <EmptyState title={t("applications.noMatch")} />
           ) : null}
 
           {view === "list" ? (
-            <ul className="flex flex-col gap-2" aria-label={t("applications.title")}>
-              {visible.map((application) => renderCard(application))}
-            </ul>
+            visible.length > 0 ? (
+              <Card padded={false} className="overflow-hidden">
+                <ul className="divide-y divide-app-border" aria-label={t("applications.title")}>
+                  {visible.map((application) => renderCard(application, "row"))}
+                </ul>
+              </Card>
+            ) : (
+              <ul aria-label={t("applications.title")} />
+            )
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2">
               {APPLICATION_STATUSES.filter(
                 (status) => statusFilter === "" || status === statusFilter,
               ).map((status) => {
@@ -289,12 +326,19 @@ export function ApplicationsScreen() {
                   <section
                     key={status}
                     aria-labelledby={`board-${status}`}
-                    className="flex flex-col gap-2"
+                    className="flex w-72 shrink-0 flex-col gap-3 rounded-2xl bg-app-sunken p-3"
                   >
-                    <h2 id={`board-${status}`} className="text-base font-medium text-app-fg">
-                      {t(`applications.status.${status}`)} ({cards.length})
+                    <h2
+                      id={`board-${status}`}
+                      className="flex items-center justify-between px-1 font-sans text-sm font-semibold text-app-fg"
+                    >
+                      <span>
+                        {t(`applications.status.${status}`)} ({cards.length})
+                      </span>
                     </h2>
-                    <ul className="flex flex-col gap-2">{cards.map((card) => renderCard(card))}</ul>
+                    <ul className="flex flex-col gap-2">
+                      {cards.map((card) => renderCard(card, "card"))}
+                    </ul>
                   </section>
                 );
               })}

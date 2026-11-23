@@ -2,7 +2,9 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { ApplicationDetail as ApplicationDetailRecord } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
+import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
 import { TextArea } from "../../components/ui/TextArea";
 import { ApplicationDocuments } from "./ApplicationDocuments";
 import { ApplicationForm } from "./ApplicationForm";
@@ -65,15 +67,15 @@ export function ApplicationDetail({ applicationId, onChanged, onClose }: Applica
   }
 
   return (
-    <section
-      aria-labelledby="application-detail-title"
-      className="flex flex-col gap-4 rounded-lg border border-app-border p-4"
-    >
+    <section aria-labelledby="application-detail-title" className="flex flex-col gap-5">
       <div className="flex items-start justify-between gap-3">
-        <h3 id="application-detail-title" className="text-lg font-medium text-app-fg">
+        <h3
+          id="application-detail-title"
+          className="font-display text-3xl leading-tight font-semibold text-app-fg"
+        >
           {state.status === "ready" ? state.application.jobTitle : t("applications.detail.heading")}
         </h3>
-        <Button variant="secondary" onClick={onClose}>
+        <Button variant="secondary" size="sm" onClick={onClose}>
           {t("applications.detail.close")}
         </Button>
       </div>
@@ -85,9 +87,10 @@ export function ApplicationDetail({ applicationId, onChanged, onClose }: Applica
       ) : null}
       {state.status === "error" ? (
         <div role="alert" className="flex flex-col items-start gap-2">
-          <p className="text-sm text-app-fg">{t("applications.detail.loadFailed")}</p>
+          <p className="text-sm text-app-danger">{t("applications.detail.loadFailed")}</p>
           <Button
             variant="secondary"
+            size="sm"
             onClick={() => {
               setState({ status: "loading" });
               setAttempt((value) => value + 1);
@@ -103,29 +106,44 @@ export function ApplicationDetail({ applicationId, onChanged, onClose }: Applica
 
       {state.status === "ready" ? (
         <>
-          <p className="text-sm text-app-muted">
-            {state.application.companyName} · {t(`applications.status.${state.application.status}`)}
+          <p className="flex flex-wrap items-center gap-2 text-app-muted">
+            <span>{state.application.companyName} ·</span>
+            <Badge tone="accent">{t(`applications.status.${state.application.status}`)}</Badge>
           </p>
-          <div className="flex flex-col gap-2">
-            <h4 className="text-sm font-medium text-app-fg">{t("applications.detail.heading")}</h4>
+          <Card as="div" className="flex flex-col gap-3">
+            <h4 className="font-sans text-sm font-semibold text-app-fg">
+              {t("applications.detail.heading")}
+            </h4>
             {state.application.events.length === 0 ? (
               <p className="text-sm text-app-muted">{t("applications.detail.noEvents")}</p>
             ) : (
-              <ol className="flex flex-col gap-2 text-sm">
-                {state.application.events.map((event) => (
-                  <li key={event.id} className="flex flex-col gap-0.5">
-                    <span className="font-medium text-app-fg">
-                      {new Date(event.at).toLocaleString(i18n.language)} ·{" "}
-                      {t(`applications.status.${event.status}`)}
-                    </span>
-                    {event.note !== null ? (
-                      <span className="whitespace-pre-line text-app-muted">{event.note}</span>
+              <ol className="flex flex-col text-sm">
+                {state.application.events.map((event, index, all) => (
+                  <li key={event.id} className="relative flex gap-3 pb-4 last:pb-0">
+                    {index < all.length - 1 ? (
+                      <span
+                        aria-hidden="true"
+                        className="absolute top-3 bottom-0 left-[5px] w-px bg-app-border"
+                      />
                     ) : null}
+                    <span
+                      aria-hidden="true"
+                      className="relative mt-1.5 size-[11px] shrink-0 rounded-full border-2 border-app-accent bg-app-surface"
+                    />
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-medium text-app-fg">
+                        {new Date(event.at).toLocaleString(i18n.language)} ·{" "}
+                        {t(`applications.status.${event.status}`)}
+                      </span>
+                      {event.note !== null ? (
+                        <span className="whitespace-pre-line text-app-muted">{event.note}</span>
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ol>
             )}
-          </div>
+          </Card>
           <ApplicationDocuments applicationId={state.application.id} />
           <ApplicationForm
             application={state.application}
@@ -134,21 +152,23 @@ export function ApplicationDetail({ applicationId, onChanged, onClose }: Applica
               onChanged(application);
             }}
           />
-          <form onSubmit={(event) => void addNote(event)} className="flex flex-col gap-2">
-            <TextArea
-              label={t("applications.detail.noteLabel")}
-              value={note}
-              maxLength={2000}
-              onChange={(event) => setNote(event.target.value)}
-            />
-            <div>
-              <Button type="submit" variant="secondary" disabled={note.trim() === ""}>
-                {t("applications.detail.addNote")}
-              </Button>
-            </div>
-          </form>
+          <Card as="div">
+            <form onSubmit={(event) => void addNote(event)} className="flex flex-col gap-3">
+              <TextArea
+                label={t("applications.detail.noteLabel")}
+                value={note}
+                maxLength={2000}
+                onChange={(event) => setNote(event.target.value)}
+              />
+              <div className="flex justify-end">
+                <Button type="submit" variant="secondary" size="sm" disabled={note.trim() === ""}>
+                  {t("applications.detail.addNote")}
+                </Button>
+              </div>
+            </form>
+          </Card>
           {noteFailed ? (
-            <p role="alert" className="text-sm text-app-fg">
+            <p role="alert" className="text-sm text-app-danger">
               {t("applications.detail.noteFailed")}
             </p>
           ) : null}
