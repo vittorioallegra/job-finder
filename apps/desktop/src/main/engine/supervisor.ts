@@ -22,7 +22,10 @@ export interface EngineSupervisorOptions {
   log: (level: LogLevel, message: string) => void;
   /** Delay before the first restart; doubles per consecutive crash. */
   restartDelayMs?: number;
-  /** Consecutive crashes (without a successful ping in between) before giving up. */
+  /**
+   * Restarts allowed after consecutive crashes (no successful ping in between). The crash after
+   * the last allowed restart is terminal: with 5, the 6th consecutive crash gives up.
+   */
   maxRestarts?: number;
 }
 
@@ -46,6 +49,10 @@ export class EngineUnavailableError extends Error {
     this.name = "EngineUnavailableError";
     this.reason = reason;
   }
+}
+
+function describeError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 export interface EngineSupervisor {
@@ -159,8 +166,13 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
     }
     consecutiveCrashes += 1;
     phase = "restarting";
-    void options.database.reconcileInterruptedRuns().then((count) => {
-      options.log("error", `engine exited with code ${code}; ${count} run(s) marked interrupted`);
+    // A reconcile failure is logged and must not block recovery: restart or give-up still runs.
+    const reconciled = options.database.reconcileInterruptedRuns().then(
+      (count) => `${count} run(s) marked interrupted`,
+      (error: unknown) => `reconciling runs failed: ${describeError(error)}`,
+    );
+    void reconciled.then((summary) => {
+      options.log("error", `engine exited with code ${code}; ${summary}`);
       if (stopped) {
         return;
       }

@@ -1,5 +1,5 @@
 // protects=the engine answers pings and database batches served by main, and after a crash the supervisor logs the exit, marks runs left running as interrupted and serves the restarted engine; calls in flight at a crash, or made after the supervisor gave up or stopped, reject with EngineUnavailableError instead of hanging;
-// fails_when=a ping or a batch returns the wrong results, a run stays running after its engine crashed, the exit reason is not logged, no restart happens, or a call hangs instead of rejecting;
+// fails_when=a ping or a batch returns the wrong results, a run stays running after its engine crashed, the exit reason is not logged, no restart happens (including when reconciling runs fails), or a call hangs instead of rejecting;
 // no_claim=utility-process spawning, the real MessageChannelMain wiring and the bundled engine entry are covered by the desktop E2E smoke, not here.
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -37,8 +37,8 @@ interface Harness {
   launches: EngineLaunch[];
   logs: string[];
   database: AppDatabase;
-  /** When true, each new engine dies before it can answer a ping. */
-  control: { deadOnArrival: boolean };
+  /** When `deadOnArrival` is true, each new engine dies before it can answer a ping. When `reconcileFails` is true, reconciling runs rejects. */
+  control: { deadOnArrival: boolean; reconcileFails: boolean };
 }
 
 const repoMigrations = resolve(__dirname, "../../../drizzle");
@@ -53,7 +53,7 @@ async function startHarness(): Promise<Harness> {
   });
   const launches: EngineLaunch[] = [];
   const logs: string[] = [];
-  const control = { deadOnArrival: false };
+  const control = { deadOnArrival: false, reconcileFails: false };
   const launch = (): EngineHandle => {
     const { port1, port2 } = new MessageChannel();
     const runtime = createEngineRuntime(toPortLike(port2));
@@ -84,7 +84,10 @@ async function startHarness(): Promise<Harness> {
     launch,
     database: {
       execute: (calls) => executeDbCalls(database.db, calls),
-      reconcileInterruptedRuns: () => reconcileInterruptedRuns(database.db),
+      reconcileInterruptedRuns: () =>
+        control.reconcileFails
+          ? Promise.reject(new Error("reconcile boom"))
+          : reconcileInterruptedRuns(database.db),
     },
     log: (level, message) => logs.push(`${level}: ${message}`),
     restartDelayMs: 1,
@@ -159,6 +162,22 @@ describe("engine supervisor", () => {
         }),
       ],
     });
+  });
+
+  it("still restarts the engine when reconciling runs fails, and logs the failure", async () => {
+    const { supervisor, launches, logs, control } = await startHarness();
+    await supervisor.ping();
+
+    control.reconcileFails = true;
+    launches[0]?.crash();
+    await supervisor.ping();
+    control.reconcileFails = false;
+
+    expect(launches).toHaveLength(2);
+    expect(logs).toContain(
+      "error: engine exited with code 1; reconciling runs failed: reconcile boom",
+    );
+    expect(supervisor.state).toBe("running");
   });
 
   it("rejects a ping in flight when the engine crashes", async () => {

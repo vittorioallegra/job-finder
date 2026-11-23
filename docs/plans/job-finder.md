@@ -319,7 +319,7 @@ Approved: yes (2026-11-23)
 - Linux without keyring (`basic_text`): warn; store API keys only after explicit opt-in, otherwise session-only.
 - i18next pinned to 27.1.0 instead of 27.2.5 (published 2026-11-23) to respect pnpm's minimum release age; no release-age exclusions.
 - esbuild install script denied via allowBuilds (esbuild: false); drizzle-kit works without it.
-- Engine calls reject with EngineUnavailableError on crash and after the supervisor gives up (5 consecutive crashes); surfacing the failed state in the UI is left to a later UI step.
+- Engine calls reject with EngineUnavailableError on crash and after the supervisor gives up (after 5 failed restarts, i.e. the 6th consecutive crash); surfacing the failed state in the UI is left to a later UI step.
 
 ### Open questions
 
