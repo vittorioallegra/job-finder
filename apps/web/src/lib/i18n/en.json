@@ -273,6 +273,27 @@
       "alreadyRunning": "A scan is already running.",
       "engineUnavailable": "The background engine is not available. Try again in a moment."
     },
+    "score": {
+      "heading": "Affinity scores",
+      "intro": "The AI rates each open job against your profile from 0 to 100 and explains the rating. Scores are kept until your profile's ranking fields change.",
+      "start": "Score jobs",
+      "running": "Scoring jobs…",
+      "needJobs": "No open jobs to score yet.",
+      "consentNote": "Scoring sends your profile's skills, experience and the job descriptions to {{provider}}. Nothing is sent until you press Score jobs.",
+      "consent": "I agree to send my profile and job text to {{provider}}.",
+      "done": "Scored {{scored}} jobs. {{cached}} kept from earlier scores, {{failed}} could not be scored, {{skipped}} left for the next run.",
+      "openSettings": "Open Settings",
+      "openProfile": "Open your profile",
+      "failures": {
+        "no-profile": "Save your profile first: the scores compare each job with it.",
+        "consent-required": "Agree to send your profile and job text to the provider first.",
+        "ai-unavailable": "AI unavailable: no AI provider or key is set up, or the provider could not be reached. Jobs stay listed without a score.",
+        "already-running": "A scoring run is already running.",
+        "engine-unavailable": "The background engine is not available. Try again in a moment.",
+        "store-failed": "The scores could not be saved.",
+        "unknown": "The jobs could not be scored."
+      }
+    },
     "log": {
       "heading": "Scan log",
       "empty": "Nothing has been scanned yet.",
@@ -317,7 +338,10 @@
         "onsite": "On site",
         "unknown": "Work mode not stated"
       },
-      "applyLink": "Apply page: {{url}}"
+      "applyLink": "Apply page: {{url}}",
+      "affinity": "Affinity {{score}}/100",
+      "notScored": "Not scored yet",
+      "sortedByAffinity": "Sorted by affinity, highest first."
     }
   },
   "companies": {

@@ -1,6 +1,6 @@
-// protects=the jobs screen lists open jobs, starts a scan only when companies exist, follows its progress in the log and cancels it by run id, says when a scan is already running, and shows an error with a retry when the lists cannot be read;
-// fails_when=an open job is not shown, a scan starts with no companies, a second scan starts while one is running without a message, progress or the cancel is not wired to the run id, or a failed read shows a blank page;
-// no_claim=layout, keyboard focus order and the real engine run are not checked here; the engine and core ingestion tests cover the run, and company entry is tested on the Companies screen.
+// protects=the jobs screen lists open jobs with their affinity score and explanation (unscored jobs marked as not scored), starts a scan only when companies exist, follows its progress in the log and cancels it by run id, says when a scan is already running, asks for consent before scoring with a cloud provider, shows the AI unavailable state while keeping the jobs listed, and shows an error with a retry when the lists cannot be read;
+// fails_when=an open job is not shown, a scan starts with no companies, a scored job shows no score or an unscored one shows a number, scoring starts with a cloud provider before the consent box is ticked, an AI failure hides the jobs, a second scan starts while one is running without a message, progress or the cancel is not wired to the run id, or a failed read shows a blank page;
+// no_claim=layout, keyboard focus order, the real provider's answers and the real engine run are not checked here; the core ranking tests and the engine and ingestion tests cover the scoring and the run, and company entry is tested on the Companies screen.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
@@ -162,5 +162,79 @@ describe("jobs screen", () => {
     await act(async () => {});
 
     expect(container.querySelector('[role="alert"]')?.textContent).toContain("already running");
+  });
+
+  it("lists scored jobs with their affinity and explanation, and marks the others as not scored", async () => {
+    const scored: JobListItem = {
+      ...posting,
+      id: "job-2",
+      title: "Platform Engineer",
+      score: 88,
+      explanation: "Strong Kubernetes match; asks for 5+ years, you have 3.",
+    };
+    await render(createMemoryBridge({ companies: [acme], jobs: [scored, posting] }));
+
+    expect(container.textContent).toContain("Affinity 88/100");
+    expect(container.textContent).toContain(
+      "Strong Kubernetes match; asks for 5+ years, you have 3.",
+    );
+    expect(container.textContent).toContain("Not scored yet");
+    expect(container.textContent).toContain("Sorted by affinity, highest first.");
+  });
+
+  it("scores the jobs on the profile, reports the counts and reloads the list with the new scores", async () => {
+    const bridge = createMemoryBridge({ companies: [acme], jobs: [posting] });
+    const start = vi.fn(async () => ({
+      ok: true as const,
+      scored: 1,
+      cached: 0,
+      failed: 0,
+      skipped: 0,
+    }));
+    bridge.scores.start = start;
+    await render(bridge);
+
+    await act(async () => {
+      button(container, "Score jobs").click();
+    });
+    await act(async () => {});
+
+    expect(start).toHaveBeenCalledWith({ consent: false });
+    expect(container.textContent).toContain("Scored 1 jobs.");
+  });
+
+  it("asks for consent before scoring with a cloud provider, and sends the consent with the request", async () => {
+    const bridge = createMemoryBridge({ companies: [acme], jobs: [posting] });
+    const start = vi.fn(async () => ({ ok: false as const, code: "consent-required" as const }));
+    bridge.scores.start = start;
+    await render(bridge);
+
+    const consentBox = container.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    expect(consentBox).not.toBeNull();
+    await act(async () => {
+      consentBox?.click();
+    });
+    await act(async () => {
+      button(container, "Score jobs").click();
+    });
+    await act(async () => {});
+
+    expect(start).toHaveBeenCalledWith({ consent: true });
+  });
+
+  it("shows the AI unavailable state with a link to Settings and keeps the jobs listed", async () => {
+    const bridge = createMemoryBridge({ companies: [acme], jobs: [posting] });
+    bridge.scores.start = async () => ({ ok: false, code: "ai-unavailable" });
+    await render(bridge);
+
+    await act(async () => {
+      button(container, "Score jobs").click();
+    });
+    await act(async () => {});
+
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain("AI unavailable");
+    expect(container.querySelector('a[href="/settings"]')).not.toBeNull();
+    expect(container.textContent).toContain("Backend Engineer");
+    expect(container.textContent).toContain("Not scored yet");
   });
 });

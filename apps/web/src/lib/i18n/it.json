@@ -273,6 +273,27 @@
       "alreadyRunning": "Una scansione è già in corso.",
       "engineUnavailable": "Il motore in background non è disponibile. Riprova tra poco."
     },
+    "score": {
+      "heading": "Punteggi di affinità",
+      "intro": "L'AI valuta ogni annuncio aperto rispetto al tuo profilo, da 0 a 100, e spiega il punteggio. I punteggi restano validi finché non cambiano i campi del profilo usati per la valutazione.",
+      "start": "Valuta gli annunci",
+      "running": "Valutazione in corso…",
+      "needJobs": "Non ci sono annunci aperti da valutare.",
+      "consentNote": "Valutare gli annunci invia a {{provider}} le competenze e l'esperienza del tuo profilo e il testo degli annunci. Non viene inviato nulla finché non premi Valuta gli annunci.",
+      "consent": "Accetto di inviare a {{provider}} il testo del mio profilo e degli annunci.",
+      "done": "Valutati {{scored}} annunci. {{cached}} mantenuti dalle valutazioni precedenti, {{failed}} non valutabili, {{skipped}} rimandati alla prossima esecuzione.",
+      "openSettings": "Apri le impostazioni",
+      "openProfile": "Apri il tuo profilo",
+      "failures": {
+        "no-profile": "Salva prima il tuo profilo: i punteggi confrontano ogni annuncio con il profilo.",
+        "consent-required": "Accetta prima di inviare il testo del profilo e degli annunci al fornitore.",
+        "ai-unavailable": "AI non disponibile: non è configurato un fornitore o una chiave AI, oppure il fornitore non risponde. Gli annunci restano elencati senza punteggio.",
+        "already-running": "Una valutazione è già in corso.",
+        "engine-unavailable": "Il motore in background non è disponibile. Riprova tra poco.",
+        "store-failed": "I punteggi non sono stati salvati.",
+        "unknown": "Gli annunci non sono stati valutati."
+      }
+    },
     "log": {
       "heading": "Registro della scansione",
       "empty": "Nessuna scansione ancora.",
@@ -317,7 +338,10 @@
         "onsite": "In sede",
         "unknown": "Modalità di lavoro non indicata"
       },
-      "applyLink": "Pagina di candidatura: {{url}}"
+      "applyLink": "Pagina di candidatura: {{url}}",
+      "affinity": "Affinità {{score}}/100",
+      "notScored": "Non ancora valutato",
+      "sortedByAffinity": "Ordinati per affinità, dal più alto."
     }
   },
   "companies": {

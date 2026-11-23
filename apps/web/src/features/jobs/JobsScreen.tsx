@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
-import type {
-  CompanyRecord,
-  IngestEvent,
-  IngestStartFailureCode,
-  JobListItem,
-  LatestRun,
+import {
+  isCloudAiEndpoint,
+  type CompanyRecord,
+  type IngestEvent,
+  type IngestStartFailureCode,
+  type JobListItem,
+  type LatestRun,
+  type ScoreStartResult,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Button } from "../../components/ui/Button";
+import { CheckboxInput } from "../../components/ui/CheckboxInput";
 
 interface Lists {
   companies: CompanyRecord[];
@@ -31,6 +34,11 @@ export function JobsScreen() {
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [startFailure, setStartFailure] = useState<IngestStartFailureCode | null>(null);
   const [starting, setStarting] = useState(false);
+  const [cloud, setCloud] = useState(false);
+  const [providerName, setProviderName] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [scoring, setScoring] = useState(false);
+  const [scoreResult, setScoreResult] = useState<ScoreStartResult | null>(null);
 
   const readLists = useCallback(async (): Promise<Lists> => {
     const [companies, jobs] = await Promise.all([bridge.companies.list(), bridge.jobs.list()]);
@@ -48,6 +56,14 @@ export function JobsScreen() {
 
   useEffect(() => {
     let active = true;
+    void bridge.settings
+      .get()
+      .then((settings) => {
+        if (!active) return;
+        setCloud(isCloudAiEndpoint(settings.ai));
+        setProviderName(t(`settings.ai.providers.${settings.ai.provider}`));
+      })
+      .catch(() => {});
     void loadAll().then(({ state, latest }) => {
       if (!active) return;
       setLoad(state);
@@ -57,7 +73,7 @@ export function JobsScreen() {
     return () => {
       active = false;
     };
-  }, [loadAll]);
+  }, [bridge, loadAll, t]);
 
   useEffect(
     () =>
@@ -100,6 +116,25 @@ export function JobsScreen() {
       setStartFailure("engine-unavailable");
     } finally {
       setStarting(false);
+    }
+  }
+
+  /** Scores the open jobs. The lists reload afterwards, since a partial run still stores scores. */
+  async function scoreJobs() {
+    setScoring(true);
+    setScoreResult(null);
+    try {
+      setScoreResult(await bridge.scores.start({ consent }));
+    } catch {
+      setScoreResult({ ok: false, code: "engine-unavailable" });
+    }
+    try {
+      const lists = await readLists();
+      setLoad({ status: "ready", ...lists });
+    } catch {
+      setLoad({ status: "error" });
+    } finally {
+      setScoring(false);
     }
   }
 
@@ -216,6 +251,67 @@ export function JobsScreen() {
             )}
           </section>
 
+          <section aria-labelledby="jobs-score-title" className="flex flex-col gap-4">
+            <h2 id="jobs-score-title" className="text-xl font-medium text-app-fg">
+              {t("jobs.score.heading")}
+            </h2>
+            <p className="text-sm text-app-muted">{t("jobs.score.intro")}</p>
+            {cloud ? (
+              <div className="flex flex-col gap-3 rounded-lg border border-app-border p-4">
+                <p className="text-sm text-app-fg">
+                  {t("jobs.score.consentNote", { provider: providerName })}
+                </p>
+                <CheckboxInput
+                  label={t("jobs.score.consent", { provider: providerName })}
+                  checked={consent}
+                  onChange={(event) => setConsent(event.target.checked)}
+                />
+              </div>
+            ) : null}
+            <div>
+              <Button onClick={() => void scoreJobs()} disabled={scoring || load.jobs.length === 0}>
+                {t("jobs.score.start")}
+              </Button>
+            </div>
+            {load.jobs.length === 0 ? (
+              <p className="text-sm text-app-muted">{t("jobs.score.needJobs")}</p>
+            ) : null}
+            {scoring ? (
+              <p role="status" className="text-sm text-app-muted">
+                {t("jobs.score.running")}
+              </p>
+            ) : null}
+            {scoreResult?.ok === true ? (
+              <p role="status" className="text-sm text-app-fg">
+                {t("jobs.score.done", {
+                  scored: scoreResult.scored,
+                  cached: scoreResult.cached,
+                  failed: scoreResult.failed,
+                  skipped: scoreResult.skipped,
+                })}
+              </p>
+            ) : null}
+            {scoreResult?.ok === false ? (
+              <div role="alert" className="flex flex-col items-start gap-2">
+                <p className="text-sm text-app-fg">
+                  {t(`jobs.score.failures.${scoreResult.code}`, {
+                    defaultValue: t("jobs.score.failures.unknown"),
+                  })}
+                </p>
+                {scoreResult.code === "ai-unavailable" ? (
+                  <Link to="/settings" className="text-sm text-app-accent underline">
+                    {t("jobs.score.openSettings")}
+                  </Link>
+                ) : null}
+                {scoreResult.code === "no-profile" ? (
+                  <Link to="/profile" className="text-sm text-app-accent underline">
+                    {t("jobs.score.openProfile")}
+                  </Link>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+
           <section aria-labelledby="jobs-results-title" className="flex flex-col gap-4">
             <h2 id="jobs-results-title" className="text-xl font-medium text-app-fg">
               {t("jobs.results.heading")}
@@ -223,23 +319,34 @@ export function JobsScreen() {
             {load.jobs.length === 0 ? (
               <p className="text-app-muted">{t("jobs.results.empty")}</p>
             ) : (
-              <ul className="flex flex-col gap-2">
-                {load.jobs.map((job) => (
-                  <li key={job.id} className="rounded-md border border-app-border p-4">
-                    <p className="font-medium text-app-fg">{job.title}</p>
-                    <p className="text-sm text-app-muted">
-                      {job.companyName} ·{" "}
-                      {job.locations.length > 0
-                        ? job.locations.join(" / ")
-                        : t("jobs.results.noLocation")}{" "}
-                      · {t(`jobs.results.workMode.${job.workMode}`)}
-                    </p>
-                    <p className="break-all text-xs text-app-muted">
-                      {t("jobs.results.applyLink", { url: job.applyUrl })}
-                    </p>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <p className="text-sm text-app-muted">{t("jobs.results.sortedByAffinity")}</p>
+                <ul className="flex flex-col gap-2">
+                  {load.jobs.map((job) => (
+                    <li key={job.id} className="rounded-md border border-app-border p-4">
+                      <p className="font-medium text-app-fg">{job.title}</p>
+                      <p className="text-sm text-app-muted">
+                        {job.companyName} ·{" "}
+                        {job.locations.length > 0
+                          ? job.locations.join(" / ")
+                          : t("jobs.results.noLocation")}{" "}
+                        · {t(`jobs.results.workMode.${job.workMode}`)}
+                      </p>
+                      <p className="text-sm font-medium text-app-fg">
+                        {job.score === null
+                          ? t("jobs.results.notScored")
+                          : t("jobs.results.affinity", { score: job.score })}
+                      </p>
+                      {job.explanation ? (
+                        <p className="text-sm text-app-muted">{job.explanation}</p>
+                      ) : null}
+                      <p className="break-all text-xs text-app-muted">
+                        {t("jobs.results.applyLink", { url: job.applyUrl })}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </section>
         </>
