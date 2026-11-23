@@ -596,6 +596,63 @@
       "noteFailed": "Non è stato possibile salvare la nota.",
       "postingLink": "Apri l'annuncio",
       "applyLink": "Apri la pagina di candidatura"
+    },
+    "documents": {
+      "heading": "Documenti",
+      "intro": "Genera un CV e una lettera di presentazione su misura dal tuo profilo e da questa offerta. Controlli e modifichi il testo, poi esporti un PDF. Non viene inviato nulla al datore di lavoro.",
+      "loading": "Caricamento dei documenti…",
+      "loadFailed": "I documenti non si possono leggere.",
+      "kinds": {
+        "cv": "CV su misura",
+        "cover-letter": "Lettera di presentazione"
+      },
+      "notGenerated": "Non ancora generato.",
+      "generate": "Genera",
+      "generateAgain": "Genera di nuovo",
+      "generating": "Generazione in corso…",
+      "generated": "Generato. Controlla il testo prima di esportarlo.",
+      "consentNote": "Generare invia il tuo profilo e il testo di questa offerta a {{provider}}. Non si invia nulla finché non premi Genera.",
+      "consent": "Accetto di inviare il mio profilo e il testo di questa offerta a {{provider}}.",
+      "aiUnavailable": "AI non disponibile: non è impostato alcun modello. Impostane uno nelle Impostazioni per generare i documenti.",
+      "openSettings": "Apri le Impostazioni",
+      "summary": "Profilo",
+      "bulletLabel": "Punto {{number}} di {{title}}",
+      "paragraphLabel": "Paragrafo {{number}}",
+      "education": "Istruzione",
+      "skills": "Competenze",
+      "save": "Salva le modifiche",
+      "saving": "Salvataggio…",
+      "saved": "Modifiche salvate.",
+      "validationFailed": "Alcuni testi non corrispondono al tuo profilo: {{issues}}.",
+      "export": "Esporta PDF",
+      "exporting": "Esportazione…",
+      "exported": "PDF esportato.",
+      "exportedAt": "Ultima esportazione PDF: {{date}}.",
+      "stale": "Hai modificato il documento dopo l'ultima esportazione. Esportalo di nuovo per aggiornare il PDF.",
+      "reveal": "Mostra il PDF nella cartella",
+      "revealFailed": "Il PDF non è ancora esportato, o la sua cartella non si può aprire.",
+      "failures": {
+        "not-found": "La candidatura o il suo documento non sono stati trovati.",
+        "no-profile": "Salva prima il tuo profilo: i documenti si scrivono a partire da lui.",
+        "consent-required": "Accetta prima di inviare al fornitore il tuo profilo e il testo di questa offerta.",
+        "engine-unavailable": "AI non disponibile: il motore in background non è disponibile. Riprova tra poco.",
+        "not-configured": "AI non disponibile: il fornitore AI non è configurato del tutto nelle Impostazioni.",
+        "invalid-key": "AI non disponibile: il fornitore ha rifiutato la chiave API.",
+        "model-not-found": "AI non disponibile: il fornitore non conosce il modello configurato.",
+        "rate-limited": "AI non disponibile: il fornitore limita le richieste. Riprova più tardi.",
+        "unreachable": "AI non disponibile: non si riesce a raggiungere il fornitore.",
+        "invalid-output": "L'AI non ha restituito un documento coerente con il tuo profilo. Riprova.",
+        "export-failed": "Il PDF non si è potuto esportare.",
+        "unknown": "Il documento non si è potuto generare."
+      },
+      "issues": {
+        "source-missing": "una voce non esiste nel tuo profilo",
+        "source-repeated": "una voce del tuo profilo compare due volte",
+        "field-mismatch": "un datore di lavoro, un titolo, una data, un istituto, un titolo di studio o un indirizzo differisce dal tuo profilo",
+        "skill-name": "una competenza non è nel tuo profilo",
+        "numbers-not-in-source": "un numero di un punto non è nel punto di partenza",
+        "numbers-not-in-profile": "un numero non è nel tuo profilo"
+      }
     }
   }
 }

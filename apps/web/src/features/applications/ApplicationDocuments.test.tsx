@@ -1,0 +1,298 @@
+// protects=the documents panel shows loading, error and AI-unavailable states, asks for consent before a cloud provider is used, shows a generated document as editable text, reports a save that breaks the profile by its issues, exports a PDF and offers to reveal it, and names every AI failure under its own message;
+// fails_when=a generate call goes out without the consent a cloud provider needs, an AI failure is shown without the settings link, a refused save is reported as saved, an export without a file is reported as exported, or the panel shows a blank page on a failed read;
+// no_claim=the layout, the real bridge and the PDF itself are not checked here; the desktop service and PDF tests cover the rules and the file;
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { MemoryRouter } from "react-router";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  DEFAULT_APP_SETTINGS,
+  type ApplicationDocuments as ApplicationDocumentsRecord,
+  type AppSettings,
+  type DocumentRecord,
+  type JobFinderBridge,
+} from "@job-finder/bridge";
+import { BridgeProvider } from "../../lib/bridge/BridgeContext";
+import { createMemoryBridge } from "../../lib/bridge/memory";
+import { i18n } from "../../lib/i18n";
+import { ApplicationDocuments } from "./ApplicationDocuments";
+
+const cloudSettings = {
+  ...DEFAULT_APP_SETTINGS,
+  ai: { provider: "anthropic" as const, model: "claude-test", baseUrl: "", contextSize: 8192 },
+};
+
+const localSettings = {
+  ...DEFAULT_APP_SETTINGS,
+  ai: {
+    provider: "openai-compatible" as const,
+    model: "local-model",
+    baseUrl: "http://localhost:11434/v1",
+    contextSize: 8192,
+  },
+};
+
+function coverLetter(text: string, overrides: Partial<DocumentRecord> = {}): DocumentRecord {
+  return {
+    kind: "cover-letter",
+    content: { kind: "cover-letter", letter: { paragraphs: [text] } },
+    updatedAt: 10,
+    exportedAt: null,
+    ...overrides,
+  };
+}
+
+function cvRecord(): DocumentRecord {
+  return {
+    kind: "cv",
+    content: {
+      kind: "cv",
+      cv: {
+        summary: "Backend engineer.",
+        experience: [
+          {
+            source: 0,
+            company: "Acme",
+            title: "Engineer",
+            location: "Milano",
+            startDate: "2019",
+            endDate: "2024",
+            bullets: [{ source: 0, text: "Cut latency by 40%" }],
+          },
+        ],
+        education: [],
+        skills: [{ source: 0, name: "TypeScript" }],
+      },
+    },
+    updatedAt: 10,
+    exportedAt: null,
+  };
+}
+
+function documentsOf(
+  overrides: Partial<ApplicationDocumentsRecord> = {},
+): ApplicationDocumentsRecord {
+  return { applicationId: "a1", cv: null, coverLetter: null, ...overrides };
+}
+
+function button(container: HTMLElement, text: string): HTMLButtonElement {
+  const found = [...container.querySelectorAll("button")].find(
+    (node) => node.textContent?.trim() === text,
+  );
+  if (!found) throw new Error(`no button ${text}`);
+  return found;
+}
+
+function textareaLabelled(container: HTMLElement, text: string): HTMLTextAreaElement {
+  const label = [...container.querySelectorAll("label")].find((node) => node.textContent === text);
+  const control = label?.htmlFor ? document.getElementById(label.htmlFor) : null;
+  if (!(control instanceof HTMLTextAreaElement)) throw new Error(`no textarea ${text}`);
+  return control;
+}
+
+/** Sets a controlled field's value the way typing does, so React sees the change. */
+function type(field: HTMLTextAreaElement, value: string) {
+  Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set?.call(field, value);
+  field.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function bridgeWith(
+  documents: Partial<JobFinderBridge["documents"]>,
+  settings: AppSettings = localSettings,
+): JobFinderBridge {
+  const base = createMemoryBridge({ settings });
+  return {
+    ...base,
+    documents: {
+      get: vi.fn(async () => documentsOf()),
+      generate: vi.fn(async () => ({ ok: false as const, code: "unknown" as const })),
+      save: vi.fn(async () => ({ ok: false as const, code: "not-found" as const })),
+      exportPdf: vi.fn(async () => ({ ok: false as const, code: "export-failed" as const })),
+      reveal: vi.fn(async () => true),
+      ...documents,
+    },
+  };
+}
+
+describe("application documents panel", () => {
+  let container: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(async () => {
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await i18n.changeLanguage("en");
+  });
+
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  async function render(bridge: JobFinderBridge) {
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <BridgeProvider bridge={bridge}>
+            <ApplicationDocuments applicationId="a1" />
+          </BridgeProvider>
+        </MemoryRouter>,
+      );
+    });
+    await act(async () => {});
+  }
+
+  it("shows the loading state, then a not-generated state for each document", async () => {
+    let resolveGet: (value: ApplicationDocumentsRecord) => void = () => {};
+    const bridge = bridgeWith({
+      get: vi.fn(
+        () => new Promise<ApplicationDocumentsRecord>((resolve) => (resolveGet = resolve)),
+      ),
+    });
+    await render(bridge);
+    expect(container.textContent).toContain("Loading documents");
+
+    await act(async () => resolveGet(documentsOf()));
+
+    expect(container.textContent).toContain("Not generated yet.");
+    expect(button(container, "Generate")).toBeTruthy();
+  });
+
+  it("shows an error with a retry when the documents cannot be read", async () => {
+    const get = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("down"))
+      .mockResolvedValueOnce(documentsOf());
+    await render(bridgeWith({ get }));
+
+    expect(container.textContent).toContain("The documents could not be read.");
+    await act(async () => button(container, "Try again").click());
+    await act(async () => {});
+    expect(container.textContent).toContain("Not generated yet.");
+  });
+
+  it("shows AI unavailable and disables generation when no model is set up", async () => {
+    await render(bridgeWith({}, { ...localSettings, ai: { ...localSettings.ai, model: "" } }));
+
+    expect(container.textContent).toContain("AI unavailable");
+    expect(button(container, "Generate").disabled).toBe(true);
+  });
+
+  it("asks for consent before a cloud provider receives the profile, and sends it once given", async () => {
+    const generate = vi.fn(async () => ({ ok: true as const, document: coverLetter("Hi.") }));
+    await render(bridgeWith({ generate }, cloudSettings));
+
+    expect(container.textContent).toContain("Generating sends your profile");
+    const generateButton = button(container, "Generate");
+    expect(generateButton.disabled).toBe(true);
+
+    const consent = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    await act(async () => consent.click());
+    await act(async () => button(container, "Generate").click());
+
+    expect(generate).toHaveBeenCalledWith({
+      applicationId: "a1",
+      kind: "cv",
+      consent: true,
+    });
+  });
+
+  it("shows a generated letter as editable text and reports the saved change", async () => {
+    const save = vi.fn(async () => ({
+      ok: true as const,
+      document: coverLetter("Edited.", { updatedAt: 20 }),
+    }));
+    await render(
+      bridgeWith({
+        get: vi.fn(async () => documentsOf({ coverLetter: coverLetter("Hi there.") })),
+        save,
+      }),
+    );
+
+    const paragraph = textareaLabelled(container, "Paragraph 1");
+    expect(paragraph.value).toBe("Hi there.");
+    await act(async () => type(paragraph, "Edited."));
+    await act(async () => button(container, "Save changes").click());
+
+    expect(save).toHaveBeenCalledWith({
+      applicationId: "a1",
+      content: { kind: "cover-letter", letter: { paragraphs: ["Edited."] } },
+    });
+    expect(container.textContent).toContain("Changes saved.");
+  });
+
+  it("names the facts a refused save breaks, and does not report it as saved", async () => {
+    await render(
+      bridgeWith({
+        get: vi.fn(async () => documentsOf({ cv: cvRecord() })),
+        save: vi.fn(async () => ({
+          ok: false as const,
+          code: "validation-failed" as const,
+          issues: [{ code: "skill-name" as const, path: "skills.0" }],
+        })),
+      }),
+    );
+
+    await act(async () => button(container, "Save changes").click());
+
+    expect(container.textContent).toContain("Some text does not match your profile");
+    expect(container.textContent).toContain("a skill is not in your profile");
+    expect(container.textContent).not.toContain("Changes saved.");
+  });
+
+  it("links an AI failure to the settings, and shows a retryable failure without the link", async () => {
+    const generate = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, code: "invalid-key" })
+      .mockResolvedValueOnce({ ok: false, code: "invalid-output" });
+    await render(bridgeWith({ generate }));
+
+    await act(async () => button(container, "Generate").click());
+    expect(container.textContent).toContain("the provider rejected the API key");
+    expect(container.querySelector('a[href="/settings"]')).not.toBeNull();
+
+    await act(async () => button(container, "Generate").click());
+    expect(container.textContent).toContain("did not return a document that matches your profile");
+    expect(container.querySelectorAll('a[href="/settings"]').length).toBe(0);
+  });
+
+  it("exports the PDF, then offers to show it, which opens the file", async () => {
+    const exportPdf = vi.fn(async () => ({
+      ok: true as const,
+      document: coverLetter("Hi.", { exportedAt: 30 }),
+    }));
+    const reveal = vi.fn(async () => true);
+    await render(
+      bridgeWith({
+        get: vi.fn(async () => documentsOf({ coverLetter: coverLetter("Hi.") })),
+        exportPdf,
+        reveal,
+      }),
+    );
+
+    await act(async () => button(container, "Export PDF").click());
+    expect(exportPdf).toHaveBeenCalledWith({ applicationId: "a1", kind: "cover-letter" });
+    expect(container.textContent).toContain("PDF exported.");
+
+    await act(async () => button(container, "Show PDF in folder").click());
+    expect(reveal).toHaveBeenCalledWith({ applicationId: "a1", kind: "cover-letter" });
+  });
+
+  it("reports a failed export, and offers no reveal before a PDF exists", async () => {
+    await render(
+      bridgeWith({
+        get: vi.fn(async () => documentsOf({ coverLetter: coverLetter("Hi.") })),
+        exportPdf: vi.fn(async () => ({ ok: false as const, code: "export-failed" as const })),
+      }),
+    );
+
+    expect(
+      [...container.querySelectorAll("button")].some(
+        (node) => node.textContent === "Show PDF in folder",
+      ),
+    ).toBe(false);
+    await act(async () => button(container, "Export PDF").click());
+    expect(container.textContent).toContain("The PDF could not be exported.");
+  });
+});

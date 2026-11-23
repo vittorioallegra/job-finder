@@ -4,6 +4,7 @@ import type { ApplicationDetail as ApplicationDetailRecord } from "@job-finder/b
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Button } from "../../components/ui/Button";
 import { TextArea } from "../../components/ui/TextArea";
+import { ApplicationDocuments } from "./ApplicationDocuments";
 
 type DetailState =
   | { status: "loading" }
@@ -124,6 +125,7 @@ export function ApplicationDetail({ applicationId, onChanged, onClose }: Applica
               </ol>
             )}
           </div>
+          <ApplicationDocuments applicationId={state.application.id} />
           <form onSubmit={(event) => void addNote(event)} className="flex flex-col gap-2">
             <TextArea
               label={t("applications.detail.noteLabel")}

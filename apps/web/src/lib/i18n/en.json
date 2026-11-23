@@ -596,6 +596,63 @@
       "noteFailed": "The note could not be saved.",
       "postingLink": "Open the posting",
       "applyLink": "Open the apply page"
+    },
+    "documents": {
+      "heading": "Documents",
+      "intro": "Generate a tailored CV and cover letter from your profile and this job. You review and edit the text, then export a PDF. Nothing is sent to the employer.",
+      "loading": "Loading documents…",
+      "loadFailed": "The documents could not be read.",
+      "kinds": {
+        "cv": "Tailored CV",
+        "cover-letter": "Cover letter"
+      },
+      "notGenerated": "Not generated yet.",
+      "generate": "Generate",
+      "generateAgain": "Generate again",
+      "generating": "Generating…",
+      "generated": "Generated. Review the text before you export it.",
+      "consentNote": "Generating sends your profile and this job's text to {{provider}}. Nothing is sent until you press Generate.",
+      "consent": "I agree to send my profile and this job's text to {{provider}}.",
+      "aiUnavailable": "AI unavailable: no AI model is set up. Set one in Settings to generate documents.",
+      "openSettings": "Open Settings",
+      "summary": "Summary",
+      "bulletLabel": "Bullet {{number}} of {{title}}",
+      "paragraphLabel": "Paragraph {{number}}",
+      "education": "Education",
+      "skills": "Skills",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "saved": "Changes saved.",
+      "validationFailed": "Some text does not match your profile: {{issues}}.",
+      "export": "Export PDF",
+      "exporting": "Exporting…",
+      "exported": "PDF exported.",
+      "exportedAt": "Last PDF export: {{date}}.",
+      "stale": "You changed this document after the last export. Export again to update the PDF.",
+      "reveal": "Show PDF in folder",
+      "revealFailed": "The PDF is not exported yet, or its folder could not be opened.",
+      "failures": {
+        "not-found": "The application or its document was not found.",
+        "no-profile": "Save your profile first: the documents are written from it.",
+        "consent-required": "Agree to send your profile and this job's text to the provider first.",
+        "engine-unavailable": "AI unavailable: the background engine is not available. Try again in a moment.",
+        "not-configured": "AI unavailable: the AI provider is not fully set up in Settings.",
+        "invalid-key": "AI unavailable: the provider rejected the API key.",
+        "model-not-found": "AI unavailable: the provider does not know the configured model.",
+        "rate-limited": "AI unavailable: the provider is rate limiting requests. Try again later.",
+        "unreachable": "AI unavailable: the provider could not be reached.",
+        "invalid-output": "The AI did not return a document that matches your profile. Try again.",
+        "export-failed": "The PDF could not be exported.",
+        "unknown": "The document could not be generated."
+      },
+      "issues": {
+        "source-missing": "an item does not exist in your profile",
+        "source-repeated": "an item of your profile is listed twice",
+        "field-mismatch": "an employer, title, date, institution, degree or field differs from your profile",
+        "skill-name": "a skill is not in your profile",
+        "numbers-not-in-source": "a number in a bullet is not in its source bullet",
+        "numbers-not-in-profile": "a number is not in your profile"
+      }
     }
   }
 }
