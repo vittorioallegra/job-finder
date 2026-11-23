@@ -275,7 +275,7 @@ Approved: yes (2026-11-23)
 
 ### Steps
 - [x] 1. Workspace scaffold — `docs: add CLAUDE.md, README, license, contributing guide and repo conventions test`
-- [ ] 2. Engine walking skeleton and persistence foundation
+- [x] 2. Engine walking skeleton and persistence foundation — `feat: start engine and migrations from main, reconcile runs on startup`
 - [ ] 3. CI and release pipeline
 - [ ] 4. Bridge, settings and secrets
 - [ ] 5. AI layer
@@ -318,8 +318,9 @@ Approved: yes (2026-11-23)
 - Duplicate guard: same job/fingerprint warns and needs two explicit confirmations to proceed; same company within 90 days warns with one confirmation; spec AC8 reworded.
 - Linux without keyring (`basic_text`): warn; store API keys only after explicit opt-in, otherwise session-only.
 - i18next pinned to 27.1.0 instead of 27.2.5 (published 2026-11-23) to respect pnpm's minimum release age; no release-age exclusions.
+- esbuild install script denied via allowBuilds (esbuild: false); drizzle-kit works without it.
 
 ### Open questions
 
 ### Next
-Step 2: engine walking skeleton and persistence foundation (node:sqlite adapter, migrator with backup, engine utilityProcess).
+Step 3: CI and release pipeline. Add the extraResources entry for the migrations folder (`apps/desktop/drizzle` to `resources/drizzle`) in `electron-builder.yml`, and make the packaged E2E smoke check that the engine reports `engine ready` (the packaged migrations path is only exercised there).

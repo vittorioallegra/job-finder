@@ -9,7 +9,12 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       outDir: resolve(__dirname, "out/main"),
-      rollupOptions: { input: resolve(__dirname, "src/main/index.ts") },
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, "src/main/index.ts"),
+          engine: resolve(__dirname, "src/engine/index.ts"),
+        },
+      },
     },
   },
   preload: {

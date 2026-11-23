@@ -1,9 +1,9 @@
-// protects=the packaged-style build opens one window with the home screen and a second launch focuses it instead of opening another;
+// protects=the packaged-style build opens one window with the home screen, starts the engine utility process (ready after a ping), and a second launch focuses it instead of opening another;
 // fails_when=the window does not load the renderer, or a second instance keeps running or creates a second window;
 // no_claim=installers, code signing and the packaged app on Windows and Linux are covered by a later step.
 import { _electron as electron, expect, test } from "@playwright/test";
 import { spawn } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
@@ -21,6 +21,10 @@ test("window opens and a second launch does not open a second window", async () 
   try {
     const window = await app.firstWindow();
     await expect(window.getByRole("heading", { level: 1 })).toHaveText("Job Finder");
+    const logFile = join(userDataDir, "logs", "main.log");
+    await expect
+      .poll(() => (existsSync(logFile) ? readFileSync(logFile, "utf8") : ""), { timeout: 30_000 })
+      .toContain("engine ready");
 
     const second = spawn(electronBinary, [mainEntry, `--user-data-dir=${userDataDir}`], {
       stdio: "ignore",

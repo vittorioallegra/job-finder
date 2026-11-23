@@ -4,6 +4,7 @@
   },
   "startup": {
     "failedTitle": "Job Finder non è riuscito ad avviarsi",
-    "failedBody": "Impossibile creare la finestra dell'applicazione. Controlla i file di log e riprova."
+    "failedBody": "Impossibile creare la finestra dell'applicazione. Controlla i file di log e riprova.",
+    "databaseFailedBody": "Job Finder non è riuscito ad aprire il suo database. Controlla i file di log e riprova."
   }
 }
