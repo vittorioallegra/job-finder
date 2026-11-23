@@ -276,7 +276,7 @@ Approved: yes (2026-11-23)
 ### Steps
 - [x] 1. Workspace scaffold — `docs: add CLAUDE.md, README, license, contributing guide and repo conventions test`
 - [x] 2. Engine walking skeleton and persistence foundation — `feat: start engine and migrations from main, reconcile runs on startup`
-- [ ] 3. CI and release pipeline
+- [x] 3. CI and release pipeline — `ci: build, smoke-test and draft-release the desktop installers from v* tags`
 - [ ] 4. Bridge, settings and secrets
 - [ ] 5. AI layer
 - [ ] 6. Onboarding and profile
@@ -320,8 +320,18 @@ Approved: yes (2026-11-23)
 - i18next pinned to 27.1.0 instead of 27.2.5 (published 2026-11-23) to respect pnpm's minimum release age; no release-age exclusions.
 - esbuild install script denied via allowBuilds (esbuild: false); drizzle-kit works without it.
 - Engine calls reject with EngineUnavailableError on crash and after the supervisor gives up (after 5 failed restarts, i.e. the 6th consecutive crash); surfacing the failed state in the UI is left to a later UI step.
+- Installers: electron-builder 26.18.0 (exact, pinned with `electronVersion` 45.4.1). `electron: true` in `allowBuilds` because its install script downloads the runtime that packaging and the E2E need; `electron-winstaller` stays denied. No other install script was blocked.
+- Fuses (`build/after-pack.mjs`, ESM hook): RunAsNode, NODE_OPTIONS and CLI inspect arguments off; cookie encryption and OnlyLoadAppFromAsar on; embedded ASAR integrity not configured (off). Playwright launches Electron with `--inspect=0`, so the packaged smoke test runs a copy of the app with only the inspect fuse turned on (ad-hoc re-signed on macOS). Installers keep it off.
+- macOS: dmg for arm64 and x64, ad-hoc signed (`identity: "-"`), hardened runtime and Gatekeeper assessment off, no notarization. Windows: NSIS x64. Linux: AppImage and deb x64 (`executableName: job-finder`). Artifact names `job-finder-<version>-<arch>.<ext>`.
+- App icon: `apps/desktop/build/icon.png` (1024 px placeholder); electron-builder derives the icns and ico from it.
+- Packaged smoke runs against the unpacked app in each platform's output directory, not against the installers. It asserts the window, `engine ready`, an `applied N migration(s)` log line, `process.resourcesPath/drizzle` present, and a `node:sqlite` count of `__drizzle_migrations` from the main process.
+- Linux CI passes `--no-sandbox` to the test launch only (`JOB_FINDER_E2E_NO_SANDBOX=1`), as a precaution against the Ubuntu runner's user-namespace restrictions. Not reproduced yet; revisit if the Linux job runs fine without it.
+- Release: the desktop workflow creates a draft release only for `v*` tags; a manual run uploads artifacts to the run and stops there. Tag must equal `apps/desktop/package.json` version. Release notes come from `scripts/release-notes.mjs` (Conventional Commit subjects since the previous `v*` tag).
+- Actions are pinned to major version tags (`@v4`/`@v5`), not commit SHAs: this step had no way to verify SHAs. Pin before the first public release.
+- Workflow YAML validated with a parser (js-yaml); actionlint is not installed here.
+- Root `tsconfig.json` gets `allowJs` so the `.mjs` release script can be imported by its `.ts` test; `scripts/` is a Vitest project.
 
 ### Open questions
 
 ### Next
-Step 3: CI and release pipeline. Add the extraResources entry for the migrations folder (`apps/desktop/drizzle` to `resources/drizzle`) in `electron-builder.yml`, and make the packaged E2E smoke check that the engine reports `engine ready` (the packaged migrations path is only exercised there).
+Step 4: bridge, settings and secrets (typed IPC contract with zod schemas, sender-frame checks, settings repository, `safeStorage` with the Linux `basic_text` opt-in, settings screen).
