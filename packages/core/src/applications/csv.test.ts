@@ -21,6 +21,16 @@ describe("CSV export escaping", () => {
     expect(csvField("a=b")).toBe("a=b");
   });
 
+  it("also catches a formula after leading spaces or written with full-width characters, and leaves numbers alone", () => {
+    expect(csvField(" =SUM(A1)")).toBe("' =SUM(A1)");
+    expect(csvField("\u00a0@cmd")).toBe("'\u00a0@cmd");
+    expect(csvField("\uff1dSUM(A1)")).toBe("'\uff1dSUM(A1)");
+    expect(csvField("\uff0b1")).toBe("'\uff0b1");
+    expect(csvField("\uff0d1")).toBe("'\uff0d1");
+    expect(csvField("\uff20x")).toBe("'\uff20x");
+    expect(csvField(-5)).toBe("-5");
+  });
+
   it("writes null as an empty cell and joins rows with CRLF after the header", () => {
     expect(csvField(null)).toBe("");
     expect(
