@@ -9,12 +9,15 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "typecheck": "node ../../node_modules/typescript7/bin/tsc --noEmit -p tsconfig.json",
-    "test:e2e": "pnpm build && playwright test -c playwright.config.ts"
+    "test:e2e": "pnpm build && playwright test -c playwright.config.ts",
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
-    "@job-finder/bridge": "workspace:*"
+    "@job-finder/bridge": "workspace:*",
+    "drizzle-orm": "0.45.4"
   },
   "devDependencies": {
+    "@job-finder/core": "workspace:*",
     "@playwright/test": "1.65.1",
     "@tailwindcss/vite": "4.3.5",
     "@types/node": "26.6.6",
