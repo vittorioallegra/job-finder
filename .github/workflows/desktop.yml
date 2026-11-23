@@ -1,0 +1,125 @@
+name: Desktop release
+
+# Manual runs build and smoke-test the installers and attach them to the workflow run.
+# Pushing a `v*` tag does the same and then creates a draft GitHub Release. The tag must equal
+# the version in apps/desktop/package.json. Publishing the draft is a manual step.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Check version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: read
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version=$(node -p "require('./apps/desktop/package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$REF_TYPE" = "tag" ] && [ "$REF_NAME" != "v$version" ]; then
+            echo "::error::tag $REF_NAME does not match apps/desktop/package.json version $version"
+            exit 1
+          fi
+
+  build:
+    name: Build and smoke-test (${{ matrix.os }})
+    needs: version
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            executable: apps/desktop/dist/mac-arm64/Job Finder.app/Contents/MacOS/Job Finder
+          - os: windows-latest
+            executable: apps/desktop/dist/win-unpacked/Job Finder.exe
+          - os: ubuntu-latest
+            executable: apps/desktop/dist/linux-unpacked/job-finder
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build installers
+        run: pnpm desktop:dist
+      - name: Install Xvfb for the Linux smoke test
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      # Smoke test of the unpacked packaged app: window, engine ready, migrations from resources, node:sqlite read.
+      - name: Smoke-test the packaged app
+        if: runner.os != 'Linux'
+        env:
+          JOB_FINDER_PACKAGED_APP: ${{ github.workspace }}/${{ matrix.executable }}
+        run: pnpm --filter @job-finder/desktop test:e2e:packaged
+      - name: Smoke-test the packaged app under Xvfb
+        if: runner.os == 'Linux'
+        env:
+          JOB_FINDER_PACKAGED_APP: ${{ github.workspace }}/${{ matrix.executable }}
+          # The Ubuntu runner's AppArmor policy blocks Chromium's sandbox for the test launch only.
+          JOB_FINDER_E2E_NO_SANDBOX: "1"
+        run: xvfb-run --auto-servernum pnpm --filter @job-finder/desktop test:e2e:packaged
+      - name: Collect installers
+        shell: bash
+        run: |
+          mkdir -p installers
+          find apps/desktop/dist -maxdepth 1 -type f \
+            \( -name '*.dmg' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' \) \
+            -exec cp {} installers/ \;
+      - uses: actions/upload-artifact@v5
+        with:
+          name: installers-${{ matrix.os }}
+          path: installers/*
+          if-no-files-found: error
+
+  release:
+    name: Draft GitHub Release
+    needs: [version, build]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: installers-*
+          path: installers
+          merge-multiple: true
+      - name: Write release notes
+        shell: bash
+        run: |
+          args=(--version "$VERSION" --assets installers)
+          previous=$(git describe --tags --abbrev=0 --match 'v*' HEAD^ 2>/dev/null || true)
+          if [ -n "$previous" ]; then args+=(--previous "$previous"); fi
+          node scripts/release-notes.mjs "${args[@]}" > release-notes.md
+      - name: Create draft release
+        shell: bash
+        run: |
+          gh release create "$GITHUB_REF_NAME" installers/* \
+            --draft \
+            --title "Job Finder $VERSION" \
+            --notes-file release-notes.md
