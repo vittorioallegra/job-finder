@@ -720,6 +720,8 @@
         "consent-required": "Agree to send the form's fields and your profile to the provider first."
       },
       "ai": {
+        "loadFailed": "The AI settings could not be loaded. Try again.",
+        "retry": "Try again",
         "notConfigured": "AI unavailable: no AI provider is set up in Settings. Autofill still fills what your profile covers by its rules.",
         "openSettings": "Open Settings",
         "useAi": "Ask the AI to fill the fields the rules leave",

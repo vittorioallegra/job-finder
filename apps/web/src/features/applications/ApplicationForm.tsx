@@ -42,23 +42,31 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
   const [aiFallback, setAiFallback] = useState(false);
   const [consent, setConsent] = useState(false);
 
+  const [aiLoadFailed, setAiLoadFailed] = useState(false);
+  const [aiAttempt, setAiAttempt] = useState(0);
+
   useEffect(() => {
     let active = true;
-    void bridge.settings.get().then((settings) => {
-      if (!active) return;
-      const { ai: aiSettings } = settings;
-      setAi({
-        configured:
-          aiSettings.model.trim() !== "" &&
-          (aiSettings.provider !== "openai-compatible" || aiSettings.baseUrl.trim() !== ""),
-        cloud: isCloudAiEndpoint(aiSettings),
-        provider: t(`settings.ai.providers.${aiSettings.provider}`),
+    bridge.settings
+      .get()
+      .then((settings) => {
+        if (!active) return;
+        const { ai: aiSettings } = settings;
+        setAi({
+          configured:
+            aiSettings.model.trim() !== "" &&
+            (aiSettings.provider !== "openai-compatible" || aiSettings.baseUrl.trim() !== ""),
+          cloud: isCloudAiEndpoint(aiSettings),
+          provider: t(`settings.ai.providers.${aiSettings.provider}`),
+        });
+      })
+      .catch(() => {
+        if (active) setAiLoadFailed(true);
       });
-    });
     return () => {
       active = false;
     };
-  }, [bridge, t]);
+  }, [bridge, t, aiAttempt]);
 
   const available = application.status === "preparing" || application.status === "ready";
   const needsConsent = aiFallback && ai !== null && ai.cloud && ai.configured;
@@ -131,6 +139,22 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
         <p className="text-sm text-app-muted">{t("applications.form.inactive")}</p>
       ) : (
         <div className="flex flex-col gap-3">
+          {aiLoadFailed ? (
+            <div className="flex flex-col items-start gap-2">
+              <p role="alert" className="text-sm text-app-fg">
+                {t("applications.form.ai.loadFailed")}
+              </p>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setAiLoadFailed(false);
+                  setAiAttempt((n) => n + 1);
+                }}
+              >
+                {t("applications.form.ai.retry")}
+              </Button>
+            </div>
+          ) : null}
           {ai !== null && !ai.configured ? (
             <div className="flex flex-col items-start gap-2">
               <p role="status" className="text-sm text-app-fg">
@@ -166,7 +190,7 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
           <div>
             <Button
               variant="secondary"
-              disabled={openDisabled || ai === null}
+              disabled={openDisabled || (ai === null && !aiLoadFailed)}
               onClick={() => void open()}
             >
               {busy === "open" ? t("applications.form.opening") : t("applications.form.open")}

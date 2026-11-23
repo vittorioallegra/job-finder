@@ -720,6 +720,8 @@
         "consent-required": "Prima acconsenti a inviare al fornitore i campi del modulo e il profilo."
       },
       "ai": {
+        "loadFailed": "Impossibile caricare le impostazioni AI. Riprova.",
+        "retry": "Riprova",
         "notConfigured": "AI non disponibile: nessun fornitore AI è impostato nelle Impostazioni. L'autocompilazione riempie comunque ciò che il profilo copre con le regole.",
         "openSettings": "Apri Impostazioni",
         "useAi": "Chiedi all'AI di compilare i campi che le regole lasciano",

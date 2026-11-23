@@ -106,6 +106,28 @@ describe("application form panel", () => {
     });
   }
 
+  it("shows an error with a retry when the AI settings cannot be loaded", async () => {
+    // protects=the AI settings load failure shows an error state with a retry; fails_when=the rejection only reaches the console or retry does not reload; no_claim=the form start itself;
+    const bridge = bridgeWith(async () => ({ ok: false, code: "autofill-failed" }));
+    const realGet = bridge.settings.get;
+    let calls = 0;
+    bridge.settings.get = async () => {
+      calls += 1;
+      if (calls === 1) throw new Error("boom");
+      return realGet();
+    };
+    await render(bridge);
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+      "The AI settings could not be loaded",
+    );
+
+    await act(async () => button(container, "Try again").click());
+
+    expect(calls).toBe(2);
+    expect(container.textContent).not.toContain("could not be loaded");
+    expect(checkbox(container, "AI")).toBeTruthy();
+  });
+
   it("opens the form and lists what was filled and what is left for the user", async () => {
     const bridge = bridgeWith(async () => ({
       ok: true,

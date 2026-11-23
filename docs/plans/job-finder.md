@@ -301,6 +301,7 @@ Approved: yes (2026-11-23)
   - Autofill filled a field hidden by a zero-height or zero-width ancestor with clipped overflow, a common honeypot trap — `fix: treat fields inside a zero-size clipped block as autofill honeypots`
   - SmartRecruiters adapter ended a scan as complete on an empty page while totalFound was higher, so a partial read could close jobs — `fix: fail a SmartRecruiters scan whose page is empty while more postings are announced`
 - review: pending
+  - ApplicationForm swallowed a failed settings load, leaving the AI fallback state unset with no error or retry — `fix: show an error with a retry when the application form cannot load the AI settings`
 
 ### Decisions
 - Single-user, local-only app; published as open source on GitHub, each user runs it on their own machine.
