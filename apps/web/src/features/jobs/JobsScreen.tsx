@@ -303,9 +303,12 @@ export function JobsScreen() {
         </Link>
       </nav>
       <h1 className="text-3xl font-semibold text-app-fg">{t("jobs.title")}</h1>
-      <p>
+      <p className="flex flex-wrap gap-4">
         <Link to="/companies" className="text-sm text-app-accent underline">
           {t("jobs.openCompanies")}
+        </Link>
+        <Link to="/applications" className="text-sm text-app-accent underline">
+          {t("jobs.openApplications")}
         </Link>
       </p>
 
@@ -513,6 +516,13 @@ export function JobsScreen() {
                       {job.dismissed ? (
                         <span className="rounded-full border border-app-border px-2 py-0.5 text-xs text-app-muted">
                           {t("jobs.results.dismissed")}
+                        </span>
+                      ) : null}
+                      {job.applicationStatus !== null ? (
+                        <span className="rounded-full border border-app-border px-2 py-0.5 text-xs text-app-fg">
+                          {t("jobs.results.applicationStatus", {
+                            status: t(`applications.status.${job.applicationStatus}`),
+                          })}
                         </span>
                       ) : null}
                     </div>

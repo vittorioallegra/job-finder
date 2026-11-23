@@ -34,6 +34,7 @@ export interface FilterDraft {
   sources: string[];
   minScore: string;
   hideDismissed: boolean;
+  hideApplied: boolean;
   newOnly: boolean;
 }
 
@@ -76,6 +77,7 @@ export function draftFromFilter(filter: JobFilter): FilterDraft {
     sources: [...filter.sources],
     minScore: filter.minScore === null ? "" : String(filter.minScore),
     hideDismissed: filter.hideDismissed,
+    hideApplied: filter.hideApplied,
     newOnly: filter.newOnly,
   };
 }
@@ -111,6 +113,7 @@ export function filterFromDraft(
     sources: draft.sources,
     minScore: draft.minScore.trim() === "" ? null : Number(draft.minScore),
     hideDismissed: draft.hideDismissed,
+    hideApplied: draft.hideApplied,
     newOnly: draft.newOnly,
   });
   return parsed.success ? { ok: true, filter: parsed.data } : { ok: false };

@@ -345,7 +345,8 @@
       "dismissed": "Scartato",
       "open": "Apri",
       "openJob": "Apri {{title}}",
-      "noMatch": "Nessun annuncio corrisponde a questi filtri. Cambiali o reimpostali."
+      "noMatch": "Nessun annuncio corrisponde a questi filtri. Cambiali o reimpostali.",
+      "applicationStatus": "Candidatura: {{status}}"
     },
     "filters": {
       "heading": "Filtri",
@@ -422,7 +423,8 @@
       "newOnly": "Solo annunci nuovi (non ancora aperti)",
       "apply": "Applica filtri",
       "reset": "Reimposta filtri",
-      "invalid": "Controlla i filtri: un numero, un codice paese o un codice lingua non è valido."
+      "invalid": "Controlla i filtri: un numero, un codice paese o un codice lingua non è valido.",
+      "hideApplied": "Nascondi gli annunci già candidati"
     },
     "saved": {
       "heading": "Ricerche salvate",
@@ -468,8 +470,22 @@
       "noSources": "Nessuna fonte registrata per questo annuncio.",
       "sourceClosed": "non più elencato",
       "postingUrl": "Annuncio: {{url}}",
-      "applyUrl": "Pagina di candidatura: {{url}}"
-    }
+      "applyUrl": "Pagina di candidatura: {{url}}",
+      "bookmark": "Salva",
+      "removeBookmark": "Rimuovi dai salvati",
+      "prepare": "Prepara candidatura",
+      "prepared": "Candidatura avviata. Il suo stato è ora {{status}}.",
+      "prepareCheck": {
+        "sameJobWarning": "Questo annuncio ha già una candidatura: {{count}} per lo stesso annuncio o per un annuncio con la stessa impronta.",
+        "sameCompanyWarning": "Questa azienda ha una candidatura modificata negli ultimi 90 giorni: {{count}}.",
+        "confirmOnce": "Ho capito, prepara comunque",
+        "confirmAgain": "Conferma ancora: prepara una seconda candidatura",
+        "cancel": "Annulla",
+        "previous": "{{title}} presso {{company}}: {{status}}, modificata il {{date}}",
+        "failed": "Non è stato possibile avviare la candidatura."
+      }
+    },
+    "openApplications": "Apri candidature"
   },
   "companies": {
     "title": "Aziende",
@@ -527,6 +543,59 @@
         "duplicate-company": "Questa bacheca è già nell'elenco.",
         "unknown": "Non è stato possibile aggiungere l'azienda."
       }
+    }
+  },
+  "applications": {
+    "title": "Candidature",
+    "backToJobs": "Torna agli annunci",
+    "view": {
+      "label": "Vista",
+      "list": "Elenco",
+      "board": "Bacheca"
+    },
+    "filters": {
+      "status": "Stato",
+      "allStatuses": "Tutti gli stati",
+      "company": "Azienda",
+      "allCompanies": "Tutte le aziende"
+    },
+    "status": {
+      "bookmarked": "Salvata",
+      "preparing": "In preparazione",
+      "ready": "Pronta",
+      "applied": "Inviata",
+      "interviewing": "Colloquio",
+      "offer": "Offerta",
+      "rejected": "Rifiutata",
+      "withdrawn": "Ritirata"
+    },
+    "loading": "Caricamento candidature…",
+    "loadFailed": "Non è stato possibile leggere le candidature.",
+    "retry": "Riprova",
+    "empty": "Nessuna candidatura. Salva un annuncio o avvia la preparazione dalla schermata annunci.",
+    "noMatch": "Nessuna candidatura corrisponde a questi filtri.",
+    "changed": "Modificata il {{date}}",
+    "cardStatus": "Stato di {{title}}",
+    "openDetail": "Dettagli di {{title}}",
+    "details": "Dettagli",
+    "statusFailed": "Non è stato possibile cambiare lo stato.",
+    "export": {
+      "button": "Esporta CSV",
+      "dialogTitle": "Esporta candidature",
+      "done": "Esportate {{count}} candidature in {{path}}.",
+      "failed": "Esportazione non riuscita."
+    },
+    "detail": {
+      "heading": "Cronologia",
+      "loading": "Caricamento della cronologia…",
+      "loadFailed": "Non è stato possibile leggere la cronologia.",
+      "close": "Chiudi",
+      "noEvents": "Nessun evento.",
+      "noteLabel": "Aggiungi una nota",
+      "addNote": "Aggiungi nota",
+      "noteFailed": "Non è stato possibile salvare la nota.",
+      "postingLink": "Apri l'annuncio",
+      "applyLink": "Apri la pagina di candidatura"
     }
   }
 }

@@ -1,4 +1,5 @@
 import { createBrowserRouter } from "react-router";
+import { ApplicationsScreen } from "../features/applications/ApplicationsScreen";
 import { CompaniesScreen } from "../features/companies/CompaniesScreen";
 import { HomeScreen } from "../features/home/HomeScreen";
 import { JobsScreen } from "../features/jobs/JobsScreen";
@@ -13,6 +14,7 @@ export const router = createBrowserRouter([
   { path: "/profile", element: <ProfileScreen /> },
   { path: "/companies", element: <CompaniesScreen /> },
   { path: "/jobs", element: <JobsScreen /> },
+  { path: "/applications", element: <ApplicationsScreen /> },
   { path: "/settings", element: <SettingsScreen /> },
   { path: "*", element: <NotFoundScreen /> },
 ]);

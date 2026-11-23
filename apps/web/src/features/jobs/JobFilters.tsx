@@ -280,6 +280,11 @@ export function JobFilters({
           onChange={(event) => set("hideDismissed", event.target.checked)}
         />
         <CheckboxInput
+          label={t("jobs.filters.hideApplied")}
+          checked={draft.hideApplied}
+          onChange={(event) => set("hideApplied", event.target.checked)}
+        />
+        <CheckboxInput
           label={t("jobs.filters.newOnly")}
           checked={draft.newOnly}
           onChange={(event) => set("newOnly", event.target.checked)}

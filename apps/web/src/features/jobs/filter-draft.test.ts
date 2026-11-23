@@ -62,6 +62,7 @@ describe("filter draft", () => {
       sources: ["greenhouse"],
       minScore: 60,
       hideDismissed: false,
+      hideApplied: false,
       newOnly: true,
     });
 

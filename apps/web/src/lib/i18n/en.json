@@ -345,7 +345,8 @@
       "dismissed": "Dismissed",
       "open": "Open",
       "openJob": "Open {{title}}",
-      "noMatch": "No job matches these filters. Change them or reset the filters."
+      "noMatch": "No job matches these filters. Change them or reset the filters.",
+      "applicationStatus": "Application: {{status}}"
     },
     "filters": {
       "heading": "Filters",
@@ -422,7 +423,8 @@
       "newOnly": "Only new jobs (not opened yet)",
       "apply": "Apply filters",
       "reset": "Reset filters",
-      "invalid": "Check the filters: a number, a country code or a language code is not valid."
+      "invalid": "Check the filters: a number, a country code or a language code is not valid.",
+      "hideApplied": "Hide applied jobs"
     },
     "saved": {
       "heading": "Saved searches",
@@ -468,8 +470,22 @@
       "noSources": "No source is recorded for this job.",
       "sourceClosed": "no longer listed",
       "postingUrl": "Posting: {{url}}",
-      "applyUrl": "Apply page: {{url}}"
-    }
+      "applyUrl": "Apply page: {{url}}",
+      "bookmark": "Bookmark",
+      "removeBookmark": "Remove bookmark",
+      "prepare": "Prepare application",
+      "prepared": "Application started. Its status is now {{status}}.",
+      "prepareCheck": {
+        "sameJobWarning": "This job already has an application: {{count}} for this same posting or a posting with the same fingerprint.",
+        "sameCompanyWarning": "This company has an application changed in the last 90 days: {{count}}.",
+        "confirmOnce": "I understand, prepare anyway",
+        "confirmAgain": "Confirm again: prepare a second application",
+        "cancel": "Cancel",
+        "previous": "{{title}} at {{company}}: {{status}}, changed {{date}}",
+        "failed": "The application could not be started."
+      }
+    },
+    "openApplications": "Open applications"
   },
   "companies": {
     "title": "Companies",
@@ -527,6 +543,59 @@
         "duplicate-company": "This job board is already in the list.",
         "unknown": "The company could not be added."
       }
+    }
+  },
+  "applications": {
+    "title": "Applications",
+    "backToJobs": "Back to jobs",
+    "view": {
+      "label": "View",
+      "list": "List",
+      "board": "Board"
+    },
+    "filters": {
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "company": "Company",
+      "allCompanies": "All companies"
+    },
+    "status": {
+      "bookmarked": "Bookmarked",
+      "preparing": "Preparing",
+      "ready": "Ready",
+      "applied": "Applied",
+      "interviewing": "Interviewing",
+      "offer": "Offer",
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn"
+    },
+    "loading": "Loading applications…",
+    "loadFailed": "Applications could not be read.",
+    "retry": "Try again",
+    "empty": "No applications yet. Bookmark a job or start preparing it on the jobs screen.",
+    "noMatch": "No application matches these filters.",
+    "changed": "Changed {{date}}",
+    "cardStatus": "Status of {{title}}",
+    "openDetail": "Details of {{title}}",
+    "details": "Details",
+    "statusFailed": "The status could not be changed.",
+    "export": {
+      "button": "Export CSV",
+      "dialogTitle": "Export applications",
+      "done": "Exported {{count}} applications to {{path}}.",
+      "failed": "The export failed."
+    },
+    "detail": {
+      "heading": "Timeline",
+      "loading": "Loading the timeline…",
+      "loadFailed": "The timeline could not be read.",
+      "close": "Close",
+      "noEvents": "No events yet.",
+      "noteLabel": "Add a note",
+      "addNote": "Add note",
+      "noteFailed": "The note could not be saved.",
+      "postingLink": "Open the posting",
+      "applyLink": "Open the apply page"
     }
   }
 }
