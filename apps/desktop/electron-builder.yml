@@ -1,0 +1,47 @@
+# Installer build for `pnpm desktop:dist`. Each OS builds the targets listed for it; `publish` is
+# off because the release workflow uploads the installers to a draft GitHub Release.
+appId: dev.job-finder.desktop
+productName: Job Finder
+copyright: Copyright (c) Job Finder contributors
+# Pinned to the electron devDependency; electron-builder downloads this exact runtime.
+electronVersion: 45.4.1
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**/*
+  - package.json
+# Migrations are read from resources/drizzle when packaged (see resolveMigrationsFolder).
+extraResources:
+  - from: drizzle
+    to: drizzle
+asar: true
+icon: build/icon.png
+artifactName: "job-finder-${version}-${arch}.${ext}"
+publish: null
+# Flips Electron fuses on the packaged binary before signing (see build/after-pack.mjs).
+afterPack: build/after-pack.mjs
+mac:
+  category: public.app-category.productivity
+  # Ad-hoc signature only (no Apple Developer ID); see docs/release.md for opening unsigned apps.
+  identity: "-"
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+linux:
+  executableName: job-finder
+  category: Office
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]

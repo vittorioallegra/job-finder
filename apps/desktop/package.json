@@ -8,8 +8,10 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "dist": "electron-vite build && electron-builder --config electron-builder.yml --publish never",
     "typecheck": "node ../../node_modules/typescript7/bin/tsc --noEmit -p tsconfig.json",
     "test:e2e": "pnpm build && playwright test -c playwright.config.ts",
+    "test:e2e:packaged": "playwright test -c playwright.config.ts packaged.spec.ts",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
