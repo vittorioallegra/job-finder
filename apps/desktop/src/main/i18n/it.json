@@ -1,0 +1,9 @@
+{
+  "window": {
+    "title": "Job Finder"
+  },
+  "startup": {
+    "failedTitle": "Job Finder non è riuscito ad avviarsi",
+    "failedBody": "Impossibile creare la finestra dell'applicazione. Controlla i file di log e riprova."
+  }
+}

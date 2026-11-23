@@ -1,0 +1,12 @@
+{
+  "app": {
+    "name": "Job Finder",
+    "notFound": "Questa pagina non esiste."
+  },
+  "home": {
+    "title": "Job Finder",
+    "subtitle": "La configurazione è in corso.",
+    "emptyTitle": "Non c'è ancora nulla",
+    "emptyBody": "Ricerche e risultati compariranno qui."
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@job-finder/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pure TypeScript domain logic. No Electron or React imports.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "node ../../node_modules/typescript7/bin/tsc --noEmit -p tsconfig.json"
+  }
+}

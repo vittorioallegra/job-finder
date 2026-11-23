@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/* Design tokens. Colors are defined on :root and redefined for dark mode. */
+:root {
+  --app-bg: #f7f7f5;
+  --app-fg: #1c1c1a;
+  --app-muted: #6b6b66;
+  --app-accent: #2f5fd0;
+  --app-border: #d9d9d4;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --app-bg: #161614;
+    --app-fg: #ededea;
+    --app-muted: #a3a39c;
+    --app-accent: #8fb0ff;
+    --app-border: #34342f;
+  }
+}
+
+:root[data-theme="dark"] {
+  --app-bg: #161614;
+  --app-fg: #ededea;
+  --app-muted: #a3a39c;
+  --app-accent: #8fb0ff;
+  --app-border: #34342f;
+}
+
+@theme inline {
+  --color-app-bg: var(--app-bg);
+  --color-app-fg: var(--app-fg);
+  --color-app-muted: var(--app-muted);
+  --color-app-accent: var(--app-accent);
+  --color-app-border: var(--app-border);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-fg);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+}

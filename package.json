@@ -1,0 +1,40 @@
+{
+  "name": "job-finder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native desktop app that finds, ranks and tracks job openings, and prepares applications for the user to review.",
+  "license": "MIT",
+  "packageManager": "pnpm@12.21.0",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "setup": "pnpm install",
+    "dev": "pnpm --filter @job-finder/web dev",
+    "desktop:dev": "pnpm --filter @job-finder/desktop dev",
+    "desktop:build": "pnpm --filter @job-finder/desktop build",
+    "typecheck": "pnpm -r --no-bail typecheck && node node_modules/typescript7/bin/tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run --reporter=dot",
+    "test:e2e:desktop": "pnpm --filter @job-finder/desktop test:e2e",
+    "verify": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm test:e2e:desktop"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.65.1",
+    "@types/node": "26.6.6",
+    "eslint": "10.15.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-i18next": "6.1.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.14.0",
+    "jsdom": "31.0.1",
+    "prettier": "3.10.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.73.0",
+    "typescript7": "npm:typescript@7.0.2",
+    "vitest": "5.1.1"
+  }
+}
