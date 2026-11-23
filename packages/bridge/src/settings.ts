@@ -127,3 +127,13 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   updates: { checkEnabled: true },
   secrets: { allowBasicText: false },
 };
+
+/** Merges a patch into settings section by section and validates the result. Throws on invalid input. */
+export function applySettingsPatch(current: AppSettings, patch: AppSettingsPatch): AppSettings {
+  const changes = AppSettingsPatchSchema.parse(patch);
+  const merged: Record<string, unknown> = {};
+  for (const section of Object.keys(SETTINGS_SECTIONS) as AppSettingsSection[]) {
+    merged[section] = { ...current[section], ...changes[section] };
+  }
+  return AppSettingsSchema.parse(merged);
+}

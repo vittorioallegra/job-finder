@@ -3,6 +3,7 @@ import { settings } from "@job-finder/core";
 import {
   AppSettingsPatchSchema,
   AppSettingsSchema,
+  applySettingsPatch,
   DEFAULT_APP_SETTINGS,
   SETTINGS_SECTIONS,
   type AppSettings,
@@ -56,13 +57,9 @@ export function createSettingsRepository(db: AppDb): SettingsRepository {
   return {
     get: read,
     async update(patch) {
-      const changes = AppSettingsPatchSchema.parse(patch);
       const current = await read();
-      const merged: Record<string, unknown> = {};
-      for (const section of SECTIONS) {
-        merged[section] = { ...current[section], ...changes[section] };
-      }
-      const next = AppSettingsSchema.parse(merged);
+      const next = applySettingsPatch(current, patch);
+      const changes = AppSettingsPatchSchema.parse(patch);
       const now = Date.now();
       for (const section of SECTIONS) {
         if (changes[section] === undefined) {
