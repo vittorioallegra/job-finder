@@ -286,7 +286,7 @@ Approved: yes (2026-11-23)
 - [x] 10. Discovery A: web search and companies — `docs: record step 10 decisions and tick the step`
 - [x] 11. Discovery B: Common Crawl and keyed providers — `docs: record step 11 decisions and tick the step`
 - [x] 12. Generic careers page adapter — `docs: record step 12 decisions and tick the step`
-- [ ] 13. Matching and ranking
+- [x] 13. Matching and ranking — `docs: record step 13 decisions and tick the step`
 - [ ] 14. Search and filters UI
 - [ ] 15. Application tracker
 - [ ] 16. CV and cover letter
@@ -442,8 +442,22 @@ Approved: yes (2026-11-23)
 - Step 12: fixtures are hand-written (a static listing, an empty app shell, a rendered listing, one posting page), not recordings of real sites. The automated tests use a scripted HTTP fetch and a scripted provider behind `createAiModel`, and never reach the network.
 - Step 12: Prettier was applied to the files this step touched. Several files already failed `pnpm format:check` at HEAD and were not touched: `core/discovery/discover.ts`, `core/discovery/keyed.ts`, `core/discovery/commoncrawl.test.ts`, `core/discovery/discover.test.ts`, `core/discovery/keyed.test.ts`, `core/net/http.test.ts`, `desktop/main/discovery/service.ts` and its test. Fixing them is left to a separate change.
 - Step 12: not exercised: real career pages or real model answers (none were requested, per the rules); the hidden window rendering a JavaScript careers page (the E2E run covers the window and the engine start only); a generic company scanned from the packaged app; AI extraction quality on real pages and models; posting-page descriptions on real sites, which can include navigation text.
+- Step 13: scoring starts from the jobs screen ("Score jobs"), not during ingestion. The renderer awaits `scores:start`; the engine runs the scoring and returns counts. No `runs` row and no run log for scoring, since the step did not ask for progress.
+- Step 13: the hard filters belong to step 14's filter engine, which does not exist yet. Candidates are the open jobs, newest first, at most 500 per run. Step 14 passes the filtered and visible order into the same run.
+- Step 13: `core/ranking` (subpath `@job-finder/core/ranking`) scores in chunks of 10 with at most 3 AI calls at once (`p-queue`, already a core dependency) and at most 50 AI calls per run. A stored score costs no call. Jobs past the budget count as skipped and a later run scores them.
+- Step 13: table `job_scores` has the primary key (`job_id`, `profile_version`), one row per job and profile version. A stored score is reused only when its job hash, profile hash, model and prompt version (1) all match. A new profile version finds no row and is scored again; the list reads only the current version's rows.
+- Step 13: the job hash covers the fields the prompt shows (company, title, description, locations, work mode, employment type, seniority, salary, visa sponsorship, language). The profile hash is the hash of the existing scoring snapshot, so contact-only edits keep the scores.
+- Step 13: the answer is `{score: integer 0-100, explanation}` through `generateStructured`, with its one repair retry. An invalid answer after the retry counts as failed and stores nothing. Any other AI failure (unreachable, rejected key, rate limit, unknown model, no model configured) stops the run as `ai-unavailable`; scores stored before it are kept.
+- Step 13: explanations are AI output in English, not i18n strings. Revisit if explanations should follow the app language.
+- Step 13: for a cloud provider, the profile's ranking fields and the job text leave the machine, so scoring needs the same consent as the CV import (`consent` in `scores:start`). The plan does not say this; it is the conservative choice. Local providers need no consent.
+- Step 13: the list is sorted by affinity, highest first, unscored jobs last and newest first within each group. The newest-first toggle is step 14's.
+- Step 13: the engine gets the profile's ranking fields only (no contact details) and the key for the run only. It reaches the database through three batched calls (`scores.jobs`, `scores.lookup`, `scores.persist`) that main executes.
+- Step 13: migration `0007_job_scores.sql` adds a CHECK on the score range and a foreign key to `jobs`; the populated-fixture test is `scoring-migrations.test.ts`.
+- Step 13: without a provider or key the jobs screen shows "AI unavailable" with a link to Settings and keeps the jobs listed unscored. "No profile" and "consent required" have their own messages.
+- Step 13: Prettier was applied to the files this step touched. `pnpm format:check` is clean on the whole repo at the end of the step.
+- Step 13: not exercised: real model answers and provider behaviour (scripted doubles only); scores and the budget on a real job set; the 500-job cap with real data; a scoring run in the packaged app (the E2E covers the window and engine start only).
 
 ### Open questions
 
 ### Next
-Step 13: Matching and ranking (table `job_scores`; affinity score 0-100 with an explanation through the AI layer; cache key of job content hash, profile hash, model and prompt version; computed only for jobs that pass the hard filters; visible and top jobs first; per-run AI budget and concurrency limit; jobs without a score still listed when AI is unavailable).
+Step 14: Search and filters UI (tables `saved_searches`, `job_flags` (dismissed, new only); filter engine in core (SQL from a typed filter object) covering every spec filter; "posted within" falls back to `first_seen_at` when `posted_at` is missing; minimum salary compares only same currency and period (no FX); results sorted by affinity (toggle newest), job detail with all sources, dismiss / bookmark / "new" badge, saved searches CRUD, run progress and run log). Step 14 also passes the filtered, visible order into the scoring run (step 13 scores newest first).
