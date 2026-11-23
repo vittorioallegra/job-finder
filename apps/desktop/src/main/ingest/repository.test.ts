@@ -1,5 +1,5 @@
-// protects=a company is stored only with a board the adapters can read, one board is stored once, the job list shows only open jobs, the latest run comes back with its log in order, and each company shows its most recent scan from the run log;
-// fails_when=a careers URL with no supported board is stored, the same board is stored twice, a closed job is listed, the run log is returned out of order or without its kinds, or a company shows an older scan than its latest one;
+// protects=a company is stored with its supported board or as a generic careers page, one board or careers URL is stored once, the job list shows only open jobs, the latest run comes back with its log in order, and each company shows its most recent scan;
+// fails_when=a board or careers URL already stored is stored again, a supported careers URL is stored without its board, a closed job is listed, the run log is returned out of order or without its kinds, or a company shows an older scan than its latest;
 // no_claim=the careers URL is checked by its shape only, without a request, so a board that does not exist is still stored; the database schema is covered by the migration tests.
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -23,7 +23,7 @@ async function openDatabase(): Promise<AppDatabase> {
 }
 
 describe("ingest repository", () => {
-  it("stores a company with its detected board and refuses an unsupported or repeated one", async () => {
+  it("stores a company with its detected board or its careers page, and refuses a repeated one", async () => {
     const database = await openDatabase();
     const repository = createIngestRepository(database.db);
 
@@ -47,14 +47,17 @@ describe("ingest repository", () => {
 
     expect(
       await repository.addCompany({ name: "Other", careersUrl: "https://example.com/careers" }),
-    ).toEqual({ ok: false, code: "unsupported-careers-url" });
+    ).toMatchObject({
+      ok: true,
+      company: { ats: null, slug: null, careersUrl: "https://example.com/careers" },
+    });
     expect(
       await repository.addCompany({
         name: "Acme again",
         careersUrl: "https://job-boards.greenhouse.io/acme",
       }),
     ).toEqual({ ok: false, code: "duplicate-company" });
-    expect(await repository.listCompanies()).toHaveLength(1);
+    expect(await repository.listCompanies()).toHaveLength(2);
     database.close();
   });
 

@@ -120,6 +120,12 @@ if (gotSingleInstanceLock) {
     }
     // The ingestion service and the supervisor refer to each other: the supervisor forwards engine
     // progress to the service, and the service reaches the engine through `supervisor`.
+    const settingsRepository = createSettingsRepository(database.db);
+    const secretStore = createSecretStore({
+      safeStorage,
+      rows: createSettingsSecretRows(database.db),
+      isBasicTextAllowed: async () => (await settingsRepository.get()).secrets.allowBasicText,
+    });
     let supervisor: EngineSupervisor | null = null;
     const ingestion = createIngestionService({
       engine: () => supervisor,
@@ -127,6 +133,19 @@ if (gotSingleInstanceLock) {
         for (const window of BrowserWindow.getAllWindows()) {
           window.webContents.send(INGEST_PROGRESS_CHANNEL, event);
         }
+      },
+      // Generic careers pages use the saved AI provider; the key is read here and handed only to the engine.
+      aiSettings: async () => {
+        const { ai } = await settingsRepository.get();
+        return {
+          config: {
+            provider: ai.provider,
+            model: ai.model,
+            baseUrl: ai.baseUrl,
+            apiKey: await secretStore.read("ai.apiKey"),
+          },
+          contextSize: ai.contextSize,
+        };
       },
     });
     supervisor = startEngineSupervisor({
@@ -151,12 +170,6 @@ if (gotSingleInstanceLock) {
     const rendererUrl = isDevelopment
       ? (process.env["ELECTRON_RENDERER_URL"] as string)
       : `${APP_SCHEME}://${APP_HOST}/`;
-    const settingsRepository = createSettingsRepository(database.db);
-    const secretStore = createSecretStore({
-      safeStorage,
-      rows: createSettingsSecretRows(database.db),
-      isBasicTextAllowed: async () => (await settingsRepository.get()).secrets.allowBasicText,
-    });
     const aiConnection = createAiConnectionService({
       settings: settingsRepository,
       secrets: secretStore,

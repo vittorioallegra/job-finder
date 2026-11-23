@@ -86,7 +86,7 @@ function spyServices() {
     },
     addCompany: async () => {
       calls.push("repository.addCompany");
-      return { ok: false as const, code: "unsupported-careers-url" as const };
+      return { ok: false as const, code: "duplicate-company" as const };
     },
     listJobs: async () => {
       calls.push("repository.listJobs");

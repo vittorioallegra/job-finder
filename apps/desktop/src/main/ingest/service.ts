@@ -1,9 +1,14 @@
 import type { IngestEvent } from "@job-finder/core/ingest/events";
 import type { IngestStartResult } from "@job-finder/bridge";
+import type { IngestAiSettings } from "../../engine/protocol";
 
 /** The part of the engine supervisor the ingestion service needs. */
 export interface IngestionEngine {
-  startIngestion(runId: string, companyId?: string): Promise<"accepted" | "already-running">;
+  startIngestion(
+    runId: string,
+    companyId?: string,
+    ai?: IngestAiSettings,
+  ): Promise<"accepted" | "already-running">;
   cancelIngestion(runId: string): void;
 }
 
@@ -12,6 +17,11 @@ export interface IngestionServiceOptions {
   engine: () => IngestionEngine | null;
   /** Sends a progress event to the renderer windows. */
   broadcast: (event: IngestEvent) => void;
+  /**
+   * The AI provider for generic careers pages, read when a run starts: settings plus the saved key.
+   * Omitted or rejected: the run goes ahead without AI, and generic careers pages fail with `ai-unavailable`.
+   */
+  aiSettings?: () => Promise<IngestAiSettings | undefined>;
   newRunId?: () => string;
 }
 
@@ -28,6 +38,17 @@ export interface IngestionService {
 /** Seq of a progress event that is not in the run log (the run never wrote its own). */
 const UNSTORED_SEQ = -1;
 
+async function loadAiSettings(
+  load: IngestionServiceOptions["aiSettings"],
+): Promise<IngestAiSettings | undefined> {
+  if (!load) return undefined;
+  try {
+    return await load();
+  } catch {
+    return undefined;
+  }
+}
+
 /** Runs one ingestion at a time from the renderer's request to the engine and back. */
 export function createIngestionService(options: IngestionServiceOptions): IngestionService {
   const newRunId = options.newRunId ?? (() => crypto.randomUUID());
@@ -43,9 +64,10 @@ export function createIngestionService(options: IngestionServiceOptions): Ingest
         return { ok: false, code: "engine-unavailable" };
       }
       const runId = newRunId();
+      const ai = await loadAiSettings(options.aiSettings);
       let answer: "accepted" | "already-running";
       try {
-        answer = await engine.startIngestion(runId, companyId);
+        answer = await engine.startIngestion(runId, companyId, ai);
       } catch {
         return { ok: false, code: "engine-unavailable" };
       }

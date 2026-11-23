@@ -294,7 +294,11 @@
         "storage-failed": "gli annunci non sono stati salvati",
         "aborted": "la scansione è stata fermata",
         "invalid-url": "l'indirizzo non è valido",
-        "unknown": "errore imprevisto"
+        "unknown": "errore imprevisto",
+        "ai-unavailable": "nessun provider AI è impostato o non è raggiungibile",
+        "incomplete-listing": "la pagina mostra più annunci di quelli leggibili",
+        "no-parseable-jobs": "nessun annuncio leggibile nella pagina",
+        "render-failed": "la pagina non si è caricata"
       },
       "statuses": {
         "succeeded": "completata",
@@ -327,8 +331,7 @@
       "heading": "Aziende",
       "empty": "Nessuna azienda ancora. Cerca bacheche qui sotto o aggiungine una con il link alla pagina di lavoro.",
       "board": "Bacheca: {{ats}}",
-      "noBoard": "Nessuna bacheca supportata",
-      "noBoardHint": "Aggiungi il link alla pagina di lavoro di una bacheca supportata per analizzare questa azienda."
+      "careersPage": "Pagina di lavoro, letta con l'IA"
     },
     "scan": {
       "never": "Non ancora analizzata.",
@@ -366,11 +369,10 @@
       "heading": "Aggiungi con un link",
       "name": "Nome dell'azienda",
       "careersUrl": "Link alla pagina di lavoro",
-      "careersUrlHint": "Per esempio https://boards.greenhouse.io/<azienda>. Bacheche supportate: Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Personio, Recruitee e Teamtailor.",
+      "careersUrlHint": "Per esempio https://boards.greenhouse.io/<azienda>. Le bacheche supportate (Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Personio, Recruitee e Teamtailor) vengono lette direttamente. Ogni altra pagina di lavoro viene letta con il provider AI impostato nelle Impostazioni.",
       "submit": "Aggiungi azienda",
       "added": "Azienda aggiunta.",
       "failure": {
-        "unsupported-careers-url": "Questo link non punta a una bacheca di lavoro supportata.",
         "duplicate-company": "Questa bacheca è già nell'elenco.",
         "unknown": "Non è stato possibile aggiungere l'azienda."
       }

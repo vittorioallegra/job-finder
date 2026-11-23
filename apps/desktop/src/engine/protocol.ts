@@ -34,6 +34,16 @@ export type DbResult = { ok: true; value: unknown } | { ok: false; error: string
 export type IngestStartCode = "accepted" | "already-running";
 
 /**
+ * The AI provider a run may use for generic careers pages. Main builds it from settings and the
+ * saved key; the key stays in the engine. Omitted: generic careers pages fail with `ai-unavailable`.
+ */
+export interface IngestAiSettings {
+  config: AiProviderConfig;
+  /** Configured context size of the model, in tokens. */
+  contextSize: number;
+}
+
+/**
  * Messages sent by main to the engine over the message port. `ai-test` carries the API key from
  * main to the engine: the only path a secret value takes out of main, and it never reaches the
  * renderer.
@@ -47,13 +57,18 @@ export type MainToEngineMessage =
   /** The answer to a `page-render` request: the page HTML, or a code. */
   | { type: "page-render-result"; id: number; result: PageRenderResult }
   /** `companyId` limits the run to one company (a retry); omitted: every company. */
-  | { type: "ingest-start"; id: number; runId: string; companyId?: string }
+  | { type: "ingest-start"; id: number; runId: string; companyId?: string; ai?: IngestAiSettings }
   | { type: "ingest-cancel"; runId: string }
   /**
    * Web search for ATS boards. The engine makes the requests; main relays the criteria, the enabled
    * sources and, for keyed providers, their keys (the only path a search key takes out of main).
    */
-  | { type: "discover-companies"; id: number; criteria: DiscoveryCriteria; config: SearchSourceConfig };
+  | {
+      type: "discover-companies";
+      id: number;
+      criteria: DiscoveryCriteria;
+      config: SearchSourceConfig;
+    };
 
 /** Messages sent by the engine to main over the message port. */
 export type EngineToMainMessage =

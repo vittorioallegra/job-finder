@@ -266,6 +266,38 @@ describe("engine runtime", () => {
     expect(port.sent).toEqual([{ type: "ingest-start-result", id: 5, code: "accepted" }]);
   });
 
+  it("gives the controller the page renderer, and the AI settings of a start", async () => {
+    const port = fakePort();
+    let received: { ai: unknown; rendersPages: boolean } | undefined;
+    createEngineRuntime(port, {
+      net: fakeNet(),
+      testAiConnection: async () => ({ ok: false, code: "unknown" }),
+      importCv: async () => ({ ok: false, code: "unknown" }),
+      discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
+      createIngest: (api) => ({
+        start: (_runId, _companyId, ai) => {
+          received = { ai, rendersPages: typeof api.renderPage === "function" };
+          return "accepted";
+        },
+        cancel: () => {},
+      }),
+    });
+    const ai = {
+      config: {
+        provider: "openai-compatible",
+        model: "local",
+        baseUrl: "http://localhost:1/v1",
+        apiKey: null,
+      },
+      contextSize: 8192,
+    };
+
+    port.deliver({ type: "ingest-start", id: 6, runId: "run-11", ai });
+    await settle();
+
+    expect(received).toEqual({ ai, rendersPages: true });
+  });
+
   it("answers a company search with the discovery outcome under its request id", async () => {
     const port = fakePort();
     const asked: { criteria: DiscoveryCriteria; config: unknown }[] = [];

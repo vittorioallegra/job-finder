@@ -294,7 +294,11 @@
         "storage-failed": "the postings could not be saved",
         "aborted": "the scan was stopped",
         "invalid-url": "the address is not valid",
-        "unknown": "unexpected error"
+        "unknown": "unexpected error",
+        "ai-unavailable": "no AI provider is set up or it could not be reached",
+        "incomplete-listing": "the page shows more postings than could be read",
+        "no-parseable-jobs": "no postings could be read from the page",
+        "render-failed": "the page could not be loaded"
       },
       "statuses": {
         "succeeded": "completed",
@@ -327,8 +331,7 @@
       "heading": "Companies",
       "empty": "No companies yet. Find boards below or add one by its careers page link.",
       "board": "Board: {{ats}}",
-      "noBoard": "No supported board",
-      "noBoardHint": "Add the careers page link of a supported job board to scan this company."
+      "careersPage": "Careers page, read with AI"
     },
     "scan": {
       "never": "Not scanned yet.",
@@ -366,11 +369,10 @@
       "heading": "Add by link",
       "name": "Company name",
       "careersUrl": "Careers page link",
-      "careersUrlHint": "For example https://boards.greenhouse.io/<company>. Supported boards: Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Personio, Recruitee and Teamtailor.",
+      "careersUrlHint": "For example https://boards.greenhouse.io/<company>. Supported boards are read directly: Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Personio, Recruitee and Teamtailor. Any other careers page is read with the AI provider set in Settings.",
       "submit": "Add company",
       "added": "Company added.",
       "failure": {
-        "unsupported-careers-url": "This link does not point to a supported job board.",
         "duplicate-company": "This job board is already in the list.",
         "unknown": "The company could not be added."
       }

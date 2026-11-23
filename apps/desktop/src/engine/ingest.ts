@@ -11,20 +11,43 @@ import {
   type IngestEvent,
   type IngestRunOutcome,
 } from "@job-finder/core/ingest/events";
-import type { HttpClient } from "@job-finder/core/net";
-import type { DbCall, DbResult, EngineToMainMessage, IngestStartCode } from "./protocol";
+import { createAiModel, type AiModelHandle } from "@job-finder/core/ai";
+import { scanCareersPage, type CareersAi } from "@job-finder/core/careers";
+import type { HttpClient, PageRenderResult } from "@job-finder/core/net";
+import type {
+  DbCall,
+  DbResult,
+  EngineToMainMessage,
+  IngestAiSettings,
+  IngestStartCode,
+} from "./protocol";
 
 /** Starts and cancels ingestion runs. The engine runs at most one at a time. */
 export interface IngestController {
-  start(runId: string, companyId?: string): IngestStartCode;
+  /** `ai` is the provider for generic careers pages; omitted, those pages fail with `ai-unavailable`. */
+  start(runId: string, companyId?: string, ai?: IngestAiSettings): IngestStartCode;
   cancel(runId: string): void;
 }
 
 export interface IngestControllerOptions {
   db(calls: DbCall[]): Promise<DbResult[]>;
   send(message: EngineToMainMessage): void;
+  /** Renders a JavaScript careers page through main's hidden loader. */
+  renderPage(url: string): Promise<PageRenderResult>;
   http: HttpClient;
   now?: () => number;
+}
+
+/** Builds the model for one run. An unusable configuration means no AI for that run, not a crash. */
+function careersAi(ai: IngestAiSettings | undefined): CareersAi | undefined {
+  if (!ai) return undefined;
+  let handle: AiModelHandle;
+  try {
+    handle = createAiModel(ai.config);
+  } catch {
+    return undefined;
+  }
+  return { model: handle.model, capabilities: handle.capabilities, contextSize: ai.contextSize };
 }
 
 /** Marks a progress event that is not stored: a run that failed before its own log could be written. */
@@ -35,10 +58,11 @@ export function createIngestController(options: IngestControllerOptions): Ingest
   let active: { runId: string; controller: AbortController } | undefined;
 
   return {
-    start(runId, companyId) {
+    start(runId, companyId, ai) {
       if (active) return "already-running";
       const controller = new AbortController();
       active = { runId, controller };
+      const careers = careersAi(ai);
 
       // The final event is held back until the run row is closed, so main can accept a new run
       // as soon as it sees it.
@@ -58,6 +82,13 @@ export function createIngestController(options: IngestControllerOptions): Ingest
         signal: controller.signal,
         now,
         companyId,
+        scanCareers: (target) =>
+          scanCareersPage(target, {
+            http: options.http,
+            ai: careers,
+            renderPage: options.renderPage,
+            signal: controller.signal,
+          }),
       }).then(
         () => {
           active = undefined;

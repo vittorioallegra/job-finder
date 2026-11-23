@@ -1,4 +1,4 @@
-// protects=an ingestion run goes through batched database calls, refuses a second run while one is active, and sends its final event only after the run row is closed;
+// protects=an ingestion run goes through batched database calls, a company without a board fails as ai-unavailable when no AI is configured, refuses a second run while one is active, and sends its final event only after the run row is closed;
 // fails_when=a second run starts while one is active, the final event is sent before runs.finish, a run never reads its companies, or a failed scan is not logged as a failed company;
 // no_claim=the real board reads and the SQL behind the calls are not exercised here; the core run tests and the desktop database tests cover them.
 import { describe, expect, it } from "vitest";
@@ -16,14 +16,16 @@ const networkDown: HttpClient = {
   post: async (url) => ({ ok: false, code: "network", url }),
 };
 
-function fakeDb() {
+const noRender = async () => ({ ok: false as const, code: "unknown" as const });
+
+function fakeDb(list: unknown[] = companies) {
   const calls: string[] = [];
   const db = async (batch: DbCall[]): Promise<DbResult[]> =>
     batch.map((call) => {
       calls.push(call.name);
       const value =
         call.name === "companies.list"
-          ? companies
+          ? list
           : call.name === "ingest.lookup"
             ? { jobs: [], sources: [] }
             : null;
@@ -53,6 +55,7 @@ describe("ingestion controller", () => {
         }
       },
       http: networkDown,
+      renderPage: noRender,
       now: () => 5,
     });
 
@@ -81,6 +84,7 @@ describe("ingestion controller", () => {
       db,
       send: (message) => sent.push(message),
       http: networkDown,
+      renderPage: noRender,
     });
 
     expect(controller.start("run-1")).toBe("accepted");
@@ -90,5 +94,42 @@ describe("ingestion controller", () => {
     );
 
     expect(controller.start("run-3")).toBe("accepted");
+  });
+
+  it("fails a company without a board as ai-unavailable when no AI is configured, and writes nothing", async () => {
+    const generic = [
+      {
+        id: "co-2",
+        name: "Generic",
+        careersUrl: "https://generic.example.test/careers",
+        ats: null,
+        slug: null,
+      },
+    ];
+    const { db, calls } = fakeDb(generic);
+    const sent: EngineToMainMessage[] = [];
+    const controller = createIngestController({
+      db,
+      send: (message) => sent.push(message),
+      http: networkDown,
+      renderPage: noRender,
+      now: () => 5,
+    });
+
+    expect(controller.start("run-2")).toBe("accepted");
+    await until(() =>
+      sent.some((m) => m.type === "ingest-progress" && m.event.kind === "run-finished"),
+    );
+
+    const events = sent.flatMap((m) => (m.type === "ingest-progress" ? [m.event] : []));
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: "company-failed",
+        companyId: "co-2",
+        code: "ai-unavailable",
+      }),
+    );
+    expect(calls).not.toContain("ingest.persist");
+    expect(calls).not.toContain("ingest.close-missing");
   });
 });

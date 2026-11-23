@@ -83,7 +83,7 @@ describe("companies screen", () => {
     expect(button(container, "Search job boards").disabled).toBe(true);
   });
 
-  it("lists each company with its board and last scan, and offers a retry only with a board", async () => {
+  it("lists each company with its board or careers page and last scan, and offers a retry for every company", async () => {
     const failed: CompanyRecord = {
       ...acme,
       id: "co-2",
@@ -117,10 +117,10 @@ describe("companies screen", () => {
     expect(container.textContent).toContain("No parseable jobs in the last scan.");
     expect(container.textContent).toContain("Last scan failed: the site answered with an error.");
     expect(container.textContent).toContain("Not scanned yet.");
-    expect(container.textContent).toContain("No supported board");
+    expect(container.textContent).toContain("Careers page, read with AI");
     expect(
       [...container.querySelectorAll("button")].filter((node) => node.textContent === "Scan again"),
-    ).toHaveLength(3);
+    ).toHaveLength(4);
   });
 
   it("finds boards for the keywords and adds only the one the user picks", async () => {
@@ -214,7 +214,14 @@ describe("companies screen", () => {
     bridge.discovery.search = async () => ({
       ok: true,
       searchBlocked: true,
-      candidates: [{ ats: "lever", slug: "globex", careersUrl: "https://jobs.lever.co/globex", name: "globex" }],
+      candidates: [
+        {
+          ats: "lever",
+          slug: "globex",
+          careersUrl: "https://jobs.lever.co/globex",
+          name: "globex",
+        },
+      ],
     });
     await render(bridge);
 

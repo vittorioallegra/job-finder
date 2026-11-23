@@ -55,8 +55,8 @@ export interface CompanyRecord {
   lastScan: CompanyScan | null;
 }
 
-/** Why a company could not be added. */
-export type CompanyAddFailureCode = "unsupported-careers-url" | "duplicate-company";
+/** Why a company could not be added. Any http(s) careers page is accepted; only a duplicate is refused. */
+export type CompanyAddFailureCode = "duplicate-company";
 
 export type CompanyAddResult =
   { ok: true; company: CompanyRecord } | { ok: false; code: CompanyAddFailureCode };

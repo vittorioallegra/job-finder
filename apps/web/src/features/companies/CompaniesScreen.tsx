@@ -214,6 +214,8 @@ export function CompaniesScreen() {
   function scanSummary(scan: CompanyScan | null): string {
     if (scan === null) return t("companies.scan.never");
     if (scan.outcome === "failed") {
+      // A careers page with no readable postings is marked, not reported as a fault.
+      if (scan.code === "no-parseable-jobs") return t("companies.scan.noJobs");
       return t("companies.scan.failed", {
         reason: t(`jobs.log.reasons.${scan.code}`, { defaultValue: t("jobs.log.reasons.unknown") }),
       });
@@ -410,19 +412,15 @@ export function CompaniesScreen() {
                     <p className="text-sm text-app-muted">
                       {company.ats
                         ? t("companies.list.board", { ats: company.ats })
-                        : t("companies.list.noBoard")}
+                        : t("companies.list.careersPage")}
                     </p>
                     <p className="break-all text-xs text-app-muted">{company.careersUrl}</p>
                     <p className="text-sm text-app-fg">{scanSummary(company.lastScan)}</p>
-                    {company.ats ? (
-                      <div>
-                        <Button variant="secondary" onClick={() => void retryScan(company.id)}>
-                          {t("companies.scan.retry")}
-                        </Button>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-app-muted">{t("companies.list.noBoardHint")}</p>
-                    )}
+                    <div>
+                      <Button variant="secondary" onClick={() => void retryScan(company.id)}>
+                        {t("companies.scan.retry")}
+                      </Button>
+                    </div>
                     {scanNotice?.companyId === company.id ? (
                       scanNotice.status === "started" ? (
                         <p role="status" className="text-sm text-app-muted">

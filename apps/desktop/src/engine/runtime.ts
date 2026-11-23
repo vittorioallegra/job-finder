@@ -21,10 +21,12 @@ export interface EngineRuntime {
   close(): void;
 }
 
-/** What the ingestion controller is given: a way to ask main for database work, and to report to main. */
+/** What the ingestion controller is given: database work, reports to main, and page rendering through main. */
 export interface IngestApi {
   db(calls: DbCall[]): Promise<DbResult[]>;
   send(message: EngineToMainMessage): void;
+  /** Same as `EngineRuntime.renderPage`: robots.txt is checked before main renders anything. */
+  renderPage(url: string): Promise<PageRenderResult>;
 }
 
 /** Work the engine does for main that needs the network or the AI layer. */
@@ -32,7 +34,10 @@ export interface EngineServices {
   testAiConnection(config: AiProviderConfig): Promise<AiConnectionResult>;
   importCv(request: CvImportRequest): Promise<CvImportOutcome>;
   /** Searches for ATS boards through the engine's HTTP path. */
-  discoverCompanies(criteria: DiscoveryCriteria, config: SearchSourceConfig): Promise<DiscoveryOutcome>;
+  discoverCompanies(
+    criteria: DiscoveryCriteria,
+    config: SearchSourceConfig,
+  ): Promise<DiscoveryOutcome>;
   /** The engine's HTTP path: fixture override, robots.txt and the per-host queue. */
   net: HttpClient;
   /** Builds the ingestion controller over the runtime's database and message channel. */
@@ -56,7 +61,20 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
       post(port, { type: "db", id, calls });
     });
 
-  const ingest = services.createIngest({ db, send: (message) => post(port, message) });
+  const sendPageRender = (url: string): Promise<PageRenderResult> =>
+    new Promise((resolve) => {
+      const id = nextId;
+      nextId += 1;
+      pendingPages.set(id, resolve);
+      post(port, { type: "page-render", id, url });
+    });
+  const renderGuarded = guardPageRender(services.net, sendPageRender);
+
+  const ingest = services.createIngest({
+    db,
+    send: (message) => post(port, message),
+    renderPage: renderGuarded,
+  });
 
   port.on("message", (data) => {
     const message = data as MainToEngineMessage;
@@ -81,8 +99,8 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
       return;
     }
     if (message.type === "ingest-start") {
-      const { id, runId, companyId } = message;
-      post(port, { type: "ingest-start-result", id, code: ingest.start(runId, companyId) });
+      const { id, runId, companyId, ai } = message;
+      post(port, { type: "ingest-start-result", id, code: ingest.start(runId, companyId, ai) });
       return;
     }
     if (message.type === "discover-companies") {
@@ -108,15 +126,6 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
     }
   });
   port.start();
-
-  const sendPageRender = (url: string): Promise<PageRenderResult> =>
-    new Promise((resolve) => {
-      const id = nextId;
-      nextId += 1;
-      pendingPages.set(id, resolve);
-      post(port, { type: "page-render", id, url });
-    });
-  const renderGuarded = guardPageRender(services.net, sendPageRender);
 
   return {
     db,

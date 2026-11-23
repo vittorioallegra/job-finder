@@ -87,25 +87,35 @@ export function createIngestRepository(db: AppDb): IngestRepository {
     },
 
     async addCompany(input, now = Date.now(), newId = () => crypto.randomUUID()) {
+      // A supported board is read through its ATS API; any other careers page is read with the AI.
       const detection = detectAts({ url: input.careersUrl });
-      if (!detection || detection.slug === undefined) {
-        return { ok: false, code: "unsupported-careers-url" };
-      }
-      // One board is one company: the same ATS and board token under another URL is a duplicate.
-      const existing = await db
+      let board: { ats: string; slug: string } | undefined;
+      if (detection?.slug !== undefined) board = { ats: detection.ats, slug: detection.slug };
+      const sameUrl = await db
         .select({ id: companies.id })
         .from(companies)
-        .where(and(eq(companies.ats, detection.ats), eq(companies.slug, detection.slug)))
+        .where(eq(companies.careersUrl, input.careersUrl))
         .limit(1);
-      if (existing.length > 0) {
+      if (sameUrl.length > 0) {
         return { ok: false, code: "duplicate-company" };
+      }
+      // One board is one company: the same ATS and board token under another URL is a duplicate.
+      if (board) {
+        const existing = await db
+          .select({ id: companies.id })
+          .from(companies)
+          .where(and(eq(companies.ats, board.ats), eq(companies.slug, board.slug)))
+          .limit(1);
+        if (existing.length > 0) {
+          return { ok: false, code: "duplicate-company" };
+        }
       }
       const row = {
         id: newId(),
         name: input.name,
         careersUrl: input.careersUrl,
-        ats: detection.ats,
-        slug: detection.slug,
+        ats: board?.ats ?? null,
+        slug: board?.slug ?? null,
         createdAt: now,
       };
       await db.insert(companies).values(row);

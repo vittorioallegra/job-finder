@@ -7,7 +7,13 @@ import type {
 } from "@job-finder/core/discovery/types";
 import type { IngestEvent } from "@job-finder/core/ingest/events";
 import type { PageRenderResult } from "@job-finder/core/net";
-import type { DbCall, DbResult, EngineToMainMessage, IngestStartCode } from "../../engine/protocol";
+import type {
+  DbCall,
+  DbResult,
+  EngineToMainMessage,
+  IngestAiSettings,
+  IngestStartCode,
+} from "../../engine/protocol";
 import type { PortLike } from "../../engine/port";
 
 export type LogLevel = "info" | "warn" | "error";
@@ -86,14 +92,22 @@ export interface EngineSupervisor {
   importCv(request: CvImportRequest): Promise<CvImportOutcome>;
   /**
    * Asks the engine to start an ingestion run. Resolves with its answer (`already-running` when
-   * another run is active) and rejects with EngineUnavailableError when the engine is gone.
+   * another run is active) and rejects with EngineUnavailableError when the engine is gone. `ai`
+   * carries the key for generic careers pages; the engine keeps it for the run only.
    */
-  startIngestion(runId: string, companyId?: string): Promise<"accepted" | "already-running">;
+  startIngestion(
+    runId: string,
+    companyId?: string,
+    ai?: IngestAiSettings,
+  ): Promise<"accepted" | "already-running">;
   /**
    * Searches for ATS boards in the engine. Resolves with the outcome; rejects with
    * EngineUnavailableError when the engine is gone.
    */
-  discoverCompanies(criteria: DiscoveryCriteria, config: SearchSourceConfig): Promise<DiscoveryOutcome>;
+  discoverCompanies(
+    criteria: DiscoveryCriteria,
+    config: SearchSourceConfig,
+  ): Promise<DiscoveryOutcome>;
   /** Asks the engine to stop a run. Ignored when no engine is running. */
   cancelIngestion(runId: string): void;
   readonly state: EngineSupervisorState;
@@ -357,13 +371,13 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
         ready.handle.port.postMessage({ type: "cv-import", id, request });
       });
     },
-    async startIngestion(runId, companyId) {
+    async startIngestion(runId, companyId, ai) {
       const ready = current?.ready ? current : await waitUntilReady();
       const id = nextRequestId;
       nextRequestId += 1;
       return new Promise<IngestStartCode>((resolve, reject) => {
         ready.pendingIngestStarts.set(id, { resolve, reject });
-        ready.handle.port.postMessage({ type: "ingest-start", id, runId, companyId });
+        ready.handle.port.postMessage({ type: "ingest-start", id, runId, companyId, ai });
       });
     },
     async discoverCompanies(criteria, config) {
