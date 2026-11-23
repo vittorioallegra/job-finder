@@ -586,6 +586,8 @@ Approved: yes (2026-11-23)
 - Review: the fixture base URL override is never honoured in a packaged app, not even under `JOB_FINDER_E2E`; the packaged smoke test does not use fixtures.
 - Review: each page-loader and PDF render has its own in-memory partition, so concurrent renders never share handlers, request filters or storage.
 
+- 2026-11-23 redesign: the user rejected the first UI and picked the "warm editorial" variant (cream surfaces, terracotta accent, serif titles, job cards with a score ring) over a macOS-style split view, which would look out of place on Windows and Linux. Fonts are bundled through @fontsource so every OS renders the same; icons come from lucide-react.
+
 ### Open questions
 
 - Step 19: `RELEASES_REPOSITORY` in `packages/core/src/updates/release.ts` is null, because the repository has no git remote and no `owner/name` in its metadata. Set it to the GitHub repository (`owner/name`) before release; until then the update check makes no request.
