@@ -117,7 +117,13 @@ describe("scoring service", () => {
     });
     expect(requests).toEqual([]);
 
-    const consented = await service.start({ consent: true });
+    expect(await service.start({ consent: true, consentTarget: "openai" })).toEqual({
+      ok: false,
+      code: "consent-required",
+    });
+    expect(requests).toEqual([]);
+
+    const consented = await service.start({ consent: true, consentTarget: "anthropic" });
     expect(consented).toMatchObject({ ok: true });
     expect(requests).toHaveLength(1);
   });

@@ -145,6 +145,7 @@ describe("application form panel", () => {
       applicationId: "a1",
       aiFallback: false,
       consent: false,
+      consentTarget: "openai-compatible:http://localhost:11434",
     });
     expect(container.textContent).toContain("Recognised as: Greenhouse.");
     expect(container.textContent).toContain("Filled: First Name, Email.");
@@ -270,7 +271,12 @@ describe("application form panel", () => {
     expect(button(container, "Open form and autofill").disabled).toBe(false);
 
     await act(async () => button(container, "Open form and autofill").click());
-    expect(start).toHaveBeenCalledWith({ applicationId: "a1", aiFallback: true, consent: true });
+    expect(start).toHaveBeenCalledWith({
+      applicationId: "a1",
+      aiFallback: true,
+      consent: true,
+      consentTarget: "anthropic",
+    });
   });
 
   it("marks the AI drafts for review and names an AI failure with its reason", async () => {

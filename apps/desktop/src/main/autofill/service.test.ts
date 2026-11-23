@@ -356,7 +356,11 @@ describe("autofill service refusals", () => {
 /** A scripted AI double: it records what it was asked and answers with the given outcome. */
 function scriptedAi(
   answer: (fields: FormField[]) => AiFillOutcome,
-  status: AiFillStatus = { state: "ready", cloud: false },
+  status: AiFillStatus = {
+    state: "ready",
+    cloud: false,
+    consentTarget: "openai-compatible:http://localhost:11434",
+  },
 ) {
   const asked: FormField[][] = [];
   const ai: AiFill = {
@@ -450,7 +454,11 @@ describe("autofill service with the AI fallback", () => {
 
   it("refuses a cloud provider without consent before any window opens", async () => {
     const window = scriptedWindow("generic.html");
-    const ai = scriptedAi(genericAnswers, { state: "ready", cloud: true });
+    const ai = scriptedAi(genericAnswers, {
+      state: "ready",
+      cloud: true,
+      consentTarget: "anthropic",
+    });
     const { service, opened } = serviceWith([window], {
       application: detail({ applyUrl: "https://careers.acme.test/apply/7" }),
       ai: ai.ai,
@@ -463,7 +471,23 @@ describe("autofill service with the AI fallback", () => {
     expect(opened).toHaveLength(0);
     expect(ai.asked).toHaveLength(0);
 
-    const agreed = await service.start({ applicationId: "a1", aiFallback: true, consent: true });
+    // A consent given for another provider or host does not count.
+    expect(
+      await service.start({
+        applicationId: "a1",
+        aiFallback: true,
+        consent: true,
+        consentTarget: "openai",
+      }),
+    ).toEqual({ ok: false, code: "consent-required" });
+    expect(opened).toHaveLength(0);
+
+    const agreed = await service.start({
+      applicationId: "a1",
+      aiFallback: true,
+      consent: true,
+      consentTarget: "anthropic",
+    });
     expect(agreed).toMatchObject({ ok: true, ai: { state: "used" } });
   });
 

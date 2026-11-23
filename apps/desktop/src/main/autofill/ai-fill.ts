@@ -1,4 +1,9 @@
-import { isCloudAiEndpoint, type AiTestFailureCode } from "@job-finder/bridge";
+import {
+  aiConsentTarget,
+  hasAiConsent,
+  isCloudAiEndpoint,
+  type AiTestFailureCode,
+} from "@job-finder/bridge";
 import type { AiFieldAnswer, FormField } from "@job-finder/core/ats/autofill";
 import type { AutofillMapOutcome } from "@job-finder/core/ats/autofill/ai";
 import type { DocumentLanguage } from "@job-finder/core/documents/language";
@@ -22,7 +27,8 @@ export interface AiFillOptions {
 }
 
 /** Whether an AI provider is set up, and whether it is a cloud service that needs consent. */
-export type AiFillStatus = { state: "not-configured" } | { state: "ready"; cloud: boolean };
+export type AiFillStatus =
+  { state: "not-configured" } | { state: "ready"; cloud: boolean; consentTarget: string };
 
 /** The answer of the AI, or the reason it could not answer. */
 export type AiFillOutcome =
@@ -38,8 +44,9 @@ export interface AiFill {
     applicationId: string;
     profile: Profile;
     fields: FormField[];
-    /** Whether the user agreed to a cloud provider for this run. */
+    /** The user's consent for this run and the provider and host it was given for. */
     consent: boolean;
+    consentTarget?: string | undefined;
   }): Promise<AiFillOutcome>;
 }
 
@@ -54,15 +61,15 @@ export function createAutofillAi(options: AiFillOptions): AiFill {
       const configured =
         ai.model.trim() !== "" && (ai.provider !== "openai-compatible" || ai.baseUrl.trim() !== "");
       return configured
-        ? { state: "ready", cloud: isCloudAiEndpoint(ai) }
+        ? { state: "ready", cloud: isCloudAiEndpoint(ai), consentTarget: aiConsentTarget(ai) }
         : { state: "not-configured" };
     },
 
-    async map({ applicationId, profile, fields, consent }) {
+    async map({ applicationId, profile, fields, consent, consentTarget }) {
       // The settings are read again here, after the page has loaded: the provider may have changed
       // since the consent was checked, and a cloud provider never gets the profile without it.
       const { ai } = await options.settings.get();
-      if (isCloudAiEndpoint(ai) && !consent) {
+      if (!hasAiConsent(ai, { consent, consentTarget })) {
         return { ok: false, code: "not-configured" };
       }
       const apiKey = await options.secrets.read("ai.apiKey");

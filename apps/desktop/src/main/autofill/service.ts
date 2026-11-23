@@ -196,7 +196,12 @@ export function createAutofillService(options: AutofillServiceOptions): Autofill
     const wantsAi = request.aiFallback === true;
     const aiStatus: AiFillStatus =
       wantsAi && options.ai !== undefined ? await options.ai.status() : { state: "not-configured" };
-    if (wantsAi && aiStatus.state === "ready" && aiStatus.cloud && request.consent !== true) {
+    if (
+      wantsAi &&
+      aiStatus.state === "ready" &&
+      aiStatus.cloud &&
+      !(request.consent === true && request.consentTarget === aiStatus.consentTarget)
+    ) {
       throw new AutofillFailure("consent-required");
     }
 
@@ -264,6 +269,7 @@ export function createAutofillService(options: AutofillServiceOptions): Autofill
                   profile: saved.profile,
                   fields: candidates,
                   consent: request.consent === true,
+                  consentTarget: request.consentTarget,
                 });
           if (!outcome.ok) {
             ai = { state: "unavailable", code: outcome.code };

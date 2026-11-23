@@ -1,6 +1,6 @@
 import {
   documentLanguageFor,
-  isCloudAiEndpoint,
+  hasAiConsent,
   type ApplicationDocuments,
   type DocumentLanguage,
   type DocumentExportRequest,
@@ -110,7 +110,7 @@ export function createDocumentService(options: DocumentServiceOptions): Document
       const saved = await options.profile.get();
       if (saved === null) return { ok: false, code: "no-profile" };
       const { ai } = await options.settings.get();
-      if (isCloudAiEndpoint(ai) && !request.consent) {
+      if (!hasAiConsent(ai, request)) {
         return { ok: false, code: "consent-required" };
       }
       const language: DocumentLanguage =

@@ -1,8 +1,4 @@
-import {
-  isCloudAiEndpoint,
-  type ScoreStartRequest,
-  type ScoreStartResult,
-} from "@job-finder/bridge";
+import { hasAiConsent, type ScoreStartRequest, type ScoreStartResult } from "@job-finder/bridge";
 import { hardFilter, JobFilterSchema, type JobFilter } from "@job-finder/core/filters";
 import { scoringFields } from "@job-finder/core/profile";
 import type { ExplanationLanguage } from "@job-finder/core/ranking";
@@ -62,7 +58,7 @@ export function createScoringService(options: ScoringServiceOptions): ScoringSer
       return { ok: false, code: "no-profile" };
     }
     const { ai, ui } = await options.settings.get();
-    if (isCloudAiEndpoint(ai) && !request.consent) {
+    if (!hasAiConsent(ai, request)) {
       return { ok: false, code: "consent-required" };
     }
     // The scores of the jobs that pass the hard filters are scored; the minimum score and the new-only

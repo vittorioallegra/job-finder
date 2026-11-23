@@ -44,6 +44,8 @@ export const DocumentGenerateRequestSchema = z.strictObject({
   applicationId: identifier,
   kind: z.enum(DOCUMENT_KINDS),
   consent: z.boolean(),
+  /** The provider and host the consent was given for (`aiConsentTarget`). */
+  consentTarget: z.string().optional(),
   language: z.enum(DOCUMENT_LANGUAGES).optional(),
 });
 export type DocumentGenerateRequest = z.input<typeof DocumentGenerateRequestSchema>;

@@ -1,4 +1,4 @@
-import { isCloudAiEndpoint, type CvImportRequest, type CvImportResult } from "@job-finder/bridge";
+import { hasAiConsent, type CvImportRequest, type CvImportResult } from "@job-finder/bridge";
 import type {
   CvImportOutcome,
   CvImportRequest as EngineCvImportRequest,
@@ -32,7 +32,7 @@ export function createCvImportService(options: CvImportServiceOptions): CvImport
   return {
     async importCv(request) {
       const { ai } = await options.settings.get();
-      if (isCloudAiEndpoint(ai) && !request.consent) {
+      if (!hasAiConsent(ai, request)) {
         return { ok: false, code: "consent-required" };
       }
       const apiKey = await options.secrets.read("ai.apiKey");

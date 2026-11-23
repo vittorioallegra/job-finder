@@ -60,8 +60,8 @@ describe("createAutofillAi", () => {
       language: async () => "en",
     });
 
-    expect(await hosted.status()).toEqual({ state: "ready", cloud: true });
-    expect(await local.status()).toEqual({ state: "ready", cloud: false });
+    expect(await hosted.status()).toMatchObject({ state: "ready", cloud: true });
+    expect(await local.status()).toMatchObject({ state: "ready", cloud: false });
   });
 
   it("sends the saved key and the draft language to the engine, and returns its answer", async () => {
@@ -108,7 +108,12 @@ describe("createAutofillAi", () => {
     const input = { applicationId: "a1", profile: emptyProfile(), fields: [] };
     expect(await ai.map({ ...input, consent: false })).toMatchObject({ ok: false });
     expect(engine.mapFormFields).not.toHaveBeenCalled();
-    expect(await ai.map({ ...input, consent: true })).toMatchObject({ ok: true });
+    expect(await ai.map({ ...input, consent: true, consentTarget: "openai" })).toMatchObject({
+      ok: false,
+    });
+    expect(await ai.map({ ...input, consent: true, consentTarget: "anthropic" })).toMatchObject({
+      ok: true,
+    });
   });
 
   it("reports an engine that cannot answer as engine-unavailable, and any other throw as unknown", async () => {

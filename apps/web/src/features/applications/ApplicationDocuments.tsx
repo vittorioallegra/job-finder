@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import {
   DOCUMENT_AI_UNAVAILABLE_CODES,
   DOCUMENT_LANGUAGES,
+  aiConsentTarget,
   isCloudAiEndpoint,
   type DocumentLanguage,
   type ApplicationDocuments as ApplicationDocumentsRecord,
@@ -13,6 +14,7 @@ import {
   type DocumentKind,
   type DocumentRecord,
 } from "@job-finder/bridge";
+import { useAiConsent } from "../../lib/useAiConsent";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Button } from "../../components/ui/Button";
 import { CheckboxInput } from "../../components/ui/CheckboxInput";
@@ -41,6 +43,8 @@ interface Notice {
 interface AiState {
   /** Consent is asked when the provider is a cloud service. */
   cloud: boolean;
+  /** The provider and host a consent is given for. */
+  target: string;
   provider: string;
   /** A model (and, for a local endpoint, a base URL) is set up. */
   configured: boolean;
@@ -107,7 +111,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
   const [load, setLoad] = useState<LoadState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [ai, setAi] = useState<AiState | null>(null);
-  const [consent, setConsent] = useState(false);
+  const { consent, consentTarget, setConsent } = useAiConsent(ai?.target ?? null);
   const [language, setLanguage] = useState<DocumentLanguage>("en");
   const [drafts, setDrafts] = useState<Partial<Record<DocumentKind, Draft>>>({});
   const [busy, setBusy] = useState<{ kind: DocumentKind; action: Action } | null>(null);
@@ -121,6 +125,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
         const { ai: aiSettings } = settings;
         setAi({
           cloud: isCloudAiEndpoint(aiSettings),
+          target: aiConsentTarget(aiSettings),
           provider: aiSettings.provider,
           configured:
             aiSettings.model.trim() !== "" &&
@@ -222,7 +227,13 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
     setBusy({ kind, action: "generate" });
     setNotice(kind, null);
     try {
-      const result = await bridge.documents.generate({ applicationId, kind, consent, language });
+      const result = await bridge.documents.generate({
+        applicationId,
+        kind,
+        consent,
+        consentTarget,
+        language,
+      });
       if (result.ok) {
         applyRecord(result.document);
         setNotice(kind, { tone: "ok", text: t("applications.documents.generated") });

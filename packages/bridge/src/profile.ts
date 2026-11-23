@@ -52,6 +52,8 @@ export const CvImportRequestSchema = z.strictObject({
     .refine((bytes) => bytes.byteLength <= CV_UPLOAD_MAX_BYTES, "The CV file is too large"),
   /** The user has seen the consent note and agreed to send the CV to the configured provider. */
   consent: z.boolean(),
+  /** The provider and host the consent was given for (`aiConsentTarget`). */
+  consentTarget: z.string().optional(),
 });
 
 export type CvImportRequest = z.input<typeof CvImportRequestSchema>;

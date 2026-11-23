@@ -212,6 +212,7 @@ describe("application documents panel", () => {
       applicationId: "a1",
       kind: "cv",
       consent: true,
+      consentTarget: "anthropic",
       language: "en",
     });
   });

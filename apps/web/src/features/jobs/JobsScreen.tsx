@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 import {
   DEFAULT_JOB_FILTER,
+  aiConsentTarget,
   isCloudAiEndpoint,
   JobFilterSchema,
   type CompanyRecord,
@@ -19,6 +20,7 @@ import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Button } from "../../components/ui/Button";
 import { CheckboxInput } from "../../components/ui/CheckboxInput";
 import { JobDetail } from "./JobDetail";
+import { useAiConsent } from "../../lib/useAiConsent";
 import { JobFilters } from "./JobFilters";
 import { SavedSearches, type SavedSearchesState } from "./SavedSearches";
 import { draftFromFilter, EMPTY_DRAFT, filterFromDraft, type FilterDraft } from "./filter-draft";
@@ -51,7 +53,8 @@ export function JobsScreen() {
   const [starting, setStarting] = useState(false);
   const [cloud, setCloud] = useState(false);
   const [providerName, setProviderName] = useState("");
-  const [consent, setConsent] = useState(false);
+  const [aiTarget, setAiTarget] = useState<string | null>(null);
+  const { consent, consentTarget, setConsent } = useAiConsent(aiTarget);
   const [scoring, setScoring] = useState(false);
   const [scoreResult, setScoreResult] = useState<ScoreStartResult | null>(null);
 
@@ -109,6 +112,7 @@ export function JobsScreen() {
       .then((settings) => {
         if (!active) return;
         setCloud(isCloudAiEndpoint(settings.ai));
+        setAiTarget(aiConsentTarget(settings.ai));
         setProviderName(t(`settings.ai.providers.${settings.ai.provider}`));
       })
       .catch(() => {});
@@ -284,7 +288,9 @@ export function JobsScreen() {
     setScoreResult(null);
     const visibleJobIds = load.status === "ready" ? load.jobs.map((job) => job.id) : [];
     try {
-      setScoreResult(await bridge.scores.start({ consent, filter: applied, visibleJobIds }));
+      setScoreResult(
+        await bridge.scores.start({ consent, consentTarget, filter: applied, visibleJobIds }),
+      );
     } catch {
       setScoreResult({ ok: false, code: "engine-unavailable" });
     }

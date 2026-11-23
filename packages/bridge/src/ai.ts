@@ -19,6 +19,28 @@ export type AiTestFailureCode = (typeof AI_TEST_FAILURE_CODES)[number];
 /** Outcome of "test connection" with the saved AI settings. Never carries the key or a provider error body. */
 export type AiTestResult = { ok: true; model: string } | { ok: false; code: AiTestFailureCode };
 
+/**
+ * What a cloud consent is given for: the hosted provider, or the OpenAI-compatible provider at one
+ * origin. Changing either asks again. The path of the URL does not matter, only where the data goes.
+ */
+export function aiConsentTarget(ai: { provider: AiProvider; baseUrl: string }): string {
+  if (ai.provider !== "openai-compatible") return ai.provider;
+  try {
+    return `openai-compatible:${new URL(ai.baseUrl.trim()).origin}`;
+  } catch {
+    return `openai-compatible:${ai.baseUrl.trim()}`;
+  }
+}
+
+/** True when nothing leaves the machine, or the user agreed for this provider and host. */
+export function hasAiConsent(
+  ai: { provider: AiProvider; baseUrl: string },
+  request: { consent?: boolean | undefined; consentTarget?: string | undefined },
+): boolean {
+  if (!isCloudAiEndpoint(ai)) return true;
+  return request.consent === true && request.consentTarget === aiConsentTarget(ai);
+}
+
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 /**

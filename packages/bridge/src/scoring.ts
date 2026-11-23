@@ -9,6 +9,8 @@ import { JobFilterSchema } from "@job-finder/core/filters";
  */
 export const ScoreStartRequestSchema = z.strictObject({
   consent: z.boolean(),
+  /** The provider and host the consent was given for (`aiConsentTarget`). */
+  consentTarget: z.string().optional(),
   filter: JobFilterSchema.optional(),
   visibleJobIds: z.array(z.string().min(1).max(64)).max(500).default([]),
 });

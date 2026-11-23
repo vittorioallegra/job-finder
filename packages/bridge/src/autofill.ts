@@ -14,6 +14,8 @@ export const AutofillStartRequestSchema = z.strictObject({
   applicationId: identifier,
   aiFallback: z.boolean().optional(),
   consent: z.boolean().optional(),
+  /** The provider and host the consent was given for (`aiConsentTarget`). */
+  consentTarget: z.string().optional(),
 });
 export type AutofillStartRequest = z.input<typeof AutofillStartRequestSchema>;
 

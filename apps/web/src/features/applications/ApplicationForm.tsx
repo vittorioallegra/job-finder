@@ -7,7 +7,8 @@ import type {
   AutofillStartResult,
   AiTestFailureCode,
 } from "@job-finder/bridge";
-import { isCloudAiEndpoint } from "@job-finder/bridge";
+import { aiConsentTarget, isCloudAiEndpoint } from "@job-finder/bridge";
+import { useAiConsent } from "../../lib/useAiConsent";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Button } from "../../components/ui/Button";
 import { CheckboxInput } from "../../components/ui/CheckboxInput";
@@ -23,6 +24,7 @@ interface AiState {
   configured: boolean;
   cloud: boolean;
   provider: string;
+  target: string;
 }
 
 /**
@@ -40,7 +42,6 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
   const [submitted, setSubmitted] = useState(false);
   const [ai, setAi] = useState<AiState | null>(null);
   const [aiFallback, setAiFallback] = useState(false);
-  const [consent, setConsent] = useState(false);
 
   const [aiLoadFailed, setAiLoadFailed] = useState(false);
   const [aiAttempt, setAiAttempt] = useState(0);
@@ -57,6 +58,7 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
             aiSettings.model.trim() !== "" &&
             (aiSettings.provider !== "openai-compatible" || aiSettings.baseUrl.trim() !== ""),
           cloud: isCloudAiEndpoint(aiSettings),
+          target: aiConsentTarget(aiSettings),
           provider: t(`settings.ai.providers.${aiSettings.provider}`),
         });
       })
@@ -68,6 +70,7 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
     };
   }, [bridge, t, aiAttempt]);
 
+  const { consent, consentTarget, setConsent } = useAiConsent(ai?.target ?? null);
   const available = application.status === "preparing" || application.status === "ready";
   const needsConsent = aiFallback && ai !== null && ai.cloud && ai.configured;
   const openDisabled = busy !== null || (needsConsent && !consent);
@@ -83,6 +86,7 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
           applicationId: application.id,
           aiFallback,
           consent,
+          consentTarget,
         }),
       );
     } catch {

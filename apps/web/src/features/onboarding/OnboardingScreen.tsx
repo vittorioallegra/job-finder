@@ -1,9 +1,11 @@
+import { useAiConsent } from "../../lib/useAiConsent";
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 import {
   CV_UPLOAD_MAX_BYTES,
   emptyProfile,
+  aiConsentTarget,
   isCloudAiEndpoint,
   SETTING_LIMITS,
   type AiProvider,
@@ -286,7 +288,7 @@ type CvState =
 function CvStep({ bridge, settings, onImported, onManual }: CvStepProps) {
   const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
-  const [consent, setConsent] = useState(false);
+  const { consent, consentTarget, setConsent } = useAiConsent(aiConsentTarget(settings.ai));
   const [state, setState] = useState<CvState>({ status: "idle" });
   const cloud = isCloudAiEndpoint(settings.ai);
   const providerKey =
@@ -305,7 +307,12 @@ function CvStep({ bridge, settings, onImported, onManual }: CvStepProps) {
     setState({ status: "importing" });
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
-      const result = await bridge.profile.importCv({ fileName: file.name, bytes, consent });
+      const result = await bridge.profile.importCv({
+        fileName: file.name,
+        bytes,
+        consent,
+        consentTarget,
+      });
       if (result.ok) {
         onImported(draftFromExtraction(result.extraction, emptyProfile()), result.warnings);
       } else {

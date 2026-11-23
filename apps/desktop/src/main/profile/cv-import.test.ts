@@ -18,10 +18,11 @@ function services(ai: Partial<AppSettings["ai"]>, engine: CvEngine) {
   return createCvImportService({ settings, secrets, engine });
 }
 
-const upload = (consent: boolean) => ({
+const upload = (consent: boolean, consentTarget = "openai") => ({
   fileName: "cv.txt",
   bytes: new TextEncoder().encode("Maria Rossi"),
   consent,
+  consentTarget,
 });
 
 describe("CV import service", () => {
