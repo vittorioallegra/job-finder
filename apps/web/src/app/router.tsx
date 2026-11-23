@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router";
 import { HomeScreen } from "../features/home/HomeScreen";
+import { JobsScreen } from "../features/jobs/JobsScreen";
 import { NotFoundScreen } from "../features/home/NotFoundScreen";
 import { OnboardingScreen } from "../features/onboarding/OnboardingScreen";
 import { ProfileScreen } from "../features/profile/ProfileScreen";
@@ -9,6 +10,7 @@ export const router = createBrowserRouter([
   { path: "/", element: <HomeScreen /> },
   { path: "/onboarding", element: <OnboardingScreen /> },
   { path: "/profile", element: <ProfileScreen /> },
+  { path: "/jobs", element: <JobsScreen /> },
   { path: "/settings", element: <SettingsScreen /> },
   { path: "*", element: <NotFoundScreen /> },
 ]);

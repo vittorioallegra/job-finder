@@ -10,7 +10,8 @@
     "emptyBody": "Searches and results will appear here.",
     "openSettings": "Settings",
     "openOnboarding": "Set up your profile",
-    "openProfile": "Profile"
+    "openProfile": "Profile",
+    "openJobs": "Jobs"
   },
   "settings": {
     "title": "Settings",
@@ -251,6 +252,81 @@
       "title": "Check your profile",
       "intro": "Check every field before saving. Nothing is saved until you press Save.",
       "contextWarning": "The CV may be longer than the model's context size, so parts of it may be missing. Check the extracted fields."
+    }
+  },
+  "jobs": {
+    "title": "Jobs",
+    "backHome": "Back to home",
+    "loading": "Loading jobs…",
+    "loadFailed": "Companies and jobs could not be loaded.",
+    "retry": "Try again",
+    "companies": {
+      "heading": "Companies",
+      "empty": "No companies yet. Add one with its careers page link from a supported job board.",
+      "name": "Company name",
+      "careersUrl": "Careers page link",
+      "careersUrlHint": "For example https://boards.greenhouse.io/<company>. Supported boards: Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Personio, Recruitee and Teamtailor.",
+      "add": "Add company",
+      "added": "Company added.",
+      "board": "Board: {{ats}}",
+      "noBoard": "No supported board",
+      "failure": {
+        "unsupported-careers-url": "This link does not point to a supported job board.",
+        "duplicate-company": "This job board is already in the list.",
+        "unknown": "The company could not be added."
+      }
+    },
+    "scan": {
+      "heading": "Scan",
+      "start": "Scan companies",
+      "starting": "Starting…",
+      "cancel": "Cancel scan",
+      "running": "Scanning…",
+      "idle": "No scan is running.",
+      "alreadyRunning": "A scan is already running.",
+      "engineUnavailable": "The background engine is not available. Try again in a moment."
+    },
+    "log": {
+      "heading": "Scan log",
+      "empty": "Nothing has been scanned yet.",
+      "runStarted": "Scan started.",
+      "companyStarted": "Scanning {{company}}…",
+      "companyScanned": "{{company}}: {{postings}} postings read, {{closed}} closed.",
+      "companyFailed": "{{company}}: could not be read ({{reason}}).",
+      "runFinished": "Scan finished: {{status}}.",
+      "reasons": {
+        "no-board": "no supported job board is set for this company",
+        "http-status": "the site answered with an error",
+        "timeout": "the site did not answer in time",
+        "network": "the site could not be reached",
+        "blocked-by-robots": "robots.txt does not allow it",
+        "too-large": "the page is too large",
+        "invalid-response": "the response was not in the expected format",
+        "invalid-slug": "the board name is not valid",
+        "too-many-pages": "the board has too many pages",
+        "storage-failed": "the postings could not be saved",
+        "aborted": "the scan was stopped",
+        "invalid-url": "the address is not valid",
+        "unknown": "unexpected error"
+      },
+      "statuses": {
+        "succeeded": "completed",
+        "failed": "failed",
+        "cancelled": "cancelled",
+        "interrupted": "interrupted"
+      }
+    },
+    "results": {
+      "heading": "Jobs",
+      "empty": "No open jobs yet. Scan the companies to read their postings.",
+      "noLocation": "No location stated",
+      "workMode": {
+        "remote": "Remote",
+        "hybrid": "Hybrid",
+        "onsite": "On site",
+        "unknown": "Work mode not stated"
+      },
+      "applyLink": "Apply page: {{url}}"
     }
   }
 }

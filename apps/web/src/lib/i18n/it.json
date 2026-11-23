@@ -10,7 +10,8 @@
     "emptyBody": "Ricerche e risultati compariranno qui.",
     "openSettings": "Impostazioni",
     "openOnboarding": "Configura il profilo",
-    "openProfile": "Profilo"
+    "openProfile": "Profilo",
+    "openJobs": "Lavori"
   },
   "settings": {
     "title": "Impostazioni",
@@ -251,6 +252,81 @@
       "title": "Verifica il profilo",
       "intro": "Controlla ogni campo prima di salvare. Non viene salvato nulla finché non premi Salva.",
       "contextWarning": "Il CV potrebbe superare la dimensione di contesto del modello, quindi alcune parti potrebbero mancare. Controlla i campi estratti."
+    }
+  },
+  "jobs": {
+    "title": "Lavori",
+    "backHome": "Torna alla home",
+    "loading": "Caricamento dei lavori…",
+    "loadFailed": "Non è stato possibile caricare aziende e lavori.",
+    "retry": "Riprova",
+    "companies": {
+      "heading": "Aziende",
+      "empty": "Nessuna azienda ancora. Aggiungine una con il link alla pagina delle carriere di una bacheca di lavoro supportata.",
+      "name": "Nome dell'azienda",
+      "careersUrl": "Link alla pagina delle carriere",
+      "careersUrlHint": "Per esempio https://boards.greenhouse.io/<azienda>. Bacheche supportate: Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Personio, Recruitee e Teamtailor.",
+      "add": "Aggiungi azienda",
+      "added": "Azienda aggiunta.",
+      "board": "Bacheca: {{ats}}",
+      "noBoard": "Nessuna bacheca supportata",
+      "failure": {
+        "unsupported-careers-url": "Questo link non porta a una bacheca di lavoro supportata.",
+        "duplicate-company": "Questa bacheca è già nell'elenco.",
+        "unknown": "Non è stato possibile aggiungere l'azienda."
+      }
+    },
+    "scan": {
+      "heading": "Scansione",
+      "start": "Scansiona aziende",
+      "starting": "Avvio in corso…",
+      "cancel": "Annulla scansione",
+      "running": "Scansione in corso…",
+      "idle": "Nessuna scansione in corso.",
+      "alreadyRunning": "Una scansione è già in corso.",
+      "engineUnavailable": "Il motore in background non è disponibile. Riprova tra poco."
+    },
+    "log": {
+      "heading": "Registro della scansione",
+      "empty": "Nessuna scansione ancora.",
+      "runStarted": "Scansione avviata.",
+      "companyStarted": "Scansione di {{company}}…",
+      "companyScanned": "{{company}}: {{postings}} annunci letti, {{closed}} chiusi.",
+      "companyFailed": "{{company}}: non è stato possibile leggerla ({{reason}}).",
+      "runFinished": "Scansione {{status}}.",
+      "reasons": {
+        "no-board": "per l'azienda non è impostata una bacheca supportata",
+        "http-status": "il sito ha risposto con un errore",
+        "timeout": "il sito non ha risposto in tempo",
+        "network": "il sito non è raggiungibile",
+        "blocked-by-robots": "robots.txt non lo consente",
+        "too-large": "la pagina è troppo grande",
+        "invalid-response": "la risposta non ha il formato atteso",
+        "invalid-slug": "il nome della bacheca non è valido",
+        "too-many-pages": "la bacheca ha troppe pagine",
+        "storage-failed": "gli annunci non sono stati salvati",
+        "aborted": "la scansione è stata fermata",
+        "invalid-url": "l'indirizzo non è valido",
+        "unknown": "errore imprevisto"
+      },
+      "statuses": {
+        "succeeded": "completata",
+        "failed": "non riuscita",
+        "cancelled": "annullata",
+        "interrupted": "interrotta"
+      }
+    },
+    "results": {
+      "heading": "Lavori",
+      "empty": "Nessun lavoro aperto ancora. Scansiona le aziende per leggere gli annunci.",
+      "noLocation": "Luogo non indicato",
+      "workMode": {
+        "remote": "Da remoto",
+        "hybrid": "Ibrido",
+        "onsite": "In sede",
+        "unknown": "Modalità di lavoro non indicata"
+      },
+      "applyLink": "Pagina di candidatura: {{url}}"
     }
   }
 }
