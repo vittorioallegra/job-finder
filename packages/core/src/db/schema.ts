@@ -1,4 +1,5 @@
-import { index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
+import { check, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 /** Run states. `interrupted` marks runs left `running` when the engine or app crashed. */
 export const RUN_STATUSES = ["running", "succeeded", "failed", "cancelled", "interrupted"] as const;
@@ -130,3 +131,31 @@ export const profileVersions = sqliteTable("profile_versions", {
   snapshot: text("snapshot").notNull(),
   createdAt: integer("created_at").notNull(),
 });
+
+/**
+ * The affinity score of one job for one profile version (0-100, with the model's explanation). A row
+ * is replaced when the job content, the model or the prompt version changes. A profile version change
+ * starts new rows, so the list reads only the rows of the current version. `job_hash`, `profile_hash`,
+ * `model` and `prompt_version` are the cache key a row is reused under.
+ */
+export const jobScores = sqliteTable(
+  "job_scores",
+  {
+    jobId: text("job_id")
+      .notNull()
+      .references(() => jobs.id),
+    profileVersion: integer("profile_version").notNull(),
+    jobHash: text("job_hash").notNull(),
+    profileHash: text("profile_hash").notNull(),
+    model: text("model").notNull(),
+    promptVersion: integer("prompt_version").notNull(),
+    score: integer("score").notNull(),
+    explanation: text("explanation").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.jobId, table.profileVersion] }),
+    index("job_scores_profile_version_idx").on(table.profileVersion),
+    check("job_scores_score_range", sql`${table.score} between 0 and 100`),
+  ],
+);

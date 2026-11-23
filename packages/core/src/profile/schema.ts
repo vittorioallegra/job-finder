@@ -163,12 +163,15 @@ export function emptyProfile(): Profile {
   };
 }
 
-/**
- * The fields ranking depends on. Editing contact details, links, application defaults or standard
- * answers does not change them, so it does not start a new profile version.
- */
-export function scoringSnapshot(profile: Profile): string {
-  return JSON.stringify({
+/** The profile fields ranking depends on. */
+export type ScoringFields = Pick<
+  Profile,
+  "headline" | "summary" | "experience" | "education" | "skills" | "languages" | "certifications"
+>;
+
+/** The ranking fields of a profile. Only these are sent to the AI for scoring. */
+export function scoringFields(profile: ScoringFields): ScoringFields {
+  return {
     headline: profile.headline,
     summary: profile.summary,
     experience: profile.experience,
@@ -176,7 +179,15 @@ export function scoringSnapshot(profile: Profile): string {
     skills: profile.skills,
     languages: profile.languages,
     certifications: profile.certifications,
-  });
+  };
+}
+
+/**
+ * The fields ranking depends on. Editing contact details, links, application defaults or standard
+ * answers does not change them, so it does not start a new profile version.
+ */
+export function scoringSnapshot(profile: ScoringFields): string {
+  return JSON.stringify(scoringFields(profile));
 }
 
 /**

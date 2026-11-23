@@ -12,6 +12,7 @@
     "./net": "./src/net/index.ts",
     "./normalize": "./src/normalize/index.ts",
     "./profile": "./src/profile/schema.ts",
+    "./ranking": "./src/ranking/index.ts",
     "./ats": "./src/ats/index.ts",
     "./careers": "./src/careers/index.ts",
     "./ingest": "./src/ingest/index.ts",
