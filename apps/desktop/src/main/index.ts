@@ -190,6 +190,7 @@ if (gotSingleInstanceLock) {
       settings: settingsRepository,
       secrets: secretStore,
       openJobIds: (limit) => openJobIds(database.db, limit),
+      systemLocale: () => app.getLocale(),
     });
     const discovery = createDiscoveryService({
       engine: () => supervisor,

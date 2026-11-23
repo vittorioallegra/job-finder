@@ -50,6 +50,7 @@ function score(jobId: string, profileVersion: number, value: number): StoredScor
     profileHash: "ph",
     model: "local-test",
     promptVersion: 1,
+    explanationLanguage: "en",
     score: value,
     explanation: "Fit.",
     createdAt: 1,

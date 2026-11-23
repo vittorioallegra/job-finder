@@ -1,0 +1,1 @@
+ALTER TABLE `job_scores` ADD `explanation_language` text DEFAULT 'en' NOT NULL;

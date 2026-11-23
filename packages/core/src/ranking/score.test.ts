@@ -1,5 +1,5 @@
-// protects=affinity scores are computed once per job, profile version, model and prompt version, reused when all still match, and stop at the run budget, the concurrency limit and the first provider failure while keeping the scores already made;
-// fails_when=a stored score is reused after its job, profile version or model changed, a job is scored past the budget, more calls run at once than the limit, an invalid answer is stored, a failing provider is called again, or a score is stored without a valid cache key;
+// protects=affinity scores are computed once per job, profile version, model, prompt version and explanation language, reused when all still match, and the explanation is asked for in the requested language, and stop at the run budget, the concurrency limit and the first provider failure while keeping the scores already made;
+// fails_when=a stored score is reused after its job, profile version, model or explanation language changed, an explanation is requested in another language, a job is scored past the budget, more calls run at once than the limit, an invalid answer is stored, a failing provider is called again, or a score is stored without a valid cache key;
 // no_claim=the answers come from scripted test doubles, so the quality of real model answers and the real provider's behaviour are not shown; the store is in memory, not the SQLite tables;
 import { describe, expect, it } from "vitest";
 import { createAiModel } from "../ai";
@@ -76,9 +76,11 @@ function scriptedAi(
   let calls = 0;
   let inFlight = 0;
   let peak = 0;
-  const fetchImpl = (async () => {
+  const bodies: string[] = [];
+  const fetchImpl = (async (_input: unknown, init?: { body?: unknown }) => {
     const call = calls;
     calls += 1;
+    bodies.push(String(init?.body ?? ""));
     inFlight += 1;
     peak = Math.max(peak, inFlight);
     await new Promise((resolve) => setTimeout(resolve, options.delayMs ?? 0));
@@ -106,6 +108,7 @@ function scriptedAi(
     ai,
     calls: () => calls,
     peak: () => peak,
+    bodies,
   };
 }
 
@@ -124,6 +127,7 @@ describe("scoreJobs", () => {
       profile,
       profileVersion: 1,
       jobIds: ["a", "b"],
+      language: "en",
     });
 
     expect(run).toMatchObject({ ok: true, scored: 2, cached: 0, failed: 0, skipped: 0 });
@@ -135,6 +139,7 @@ describe("scoreJobs", () => {
       profileHash: profileHash(profile),
       model: MODEL_ID,
       promptVersion: SCORE_PROMPT_VERSION,
+      explanationLanguage: "en",
       explanation: "Strong TypeScript match.",
     });
 
@@ -145,6 +150,7 @@ describe("scoreJobs", () => {
       profile,
       profileVersion: 1,
       jobIds: ["a", "b"],
+      language: "en",
     });
 
     expect(again).toMatchObject({ ok: true, scored: 0, cached: 2 });
@@ -160,6 +166,7 @@ describe("scoreJobs", () => {
       profileHash: profileHash(profile),
       model: MODEL_ID,
       promptVersion: SCORE_PROMPT_VERSION,
+      explanationLanguage: "en",
       score: 90,
       explanation: "Old.",
       createdAt: 0,
@@ -174,6 +181,7 @@ describe("scoreJobs", () => {
         profile,
         profileVersion: 1,
         jobIds: ["a"],
+        language: "en",
       }),
     ).toMatchObject({ scored: 1, cached: 0 });
 
@@ -186,6 +194,7 @@ describe("scoreJobs", () => {
         profile,
         profileVersion: 2,
         jobIds: ["a"],
+        language: "en",
       }),
     ).toMatchObject({ scored: 1, cached: 0 });
 
@@ -199,6 +208,7 @@ describe("scoreJobs", () => {
         profile,
         profileVersion: 1,
         jobIds: ["a"],
+        language: "en",
       }),
     ).toMatchObject({ scored: 1, cached: 0 });
   });
@@ -214,6 +224,7 @@ describe("scoreJobs", () => {
       profile,
       profileVersion: 1,
       jobIds: ["a", "b", "c"],
+      language: "en",
       budget: 2,
       concurrency: 1,
     });
@@ -234,6 +245,7 @@ describe("scoreJobs", () => {
       profile,
       profileVersion: 1,
       jobIds: jobs.map((item) => item.id),
+      language: "en",
       concurrency: 2,
     });
 
@@ -252,6 +264,7 @@ describe("scoreJobs", () => {
       profile,
       profileVersion: 1,
       jobIds: ["a", "b"],
+      language: "en",
       concurrency: 1,
     });
 
@@ -270,6 +283,7 @@ describe("scoreJobs", () => {
       profile,
       profileVersion: 1,
       jobIds: ["a", "b", "c"],
+      language: "en",
       concurrency: 1,
     });
 
@@ -288,9 +302,57 @@ describe("scoreJobs", () => {
       profile,
       profileVersion: 1,
       jobIds: ["a", "missing"],
+      language: "en",
     });
 
     expect(run).toMatchObject({ ok: true, scored: 0, failed: 1, skipped: 1 });
     expect(ai.calls()).toBe(0);
+  });
+
+  it("asks for the explanation in the requested language and recomputes a stored score written in another language", async () => {
+    const jobs = [job("a")];
+    const english: StoredScore = {
+      jobId: "a",
+      profileVersion: 1,
+      jobHash: jobContentHash(jobs[0]!),
+      profileHash: profileHash(profile),
+      model: MODEL_ID,
+      promptVersion: SCORE_PROMPT_VERSION,
+      explanationLanguage: "en",
+      score: 70,
+      explanation: "Strong TypeScript match.",
+      createdAt: 0,
+    };
+    const { store, rows } = memoryStore(jobs, [english]);
+    const italian = scriptedAi(() => answer(70, "Buona corrispondenza con TypeScript."));
+
+    const run = await scoreJobs({
+      store,
+      ai: italian.ai,
+      profile,
+      profileVersion: 1,
+      jobIds: ["a"],
+      language: "it",
+    });
+
+    expect(run).toMatchObject({ ok: true, scored: 1, cached: 0 });
+    expect(italian.bodies[0]).toContain("in Italian");
+    expect(rows.find((row) => row.jobId === "a")).toMatchObject({
+      explanationLanguage: "it",
+      explanation: "Buona corrispondenza con TypeScript.",
+    });
+
+    const again = scriptedAi(() => answer(10));
+    const cached = await scoreJobs({
+      store,
+      ai: again.ai,
+      profile,
+      profileVersion: 1,
+      jobIds: ["a"],
+      language: "it",
+    });
+
+    expect(cached).toMatchObject({ ok: true, scored: 0, cached: 1 });
+    expect(again.calls()).toBe(0);
   });
 });

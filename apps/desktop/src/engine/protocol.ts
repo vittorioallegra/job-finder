@@ -9,7 +9,7 @@ import type {
 import type { BatchPlan, LookupRequest } from "@job-finder/core/ingest";
 import type { IngestEvent } from "@job-finder/core/ingest/events";
 import type { PageRenderResult } from "@job-finder/core/net";
-import type { ScoreOutcome, StoredScore } from "@job-finder/core/ranking";
+import type { ExplanationLanguage, ScoreOutcome, StoredScore } from "@job-finder/core/ranking";
 import type { ScoringFields } from "@job-finder/core/profile";
 
 /**
@@ -59,6 +59,8 @@ export interface ScoreJobsRequest {
   profileVersion: number;
   /** Jobs in scoring order: visible and top jobs first. */
   jobIds: string[];
+  /** The language of the explanations: the user's UI language. */
+  language: ExplanationLanguage;
   ai: IngestAiSettings;
 }
 

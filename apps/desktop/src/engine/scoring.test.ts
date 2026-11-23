@@ -35,6 +35,7 @@ function request(jobIds: string[] = ["j1"]): ScoreJobsRequest {
     profile: scoringFields(emptyProfile()),
     profileVersion: 3,
     jobIds,
+    language: "en",
     ai: { config, contextSize: 8192 },
   };
 }

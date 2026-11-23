@@ -67,6 +67,7 @@ export async function persistScores(db: AppDb, rows: StoredScore[]): Promise<voi
           profileHash: row.profileHash,
           model: row.model,
           promptVersion: row.promptVersion,
+          explanationLanguage: row.explanationLanguage,
           score: row.score,
           explanation: row.explanation,
           createdAt: row.createdAt,

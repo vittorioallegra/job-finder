@@ -433,6 +433,7 @@ describe("engine supervisor", () => {
       profile: scoringFields(emptyProfile()),
       profileVersion: 2,
       jobIds: ["j1", "j2"],
+      language: "en",
       ai: {
         config: {
           provider: "openai-compatible",

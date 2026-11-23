@@ -1,5 +1,5 @@
-// protects=a scoring run starts only with a saved profile and, for a cloud provider, the user's consent; the engine gets the ranking fields and the key but no contact details; a second run is refused while one is active; and an engine that is gone is reported as unavailable;
-// fails_when=the engine is asked without a profile or without consent for a cloud provider, the contact details leave main with the profile, the key is missing from the request, a second run starts while one is active, or a lost engine is reported as a store failure;
+// protects=a scoring run starts only with a saved profile and, for a cloud provider, the user's consent; the explanations are asked for in the UI language (the system locale when the setting follows the system); the engine gets the ranking fields and the key but no contact details; a second run is refused while one is active; and an engine that is gone is reported as unavailable;
+// fails_when=the explanations are asked in another language than the UI setting, the engine is asked without a profile or without consent for a cloud provider, the contact details leave main with the profile, the key is missing from the request, a second run starts while one is active, or a lost engine is reported as a store failure;
 // no_claim=the real engine, the database and the provider are not reached; the engine and database tests cover them;
 import { describe, expect, it } from "vitest";
 import { DEFAULT_APP_SETTINGS, type AppSettings } from "@job-finder/bridge";
@@ -27,6 +27,8 @@ function deps(overrides: {
   ai?: AppSettings;
   openJobIds?: string[];
   key?: string | null;
+  ui?: AppSettings["ui"];
+  locale?: string;
 }) {
   const requests: ScoreJobsRequest[] = [];
   const engine: ScoringEngine = {
@@ -44,10 +46,14 @@ function deps(overrides: {
           : overrides.saved,
     },
     settings: {
-      get: async () => overrides.ai ?? settings("openai-compatible", "http://localhost:11434/v1"),
+      get: async () => ({
+        ...(overrides.ai ?? settings("openai-compatible", "http://localhost:11434/v1")),
+        ui: overrides.ui ?? DEFAULT_APP_SETTINGS.ui,
+      }),
     },
     secrets: { read: async () => (overrides.key === undefined ? "sk-test" : overrides.key) },
     openJobIds: async (limit) => (overrides.openJobIds ?? ["j2", "j1"]).slice(0, limit),
+    systemLocale: () => overrides.locale ?? "en-US",
   });
   return { service, requests };
 }
@@ -70,6 +76,24 @@ describe("scoring service", () => {
       model: "local-model",
     });
     expect(request?.ai.contextSize).toBe(4096);
+  });
+
+  it("asks for the explanations in the UI language, or in the system language when the setting follows it", async () => {
+    const explicit = deps({ ui: { language: "it" }, locale: "en-US" });
+    await explicit.service.start({ consent: false });
+    expect(explicit.requests[0]?.language).toBe("it");
+
+    const followsSystemItalian = deps({ ui: { language: "system" }, locale: "it-IT" });
+    await followsSystemItalian.service.start({ consent: false });
+    expect(followsSystemItalian.requests[0]?.language).toBe("it");
+
+    const followsSystemOther = deps({ ui: { language: "system" }, locale: "fr-FR" });
+    await followsSystemOther.service.start({ consent: false });
+    expect(followsSystemOther.requests[0]?.language).toBe("en");
+
+    const explicitEnglish = deps({ ui: { language: "en" }, locale: "it-IT" });
+    await explicitEnglish.service.start({ consent: false });
+    expect(explicitEnglish.requests[0]?.language).toBe("en");
   });
 
   it("refuses to score without a saved profile", async () => {
@@ -129,6 +153,7 @@ describe("scoring service", () => {
       settings: { get: async () => settings("openai-compatible", "http://localhost:11434/v1") },
       secrets: { read: async () => null },
       openJobIds: async () => ["j1"],
+      systemLocale: () => "en-US",
     });
 
     const first = service.start({ consent: false });
@@ -152,6 +177,7 @@ describe("scoring service", () => {
       settings: { get: async () => settings("openai-compatible", "http://localhost:11434/v1") },
       secrets: { read: async () => null },
       openJobIds: async () => ["j1"],
+      systemLocale: () => "en-US",
     });
 
     expect(await service.start({ consent: false })).toEqual({

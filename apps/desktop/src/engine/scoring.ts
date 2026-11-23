@@ -64,6 +64,7 @@ export function createScoringRunner(
         profile: request.profile,
         profileVersion: request.profileVersion,
         jobIds: request.jobIds,
+        language: request.language,
       });
     },
   };

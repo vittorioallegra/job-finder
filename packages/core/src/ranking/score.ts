@@ -8,10 +8,14 @@ import {
   scorePrompt,
   ScoreSchema,
   SCORE_PROMPT_VERSION,
+  type ExplanationLanguage,
   type ScoringJob,
 } from "./prompt";
 
-/** A stored score. `jobHash`, `profileHash`, `model` and `promptVersion` are its cache key. */
+/**
+ * A stored score. `jobHash`, `profileHash`, `model`, `promptVersion` and `explanationLanguage` are
+ * its cache key: an explanation written in another language is not the one the user asked for.
+ */
 export interface StoredScore {
   jobId: string;
   profileVersion: number;
@@ -19,6 +23,7 @@ export interface StoredScore {
   profileHash: string;
   model: string;
   promptVersion: number;
+  explanationLanguage: ExplanationLanguage;
   score: number;
   explanation: string;
   createdAt: number;
@@ -58,6 +63,8 @@ export interface ScoreJobsOptions {
   profileVersion: number;
   /** In the order to score them: visible and top jobs first. Duplicates are scored once. */
   jobIds: string[];
+  /** The language of the explanations: the user's UI language. */
+  language: ExplanationLanguage;
   now?: () => number;
   budget?: number;
   concurrency?: number;
@@ -113,7 +120,8 @@ export async function scoreJobs(options: ScoreJobsOptions): Promise<ScoreOutcome
         row.jobHash === jobHash &&
         row.profileHash === currentProfileHash &&
         row.model === ai.modelId &&
-        row.promptVersion === SCORE_PROMPT_VERSION
+        row.promptVersion === SCORE_PROMPT_VERSION &&
+        row.explanationLanguage === options.language
       ) {
         counts.cached += 1;
       } else {
@@ -131,7 +139,7 @@ export async function scoreJobs(options: ScoreJobsOptions): Promise<ScoreOutcome
             return;
           }
           remaining -= 1;
-          const prompt = scorePrompt(job, profile);
+          const prompt = scorePrompt(job, profile, options.language);
           if (checkContextFit(`${prompt.system}\n${prompt.user}`, ai.contextSize).exceeds) {
             counts.failed += 1;
             return;
@@ -152,6 +160,7 @@ export async function scoreJobs(options: ScoreJobsOptions): Promise<ScoreOutcome
               profileHash: currentProfileHash,
               model: ai.modelId,
               promptVersion: SCORE_PROMPT_VERSION,
+              explanationLanguage: options.language,
               score: result.value.score,
               explanation: result.value.explanation,
               createdAt: now(),

@@ -4,7 +4,9 @@ import {
   type ScoreStartResult,
 } from "@job-finder/bridge";
 import { scoringFields } from "@job-finder/core/profile";
+import type { ExplanationLanguage } from "@job-finder/core/ranking";
 import type { ScoreJobsOutcome, ScoreJobsRequest } from "../../engine/protocol";
+import { resolveMainLanguage } from "../i18n";
 import { EngineUnavailableError } from "../engine/supervisor";
 import type { ProfileRepository } from "../profile/repository";
 import type { SecretStore } from "../secrets/store";
@@ -30,6 +32,16 @@ export interface ScoringServiceOptions {
   secrets: Pick<SecretStore, "read">;
   /** Open job ids, newest first, at most `limit`. */
   openJobIds(limit: number): Promise<string[]>;
+  /** The OS locale, used when the UI language setting is "system". */
+  systemLocale(): string;
+}
+
+/** The explanation language: the UI language setting, or the OS locale when the setting follows the system. */
+export function explanationLanguage(
+  setting: "system" | ExplanationLanguage,
+  systemLocale: string,
+): ExplanationLanguage {
+  return setting === "system" ? resolveMainLanguage(systemLocale) : setting;
 }
 
 /**
@@ -45,7 +57,7 @@ export function createScoringService(options: ScoringServiceOptions): ScoringSer
     if (saved === null) {
       return { ok: false, code: "no-profile" };
     }
-    const { ai } = await options.settings.get();
+    const { ai, ui } = await options.settings.get();
     if (isCloudAiEndpoint(ai) && !request.consent) {
       return { ok: false, code: "consent-required" };
     }
@@ -58,6 +70,7 @@ export function createScoringService(options: ScoringServiceOptions): ScoringSer
       profile: scoringFields(saved.profile),
       profileVersion: saved.version,
       jobIds,
+      language: explanationLanguage(ui.language, options.systemLocale()),
       ai: {
         config: {
           provider: ai.provider,
