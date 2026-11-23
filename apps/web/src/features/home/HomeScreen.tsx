@@ -26,6 +26,9 @@ export function HomeScreen() {
         <Link to="/jobs" className="text-app-accent underline">
           {t("home.openJobs")}
         </Link>
+        <Link to="/companies" className="text-app-accent underline">
+          {t("home.openCompanies")}
+        </Link>
         <Link to="/settings" className="text-app-accent underline">
           {t("home.openSettings")}
         </Link>

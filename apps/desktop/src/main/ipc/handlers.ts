@@ -3,6 +3,8 @@ import {
   type AppSettingsPatch,
   type CompanyAddRequest,
   type CvImportRequest,
+  type DiscoverySearchRequest,
+  type IngestStartRequest,
   type IpcChannel,
   type SecretName,
 } from "@job-finder/bridge";
@@ -11,6 +13,7 @@ import type { AiConnectionService } from "../ai/connection";
 import type { IngestRepository } from "../ingest/repository";
 import type { IngestionService } from "../ingest/service";
 import type { CvImportService } from "../profile/cv-import";
+import type { DiscoveryService } from "../discovery/service";
 import type { ProfileRepository } from "../profile/repository";
 import { originOf } from "../security/origin";
 import type { SecretStore } from "../secrets/store";
@@ -24,6 +27,7 @@ export interface IpcServices {
   cvImport: CvImportService;
   repository: IngestRepository;
   ingestion: IngestionService;
+  discovery: DiscoveryService;
 }
 
 /** The parts of an Electron invoke event that the sender check reads. */
@@ -96,7 +100,9 @@ export async function handleInvoke(
     case "jobs:list":
       return services.repository.listJobs();
     case "ingest:start":
-      return services.ingestion.start();
+      return services.ingestion.start((payload as IngestStartRequest | undefined)?.companyId);
+    case "discovery:search":
+      return services.discovery.search(payload as DiscoverySearchRequest);
     case "ingest:cancel":
       services.ingestion.cancel((payload as { runId: string }).runId);
       return undefined;

@@ -108,7 +108,22 @@ function spyServices() {
     handleEngineEvent: () => {},
     handleEngineLost: () => {},
   };
-  const services: IpcServices = { settings, secrets, ai, profile, cvImport, repository, ingestion };
+  const discovery = {
+    search: async () => {
+      calls.push("discovery.search");
+      return { ok: false as const, code: "engine-unavailable" as const };
+    },
+  };
+  const services: IpcServices = {
+    settings,
+    secrets,
+    ai,
+    profile,
+    cvImport,
+    repository,
+    ingestion,
+    discovery,
+  };
   return { services, calls };
 }
 
@@ -201,6 +216,7 @@ describe("IPC sender and payload guard", () => {
         "ai:test-connection",
         "companies:add",
         "companies:list",
+        "discovery:search",
         "ingest:cancel",
         "ingest:latest",
         "ingest:start",

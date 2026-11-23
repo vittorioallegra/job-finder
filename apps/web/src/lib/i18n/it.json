@@ -11,7 +11,8 @@
     "openSettings": "Impostazioni",
     "openOnboarding": "Configura il profilo",
     "openProfile": "Profilo",
-    "openJobs": "Lavori"
+    "openJobs": "Lavori",
+    "openCompanies": "Aziende"
   },
   "settings": {
     "title": "Impostazioni",
@@ -260,22 +261,7 @@
     "loading": "Caricamento dei lavori…",
     "loadFailed": "Non è stato possibile caricare aziende e lavori.",
     "retry": "Riprova",
-    "companies": {
-      "heading": "Aziende",
-      "empty": "Nessuna azienda ancora. Aggiungine una con il link alla pagina delle carriere di una bacheca di lavoro supportata.",
-      "name": "Nome dell'azienda",
-      "careersUrl": "Link alla pagina delle carriere",
-      "careersUrlHint": "Per esempio https://boards.greenhouse.io/<azienda>. Bacheche supportate: Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Personio, Recruitee e Teamtailor.",
-      "add": "Aggiungi azienda",
-      "added": "Azienda aggiunta.",
-      "board": "Bacheca: {{ats}}",
-      "noBoard": "Nessuna bacheca supportata",
-      "failure": {
-        "unsupported-careers-url": "Questo link non porta a una bacheca di lavoro supportata.",
-        "duplicate-company": "Questa bacheca è già nell'elenco.",
-        "unknown": "Non è stato possibile aggiungere l'azienda."
-      }
-    },
+    "openCompanies": "Gestisci aziende",
     "scan": {
       "heading": "Scansione",
       "start": "Scansiona aziende",
@@ -283,6 +269,7 @@
       "cancel": "Annulla scansione",
       "running": "Scansione in corso…",
       "idle": "Nessuna scansione in corso.",
+      "needCompanies": "Prima aggiungi un'azienda nella schermata Aziende.",
       "alreadyRunning": "Una scansione è già in corso.",
       "engineUnavailable": "Il motore in background non è disponibile. Riprova tra poco."
     },
@@ -327,6 +314,63 @@
         "unknown": "Modalità di lavoro non indicata"
       },
       "applyLink": "Pagina di candidatura: {{url}}"
+    }
+  },
+  "companies": {
+    "title": "Aziende",
+    "backHome": "Torna alla home",
+    "backJobs": "Torna ai lavori",
+    "loading": "Caricamento delle aziende…",
+    "loadFailed": "Non è stato possibile caricare le aziende.",
+    "retry": "Riprova",
+    "list": {
+      "heading": "Aziende",
+      "empty": "Nessuna azienda ancora. Cerca bacheche qui sotto o aggiungine una con il link alla pagina di lavoro.",
+      "board": "Bacheca: {{ats}}",
+      "noBoard": "Nessuna bacheca supportata",
+      "noBoardHint": "Aggiungi il link alla pagina di lavoro di una bacheca supportata per analizzare questa azienda."
+    },
+    "scan": {
+      "never": "Non ancora analizzata.",
+      "noJobs": "Nessun annuncio leggibile nell'ultima analisi.",
+      "scanned": "Ultima analisi: {{postings}} annunci letti, {{closed}} chiusi.",
+      "failed": "Ultima analisi non riuscita: {{reason}}.",
+      "retry": "Analizza di nuovo",
+      "started": "Analisi avviata.",
+      "alreadyRunning": "Un'analisi è già in corso.",
+      "engineUnavailable": "Il motore in background non è disponibile. Riprova tra poco."
+    },
+    "discover": {
+      "heading": "Trova aziende",
+      "intro": "Cerca sul web le bacheche di lavoro che corrispondono alle tue parole chiave. Non si aggiunge nulla finché non lo scegli tu.",
+      "keywords": "Parole chiave",
+      "keywordsHint": "Separate da virgola, fino a cinque. Per esempio: backend, data engineer.",
+      "locations": "Luogo (facoltativo)",
+      "locationsHint": "Separati da virgola, fino a cinque. Per esempio: Milano, Berlino.",
+      "submit": "Cerca bacheche",
+      "searching": "Ricerca delle bacheche in corso…",
+      "boardsFound": "Bacheche trovate: {{count}}.",
+      "none": "Nessuna bacheca trovata per questi termini.",
+      "alreadyAdded": "Già aggiunta",
+      "add": "Aggiungi {{name}}",
+      "failure": {
+        "search-blocked": "Il servizio di ricerca ha bloccato la richiesta, quindi non è stato possibile cercare. Aggiungi le aziende con il link alla pagina di lavoro qui sotto.",
+        "search-failed": "La ricerca non è riuscita. Riprova più tardi.",
+        "engine-unavailable": "Il motore in background non è disponibile. Riprova tra poco."
+      }
+    },
+    "add": {
+      "heading": "Aggiungi con un link",
+      "name": "Nome dell'azienda",
+      "careersUrl": "Link alla pagina di lavoro",
+      "careersUrlHint": "Per esempio https://boards.greenhouse.io/<azienda>. Bacheche supportate: Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Personio, Recruitee e Teamtailor.",
+      "submit": "Aggiungi azienda",
+      "added": "Azienda aggiunta.",
+      "failure": {
+        "unsupported-careers-url": "Questo link non punta a una bacheca di lavoro supportata.",
+        "duplicate-company": "Questa bacheca è già nell'elenco.",
+        "unknown": "Non è stato possibile aggiungere l'azienda."
+      }
     }
   }
 }

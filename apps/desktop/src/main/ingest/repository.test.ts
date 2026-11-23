@@ -1,5 +1,5 @@
-// protects=a company is stored only with a board the adapters can read, one board is stored once, the job list shows only open jobs, and the latest run comes back with its log in order;
-// fails_when=a careers URL with no supported board is stored, the same board is stored twice, a closed job is listed, or the run log is returned out of order or without its kinds;
+// protects=a company is stored only with a board the adapters can read, one board is stored once, the job list shows only open jobs, the latest run comes back with its log in order, and each company shows its most recent scan from the run log;
+// fails_when=a careers URL with no supported board is stored, the same board is stored twice, a closed job is listed, the run log is returned out of order or without its kinds, or a company shows an older scan than its latest one;
 // no_claim=the careers URL is checked by its shape only, without a request, so a board that does not exist is still stored; the database schema is covered by the migration tests.
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -41,6 +41,7 @@ describe("ingest repository", () => {
         ats: "greenhouse",
         slug: "acme",
         createdAt: 10,
+        lastScan: null,
       },
     });
 
@@ -54,6 +55,79 @@ describe("ingest repository", () => {
       }),
     ).toEqual({ ok: false, code: "duplicate-company" });
     expect(await repository.listCompanies()).toHaveLength(1);
+    database.close();
+  });
+
+  it("shows each company's most recent scan from the run log, or none before its first", async () => {
+    const database = await openDatabase();
+    const repository = createIngestRepository(database.db);
+    await database.db.insert(companies).values([
+      {
+        id: "co-1",
+        name: "Acme",
+        careersUrl: "https://boards.greenhouse.io/acme",
+        ats: "greenhouse",
+        slug: "acme",
+        createdAt: 1,
+      },
+      {
+        id: "co-2",
+        name: "Globex",
+        careersUrl: "https://jobs.lever.co/globex",
+        ats: "lever",
+        slug: "globex",
+        createdAt: 2,
+      },
+    ]);
+    await database.db.insert(runs).values([
+      { id: "run-1", kind: "ingest", status: "succeeded", startedAt: 5, finishedAt: 9 },
+      { id: "run-2", kind: "ingest", status: "succeeded", startedAt: 20, finishedAt: 29 },
+    ]);
+    for (const event of [
+      {
+        runId: "run-1",
+        seq: 0,
+        at: 6,
+        kind: "company-scanned",
+        companyId: "co-1",
+        companyName: "Acme",
+        jobCount: 3,
+        closedCount: 0,
+      },
+      {
+        runId: "run-1",
+        seq: 1,
+        at: 7,
+        kind: "company-failed",
+        companyId: "co-2",
+        companyName: "Globex",
+        code: "http-status",
+      },
+      {
+        runId: "run-2",
+        seq: 0,
+        at: 21,
+        kind: "company-failed",
+        companyId: "co-1",
+        companyName: "Acme",
+        code: "timeout",
+      },
+    ] as IngestEvent[]) {
+      await appendRunEvent(database.db, event);
+    }
+
+    const listed = await repository.listCompanies();
+
+    expect(listed.find((company) => company.id === "co-1")?.lastScan).toEqual({
+      outcome: "failed",
+      at: 21,
+      code: "timeout",
+    });
+    expect(listed.find((company) => company.id === "co-2")?.lastScan).toEqual({
+      outcome: "failed",
+      at: 7,
+      code: "http-status",
+    });
     database.close();
   });
 

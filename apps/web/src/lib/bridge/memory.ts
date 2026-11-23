@@ -7,6 +7,7 @@ import {
   type AppSettingsPatch,
   type CompanyRecord,
   type CvImportResult,
+  type DiscoverySearchResult,
   type IngestEvent,
   type IngestStartResult,
   type JobFinderBridge,
@@ -35,6 +36,8 @@ export interface MemoryBridgeOptions {
   latestRun?: LatestRun | null;
   /** Answer to "start a run". Defaults to engine unavailable, since there is no engine here. */
   ingestStart?: IngestStartResult;
+  /** Answer to a discovery search. Defaults to engine unavailable, since there is no engine here. */
+  discovery?: DiscoverySearchResult;
 }
 
 /**
@@ -106,6 +109,7 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
           ats: null,
           slug: null,
           createdAt: Date.now(),
+          lastScan: null,
         };
         companies.push(company);
         return { ok: true, company: structuredClone(company) };
@@ -113,6 +117,10 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
     },
     jobs: {
       list: async () => structuredClone(jobs),
+    },
+    discovery: {
+      search: async () =>
+        structuredClone(options.discovery ?? { ok: false, code: "engine-unavailable" }),
     },
     ingest: {
       start: async () =>

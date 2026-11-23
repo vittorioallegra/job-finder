@@ -1,5 +1,6 @@
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
 import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
+import type { DiscoveryCriteria, DiscoveryOutcome } from "@job-finder/core/discovery/types";
 import { guardPageRender, type HttpClient, type PageRenderResult } from "@job-finder/core/net";
 import type { DbCall, DbResult, EngineToMainMessage, MainToEngineMessage } from "./protocol";
 import type { PortLike } from "./port";
@@ -26,6 +27,8 @@ export interface IngestApi {
 export interface EngineServices {
   testAiConnection(config: AiProviderConfig): Promise<AiConnectionResult>;
   importCv(request: CvImportRequest): Promise<CvImportOutcome>;
+  /** Searches for ATS boards through the engine's HTTP path. */
+  discoverCompanies(criteria: DiscoveryCriteria): Promise<DiscoveryOutcome>;
   /** The engine's HTTP path: fixture override, robots.txt and the per-host queue. */
   net: HttpClient;
   /** Builds the ingestion controller over the runtime's database and message channel. */
@@ -74,8 +77,16 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
       return;
     }
     if (message.type === "ingest-start") {
-      const { id, runId } = message;
-      post(port, { type: "ingest-start-result", id, code: ingest.start(runId) });
+      const { id, runId, companyId } = message;
+      post(port, { type: "ingest-start-result", id, code: ingest.start(runId, companyId) });
+      return;
+    }
+    if (message.type === "discover-companies") {
+      const { id, criteria } = message;
+      void services
+        .discoverCompanies(criteria)
+        .catch((): DiscoveryOutcome => ({ ok: false, code: "search-failed" }))
+        .then((outcome) => post(port, { type: "discover-companies-result", id, outcome }));
       return;
     }
     if (message.type === "ingest-cancel") {

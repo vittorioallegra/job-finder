@@ -3,7 +3,7 @@ import type { IngestStartResult } from "@job-finder/bridge";
 
 /** The part of the engine supervisor the ingestion service needs. */
 export interface IngestionEngine {
-  startIngestion(runId: string): Promise<"accepted" | "already-running">;
+  startIngestion(runId: string, companyId?: string): Promise<"accepted" | "already-running">;
   cancelIngestion(runId: string): void;
 }
 
@@ -16,7 +16,8 @@ export interface IngestionServiceOptions {
 }
 
 export interface IngestionService {
-  start(): Promise<IngestStartResult>;
+  /** Starts a run over every company, or over `companyId` only. */
+  start(companyId?: string): Promise<IngestStartResult>;
   cancel(runId: string): void;
   /** Progress from the engine: forwarded to the windows, and a finished run stops being active. */
   handleEngineEvent(event: IngestEvent): void;
@@ -33,7 +34,7 @@ export function createIngestionService(options: IngestionServiceOptions): Ingest
   let activeRunId: string | undefined;
 
   return {
-    async start() {
+    async start(companyId) {
       if (activeRunId !== undefined) {
         return { ok: false, code: "already-running" };
       }
@@ -44,7 +45,7 @@ export function createIngestionService(options: IngestionServiceOptions): Ingest
       const runId = newRunId();
       let answer: "accepted" | "already-running";
       try {
-        answer = await engine.startIngestion(runId);
+        answer = await engine.startIngestion(runId, companyId);
       } catch {
         return { ok: false, code: "engine-unavailable" };
       }

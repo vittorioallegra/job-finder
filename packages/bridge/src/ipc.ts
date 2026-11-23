@@ -13,7 +13,13 @@ import type {
   JobListItem,
   LatestRun,
 } from "./ingest";
-import { CompanyAddRequestSchema, IngestCancelRequestSchema } from "./ingest";
+import {
+  CompanyAddRequestSchema,
+  IngestCancelRequestSchema,
+  IngestStartRequestSchema,
+} from "./ingest";
+import type { DiscoverySearchResult } from "./discovery";
+import { DiscoverySearchRequestSchema } from "./discovery";
 
 /**
  * Request payload per channel. Main validates every incoming payload with these schemas before
@@ -32,9 +38,10 @@ export const IPC_REQUEST_SCHEMAS = {
   "companies:list": z.undefined(),
   "companies:add": CompanyAddRequestSchema,
   "jobs:list": z.undefined(),
-  "ingest:start": z.undefined(),
+  "ingest:start": IngestStartRequestSchema,
   "ingest:cancel": IngestCancelRequestSchema,
   "ingest:latest": z.undefined(),
+  "discovery:search": DiscoverySearchRequestSchema,
 } as const;
 
 export type IpcChannel = keyof typeof IPC_REQUEST_SCHEMAS;
@@ -57,6 +64,7 @@ export interface IpcResponses {
   "ingest:start": IngestStartResult;
   "ingest:cancel": void;
   "ingest:latest": LatestRun | null;
+  "discovery:search": DiscoverySearchResult;
 }
 
 export type IpcResponse<C extends IpcChannel> = IpcResponses[C];

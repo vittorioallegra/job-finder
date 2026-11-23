@@ -9,6 +9,7 @@ import { createAiConnectionService } from "./ai/connection";
 import { createCvImportService } from "./profile/cv-import";
 import { createIngestRepository } from "./ingest/repository";
 import { createIngestionService } from "./ingest/service";
+import { createDiscoveryService } from "./discovery/service";
 import { createProfileRepository } from "./profile/repository";
 import { createUtilityProcessLauncher } from "./engine/launcher";
 import { engineEnvironment } from "./engine/fixture-env";
@@ -168,6 +169,7 @@ if (gotSingleInstanceLock) {
       secrets: secretStore,
       engine: supervisor,
     });
+    const discovery = createDiscoveryService(() => supervisor);
     registerIpcHandlers(
       ipcMain,
       {
@@ -178,6 +180,7 @@ if (gotSingleInstanceLock) {
         cvImport,
         repository: ingestRepository,
         ingestion,
+        discovery,
       },
       originOf(rendererUrl) ?? rendererUrl,
     );

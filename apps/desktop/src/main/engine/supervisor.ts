@@ -1,5 +1,6 @@
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
 import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
+import type { DiscoveryCriteria, DiscoveryOutcome } from "@job-finder/core/discovery/types";
 import type { IngestEvent } from "@job-finder/core/ingest/events";
 import type { PageRenderResult } from "@job-finder/core/net";
 import type { DbCall, DbResult, EngineToMainMessage, IngestStartCode } from "../../engine/protocol";
@@ -83,7 +84,12 @@ export interface EngineSupervisor {
    * Asks the engine to start an ingestion run. Resolves with its answer (`already-running` when
    * another run is active) and rejects with EngineUnavailableError when the engine is gone.
    */
-  startIngestion(runId: string): Promise<"accepted" | "already-running">;
+  startIngestion(runId: string, companyId?: string): Promise<"accepted" | "already-running">;
+  /**
+   * Searches for ATS boards in the engine. Resolves with the outcome; rejects with
+   * EngineUnavailableError when the engine is gone.
+   */
+  discoverCompanies(criteria: DiscoveryCriteria): Promise<DiscoveryOutcome>;
   /** Asks the engine to stop a run. Ignored when no engine is running. */
   cancelIngestion(runId: string): void;
   readonly state: EngineSupervisorState;
@@ -110,6 +116,11 @@ interface PendingCvImport {
   reject: (error: Error) => void;
 }
 
+interface PendingDiscovery {
+  resolve: (outcome: DiscoveryOutcome) => void;
+  reject: (error: Error) => void;
+}
+
 interface Current {
   handle: EngineHandle;
   ready: boolean;
@@ -117,6 +128,7 @@ interface Current {
   pendingAiTests: Map<number, PendingAiTest>;
   pendingCvImports: Map<number, PendingCvImport>;
   pendingIngestStarts: Map<number, PendingIngestStart>;
+  pendingDiscoveries: Map<number, PendingDiscovery>;
 }
 
 /**
@@ -148,6 +160,7 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pendingAiTests: new Map(),
       pendingCvImports: new Map(),
       pendingIngestStarts: new Map(),
+      pendingDiscoveries: new Map(),
     };
     current = state;
     phase = "running";
@@ -192,6 +205,10 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pending.reject(new EngineUnavailableError(reason));
     }
     state.pendingIngestStarts.clear();
+    for (const pending of state.pendingDiscoveries.values()) {
+      pending.reject(new EngineUnavailableError(reason));
+    }
+    state.pendingDiscoveries.clear();
   }
 
   function rejectReadyWaiters(reason: EngineUnavailableReason): void {
@@ -227,6 +244,12 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
     if (message.type === "cv-import-result") {
       const pending = state.pendingCvImports.get(message.id);
       state.pendingCvImports.delete(message.id);
+      pending?.resolve(message.outcome);
+      return;
+    }
+    if (message.type === "discover-companies-result") {
+      const pending = state.pendingDiscoveries.get(message.id);
+      state.pendingDiscoveries.delete(message.id);
       pending?.resolve(message.outcome);
       return;
     }
@@ -330,13 +353,22 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
         ready.handle.port.postMessage({ type: "cv-import", id, request });
       });
     },
-    async startIngestion(runId) {
+    async startIngestion(runId, companyId) {
       const ready = current?.ready ? current : await waitUntilReady();
       const id = nextRequestId;
       nextRequestId += 1;
       return new Promise<IngestStartCode>((resolve, reject) => {
         ready.pendingIngestStarts.set(id, { resolve, reject });
-        ready.handle.port.postMessage({ type: "ingest-start", id, runId });
+        ready.handle.port.postMessage({ type: "ingest-start", id, runId, companyId });
+      });
+    },
+    async discoverCompanies(criteria) {
+      const ready = current?.ready ? current : await waitUntilReady();
+      const id = nextRequestId;
+      nextRequestId += 1;
+      return new Promise<DiscoveryOutcome>((resolve, reject) => {
+        ready.pendingDiscoveries.set(id, { resolve, reject });
+        ready.handle.port.postMessage({ type: "discover-companies", id, criteria });
       });
     },
     cancelIngestion(runId) {

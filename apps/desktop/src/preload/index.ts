@@ -39,6 +39,9 @@ const api: JobFinderBridge = {
     save: (profile) => invoke("profile:save", profile),
     importCv: (request) => invoke("profile:import-cv", request),
   },
+  discovery: {
+    search: (input) => invoke("discovery:search", input),
+  },
   companies: {
     list: () => invoke("companies:list"),
     add: (input) => invoke("companies:add", input),
@@ -47,7 +50,8 @@ const api: JobFinderBridge = {
     list: () => invoke("jobs:list"),
   },
   ingest: {
-    start: () => invoke("ingest:start"),
+    start: (companyId) =>
+      invoke("ingest:start", companyId === undefined ? undefined : { companyId }),
     cancel: (runId: string) => invoke("ingest:cancel", { runId }),
     latest: () => invoke("ingest:latest"),
     onProgress: (listener: (event: IngestEvent) => void) => {

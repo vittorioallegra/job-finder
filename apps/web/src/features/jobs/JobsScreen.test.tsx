@@ -1,6 +1,6 @@
-// protects=the jobs screen lists companies and open jobs, adds a company through the bridge and shows why one is refused, starts a scan, follows its progress in the log and cancels it, and shows an error with a retry when the lists cannot be read;
-// fails_when=a saved company or job is not shown, a refused company is shown as added, a second scan starts while one is running without a message, progress or the cancel is not wired to the run id, or a failed read shows a blank page;
-// no_claim=layout, keyboard focus order and the real engine run are not checked here; the engine and core ingestion tests cover the run.
+// protects=the jobs screen lists open jobs, starts a scan only when companies exist, follows its progress in the log and cancels it by run id, says when a scan is already running, and shows an error with a retry when the lists cannot be read;
+// fails_when=an open job is not shown, a scan starts with no companies, a second scan starts while one is running without a message, progress or the cancel is not wired to the run id, or a failed read shows a blank page;
+// no_claim=layout, keyboard focus order and the real engine run are not checked here; the engine and core ingestion tests cover the run, and company entry is tested on the Companies screen.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
@@ -18,6 +18,7 @@ const acme: CompanyRecord = {
   ats: "greenhouse",
   slug: "acme",
   createdAt: 1,
+  lastScan: null,
 };
 
 const posting: JobListItem = {
@@ -31,11 +32,6 @@ const posting: JobListItem = {
   firstSeenAt: 1,
 };
 
-function setInputValue(element: HTMLInputElement, value: string) {
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(element, value);
-  element.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
 function button(container: HTMLElement, text: string): HTMLButtonElement {
   const found = [...container.querySelectorAll("button")].find(
     (node) => node.textContent?.trim() === text,
@@ -44,17 +40,6 @@ function button(container: HTMLElement, text: string): HTMLButtonElement {
     throw new Error(`no button ${text}`);
   }
   return found;
-}
-
-function field(container: HTMLElement, labelText: string): HTMLInputElement {
-  const label = [...container.querySelectorAll("label")].find((node) =>
-    node.textContent?.includes(labelText),
-  );
-  const control = label?.htmlFor ? container.ownerDocument.getElementById(label.htmlFor) : null;
-  if (!(control instanceof HTMLInputElement)) {
-    throw new Error(`no input labelled ${labelText}`);
-  }
-  return control;
 }
 
 describe("jobs screen", () => {
@@ -86,20 +71,18 @@ describe("jobs screen", () => {
     await act(async () => {});
   }
 
-  it("shows the empty states when nothing is stored yet", async () => {
+  it("shows the empty states and does not offer a scan when no company is saved", async () => {
     await render(createMemoryBridge());
 
-    expect(container.textContent).toContain("No companies yet.");
     expect(container.textContent).toContain("No open jobs yet.");
     expect(container.textContent).toContain("Nothing has been scanned yet.");
+    expect(container.textContent).toContain("Add a company on the Companies screen first.");
     expect(button(container, "Scan companies").disabled).toBe(true);
   });
 
-  it("lists the saved companies and the open jobs with their board and apply link", async () => {
+  it("lists the open jobs with their company, location and apply link", async () => {
     await render(createMemoryBridge({ companies: [acme], jobs: [posting] }));
 
-    expect(container.textContent).toContain("Acme");
-    expect(container.textContent).toContain("Board: greenhouse");
     expect(container.textContent).toContain("Backend Engineer");
     expect(container.textContent).toContain("Hybrid");
     expect(container.textContent).toContain(`Apply page: ${posting.applyUrl}`);
@@ -120,48 +103,8 @@ describe("jobs screen", () => {
     });
     await act(async () => {});
 
-    expect(container.textContent).toContain("Acme");
+    expect(button(container, "Scan companies").disabled).toBe(false);
     expect(list).toHaveBeenCalledTimes(2);
-  });
-
-  it("adds a company through the bridge and shows it in the list", async () => {
-    const bridge = createMemoryBridge();
-    const add = vi.spyOn(bridge.companies, "add");
-    await render(bridge);
-
-    await act(async () => {
-      setInputValue(field(container, "Company name"), "Acme");
-      setInputValue(field(container, "Careers page link"), "https://boards.greenhouse.io/acme");
-    });
-    await act(async () => {
-      button(container, "Add company").click();
-    });
-    await act(async () => {});
-
-    expect(add).toHaveBeenCalledWith({
-      name: "Acme",
-      careersUrl: "https://boards.greenhouse.io/acme",
-    });
-    expect(container.textContent).toContain("Company added.");
-    expect(container.querySelector("ul")?.textContent).toContain("Acme");
-  });
-
-  it("shows why a company is refused and keeps the list unchanged", async () => {
-    const bridge = createMemoryBridge();
-    bridge.companies.add = async () => ({ ok: false, code: "duplicate-company" });
-    await render(bridge);
-
-    await act(async () => {
-      setInputValue(field(container, "Company name"), "Acme");
-      setInputValue(field(container, "Careers page link"), "https://boards.greenhouse.io/acme");
-    });
-    await act(async () => {
-      button(container, "Add company").click();
-    });
-    await act(async () => {});
-
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain("already in the list");
-    expect(container.textContent).not.toContain("Company added.");
   });
 
   it("starts a scan, follows its progress in the log and cancels it by run id", async () => {

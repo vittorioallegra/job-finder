@@ -3,6 +3,7 @@
 // no_claim=the real provider call and the utility process transport are not exercised here; the supervisor test covers the round trip through main.
 import { describe, expect, it } from "vitest";
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
+import type { DiscoveryCriteria } from "@job-finder/core/discovery/types";
 import type { HttpClient } from "@job-finder/core/net";
 import type { PortLike } from "./port";
 import { createEngineRuntime, type EngineServices } from "./runtime";
@@ -59,6 +60,7 @@ describe("engine runtime", () => {
       net: fakeNet(),
       testAiConnection: async () => ({ ok: true, model: "claude-test" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
+      discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
     };
     createEngineRuntime(port, services);
 
@@ -79,6 +81,7 @@ describe("engine runtime", () => {
         throw new Error(`boom with ${config.apiKey}`);
       },
       importCv: async () => ({ ok: false, code: "unknown" }),
+      discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
     };
     createEngineRuntime(port, services);
 
@@ -100,6 +103,7 @@ describe("engine runtime", () => {
         expect(request.fileName).toBe("cv.txt");
         return { ok: false, code: "empty-document" };
       },
+      discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
     };
     createEngineRuntime(port, services);
 
@@ -124,6 +128,7 @@ describe("engine runtime", () => {
       importCv: async () => {
         throw new Error("parser crashed on the CV text");
       },
+      discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
     };
     createEngineRuntime(port, services);
 
@@ -146,6 +151,7 @@ describe("engine runtime", () => {
       net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
+      discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
     });
 
     port.deliver({ type: "ping", id: 1 });
@@ -160,6 +166,7 @@ describe("engine runtime", () => {
         createIngest: noIngest,
         testAiConnection: async () => ({ ok: false, code: "unknown" }),
         importCv: async () => ({ ok: false, code: "unknown" }),
+        discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
       };
     }
 
@@ -234,6 +241,81 @@ describe("engine runtime", () => {
     });
   });
 
+  it("passes a company-limited start to the controller", async () => {
+    const port = fakePort();
+    const started: Array<[string, string | undefined]> = [];
+    createEngineRuntime(port, {
+      net: fakeNet(),
+      testAiConnection: async () => ({ ok: false, code: "unknown" }),
+      importCv: async () => ({ ok: false, code: "unknown" }),
+      discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
+      createIngest: () => ({
+        start: (runId, companyId) => {
+          started.push([runId, companyId]);
+          return "accepted";
+        },
+        cancel: () => {},
+      }),
+    });
+
+    port.deliver({ type: "ingest-start", id: 5, runId: "run-10", companyId: "co-7" });
+    await settle();
+
+    expect(started).toEqual([["run-10", "co-7"]]);
+    expect(port.sent).toEqual([{ type: "ingest-start-result", id: 5, code: "accepted" }]);
+  });
+
+  it("answers a company search with the discovery outcome under its request id", async () => {
+    const port = fakePort();
+    const asked: DiscoveryCriteria[] = [];
+    createEngineRuntime(port, {
+      net: fakeNet(),
+      testAiConnection: async () => ({ ok: false, code: "unknown" }),
+      importCv: async () => ({ ok: false, code: "unknown" }),
+      createIngest: noIngest,
+      discoverCompanies: async (criteria) => {
+        asked.push(criteria);
+        return { ok: false, code: "search-blocked" };
+      },
+    });
+
+    port.deliver({
+      type: "discover-companies",
+      id: 12,
+      criteria: { keywords: ["data"], locations: ["Milan"] },
+    });
+    await settle();
+
+    expect(asked).toEqual([{ keywords: ["data"], locations: ["Milan"] }]);
+    expect(port.sent).toEqual([
+      { type: "discover-companies-result", id: 12, outcome: { ok: false, code: "search-blocked" } },
+    ]);
+  });
+
+  it("reports an unexpected search failure as a search failure, without the error text", async () => {
+    const port = fakePort();
+    createEngineRuntime(port, {
+      net: fakeNet(),
+      testAiConnection: async () => ({ ok: false, code: "unknown" }),
+      importCv: async () => ({ ok: false, code: "unknown" }),
+      createIngest: noIngest,
+      discoverCompanies: async () => {
+        throw new Error("secret detail");
+      },
+    });
+
+    port.deliver({
+      type: "discover-companies",
+      id: 13,
+      criteria: { keywords: ["x"], locations: [] },
+    });
+    await settle();
+
+    expect(port.sent).toEqual([
+      { type: "discover-companies-result", id: 13, outcome: { ok: false, code: "search-failed" } },
+    ]);
+  });
+
   it("relays an ingestion start and cancel to the controller and answers the start under its id", async () => {
     const port = fakePort();
     const started: string[] = [];
@@ -242,6 +324,7 @@ describe("engine runtime", () => {
       net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
+      discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
       createIngest: () => ({
         start: (runId) => {
           started.push(runId);

@@ -1,8 +1,14 @@
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { companies, jobs, runEvents, runs } from "@job-finder/core";
 import { detectAts } from "@job-finder/core/ats";
 import { INGEST_RUN_KIND, type IngestEvent } from "@job-finder/core/ingest/events";
-import type { CompanyAddResult, CompanyRecord, JobListItem, LatestRun } from "@job-finder/bridge";
+import type {
+  CompanyAddResult,
+  CompanyRecord,
+  CompanyScan,
+  JobListItem,
+  LatestRun,
+} from "@job-finder/bridge";
 import type { AppDb } from "../db/operations";
 
 export interface AddCompanyInput {
@@ -32,10 +38,43 @@ function parseLocations(value: string): string[] {
   }
 }
 
+const SCAN_EVENT_KINDS = ["company-scanned", "company-failed"];
+
+/**
+ * The latest scan of each company, read from the run log. Events are newest first, so the first
+ * event of a company wins.
+ */
+async function latestScans(db: AppDb): Promise<Map<string, CompanyScan>> {
+  const rows = await db
+    .select({ kind: runEvents.kind, at: runEvents.at, detail: runEvents.detail })
+    .from(runEvents)
+    .where(inArray(runEvents.kind, SCAN_EVENT_KINDS))
+    .orderBy(desc(runEvents.at), desc(runEvents.seq));
+  const scans = new Map<string, CompanyScan>();
+  for (const row of rows) {
+    const detail = JSON.parse(row.detail) as Record<string, unknown>;
+    const companyId = String(detail["companyId"]);
+    if (scans.has(companyId)) continue;
+    scans.set(
+      companyId,
+      row.kind === "company-scanned"
+        ? {
+            outcome: "scanned",
+            at: row.at,
+            jobCount: Number(detail["jobCount"]),
+            closedCount: Number(detail["closedCount"]),
+          }
+        : { outcome: "failed", at: row.at, code: String(detail["code"]) },
+    );
+  }
+  return scans;
+}
+
 export function createIngestRepository(db: AppDb): IngestRepository {
   return {
     async listCompanies() {
       const rows = await db.select().from(companies).orderBy(asc(companies.createdAt));
+      const scans = await latestScans(db);
       return rows.map((row) => ({
         id: row.id,
         name: row.name,
@@ -43,6 +82,7 @@ export function createIngestRepository(db: AppDb): IngestRepository {
         ats: row.ats,
         slug: row.slug,
         createdAt: row.createdAt,
+        lastScan: scans.get(row.id) ?? null,
       }));
     },
 
@@ -69,7 +109,7 @@ export function createIngestRepository(db: AppDb): IngestRepository {
         createdAt: now,
       };
       await db.insert(companies).values(row);
-      return { ok: true, company: row };
+      return { ok: true, company: { ...row, lastScan: null } };
     },
 
     async listJobs(limit = 200) {

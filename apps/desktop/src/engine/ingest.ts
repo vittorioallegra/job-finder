@@ -16,7 +16,7 @@ import type { DbCall, DbResult, EngineToMainMessage, IngestStartCode } from "./p
 
 /** Starts and cancels ingestion runs. The engine runs at most one at a time. */
 export interface IngestController {
-  start(runId: string): IngestStartCode;
+  start(runId: string, companyId?: string): IngestStartCode;
   cancel(runId: string): void;
 }
 
@@ -35,7 +35,7 @@ export function createIngestController(options: IngestControllerOptions): Ingest
   let active: { runId: string; controller: AbortController } | undefined;
 
   return {
-    start(runId) {
+    start(runId, companyId) {
       if (active) return "already-running";
       const controller = new AbortController();
       active = { runId, controller };
@@ -51,7 +51,14 @@ export function createIngestController(options: IngestControllerOptions): Ingest
         options.send({ type: "ingest-progress", event });
       });
 
-      void runIngestion({ runId, store, http: options.http, signal: controller.signal, now }).then(
+      void runIngestion({
+        runId,
+        store,
+        http: options.http,
+        signal: controller.signal,
+        now,
+        companyId,
+      }).then(
         () => {
           active = undefined;
           if (finalEvent) options.send({ type: "ingest-progress", event: finalEvent });

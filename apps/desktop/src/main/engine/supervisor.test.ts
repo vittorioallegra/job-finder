@@ -66,6 +66,7 @@ interface Harness {
     ingestCancels: string[];
     ingestEvents: IngestEvent[];
     engineLosses: number;
+    discoveries: string[];
   };
 }
 
@@ -93,6 +94,7 @@ async function startHarness(): Promise<Harness> {
     ingestCancels: [],
     ingestEvents: [],
     engineLosses: 0,
+    discoveries: [],
   };
   const launch = (): EngineHandle => {
     const { port1, port2 } = new MessageChannel();
@@ -104,6 +106,10 @@ async function startHarness(): Promise<Harness> {
           return new Promise(() => {});
         }
         return Promise.resolve({ ok: true, model: config.model });
+      },
+      discoverCompanies: async (criteria) => {
+        control.discoveries.push(criteria.keywords.join(","));
+        return { ok: true, candidates: [] };
       },
       importCv: async (request) => {
         control.cvRequests.push(request);
@@ -396,6 +402,15 @@ describe("engine supervisor", () => {
       expect.objectContaining({ runId: "run-1", kind: "run-started" }),
     ]);
     expect(control.ingestCancels).toEqual(["run-1"]);
+  });
+
+  it("runs a company search in the engine and answers under its request id", async () => {
+    const { supervisor, control } = await startHarness();
+
+    await expect(
+      supervisor.discoverCompanies({ keywords: ["data", "ml"], locations: [] }),
+    ).resolves.toEqual({ ok: true, candidates: [] });
+    expect(control.discoveries).toEqual(["data,ml"]);
   });
 
   it("reports the engine's answer when a run is already active", async () => {

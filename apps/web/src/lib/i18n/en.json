@@ -11,7 +11,8 @@
     "openSettings": "Settings",
     "openOnboarding": "Set up your profile",
     "openProfile": "Profile",
-    "openJobs": "Jobs"
+    "openJobs": "Jobs",
+    "openCompanies": "Companies"
   },
   "settings": {
     "title": "Settings",
@@ -260,22 +261,7 @@
     "loading": "Loading jobs…",
     "loadFailed": "Companies and jobs could not be loaded.",
     "retry": "Try again",
-    "companies": {
-      "heading": "Companies",
-      "empty": "No companies yet. Add one with its careers page link from a supported job board.",
-      "name": "Company name",
-      "careersUrl": "Careers page link",
-      "careersUrlHint": "For example https://boards.greenhouse.io/<company>. Supported boards: Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Personio, Recruitee and Teamtailor.",
-      "add": "Add company",
-      "added": "Company added.",
-      "board": "Board: {{ats}}",
-      "noBoard": "No supported board",
-      "failure": {
-        "unsupported-careers-url": "This link does not point to a supported job board.",
-        "duplicate-company": "This job board is already in the list.",
-        "unknown": "The company could not be added."
-      }
-    },
+    "openCompanies": "Manage companies",
     "scan": {
       "heading": "Scan",
       "start": "Scan companies",
@@ -283,6 +269,7 @@
       "cancel": "Cancel scan",
       "running": "Scanning…",
       "idle": "No scan is running.",
+      "needCompanies": "Add a company on the Companies screen first.",
       "alreadyRunning": "A scan is already running.",
       "engineUnavailable": "The background engine is not available. Try again in a moment."
     },
@@ -327,6 +314,63 @@
         "unknown": "Work mode not stated"
       },
       "applyLink": "Apply page: {{url}}"
+    }
+  },
+  "companies": {
+    "title": "Companies",
+    "backHome": "Back to home",
+    "backJobs": "Back to jobs",
+    "loading": "Loading companies…",
+    "loadFailed": "Companies could not be loaded.",
+    "retry": "Try again",
+    "list": {
+      "heading": "Companies",
+      "empty": "No companies yet. Find boards below or add one by its careers page link.",
+      "board": "Board: {{ats}}",
+      "noBoard": "No supported board",
+      "noBoardHint": "Add the careers page link of a supported job board to scan this company."
+    },
+    "scan": {
+      "never": "Not scanned yet.",
+      "noJobs": "No parseable jobs in the last scan.",
+      "scanned": "Last scan: {{postings}} postings read, {{closed}} closed.",
+      "failed": "Last scan failed: {{reason}}.",
+      "retry": "Scan again",
+      "started": "Scan started.",
+      "alreadyRunning": "A scan is already running.",
+      "engineUnavailable": "The background engine is not available. Try again in a moment."
+    },
+    "discover": {
+      "heading": "Find companies",
+      "intro": "Searches the web for job boards that match your keywords. Nothing is added until you choose it.",
+      "keywords": "Keywords",
+      "keywordsHint": "Comma separated, up to five. For example: backend, data engineer.",
+      "locations": "Location (optional)",
+      "locationsHint": "Comma separated, up to five. For example: Milan, Berlin.",
+      "submit": "Search job boards",
+      "searching": "Searching job boards…",
+      "boardsFound": "Boards found: {{count}}.",
+      "none": "No job boards found for these terms.",
+      "alreadyAdded": "Already added",
+      "add": "Add {{name}}",
+      "failure": {
+        "search-blocked": "The search provider blocked the request, so no boards were searched. Add companies by their careers link below.",
+        "search-failed": "The search failed. Try again later.",
+        "engine-unavailable": "The background engine is not available. Try again in a moment."
+      }
+    },
+    "add": {
+      "heading": "Add by link",
+      "name": "Company name",
+      "careersUrl": "Careers page link",
+      "careersUrlHint": "For example https://boards.greenhouse.io/<company>. Supported boards: Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Personio, Recruitee and Teamtailor.",
+      "submit": "Add company",
+      "added": "Company added.",
+      "failure": {
+        "unsupported-careers-url": "This link does not point to a supported job board.",
+        "duplicate-company": "This job board is already in the list.",
+        "unknown": "The company could not be added."
+      }
     }
   }
 }

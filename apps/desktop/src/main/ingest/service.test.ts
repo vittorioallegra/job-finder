@@ -1,4 +1,4 @@
-// protects=an ingestion run starts only when the engine accepts it, one run is active at a time, progress reaches the windows, and a run whose engine died is reported interrupted;
+// protects=an ingestion run starts only when the engine accepts it, one run is active at a time, a company-limited start names its company, progress reaches the windows, and a run whose engine died is reported interrupted;
 // fails_when=a second run starts while one is active, a run is reported started when the engine refused or is gone, a finished run keeps blocking new ones, or a dead engine leaves a run looking active;
 // no_claim=the engine's own run logic and the supervisor's crash handling are not exercised here; the engine and supervisor tests cover them.
 import { describe, expect, it } from "vitest";
@@ -16,8 +16,8 @@ function fakeEngine(): FakeEngine {
     started: [],
     cancelled: [],
     answer: "accepted",
-    startIngestion: async (runId) => {
-      engine.started.push(runId);
+    startIngestion: async (runId, companyId) => {
+      engine.started.push(companyId === undefined ? runId : `${runId}:${companyId}`);
       if (engine.answer === "unreachable") throw new Error("engine unavailable");
       return engine.answer;
     },
@@ -55,6 +55,14 @@ describe("ingestion service", () => {
     expect(await service.start()).toEqual({ ok: true, runId: "run-1" });
     expect(await service.start()).toEqual({ ok: false, code: "already-running" });
     expect(engine.started).toEqual(["run-1"]);
+  });
+
+  it("passes a company-limited start to the engine", async () => {
+    const engine = fakeEngine();
+    const { service } = setup(engine);
+
+    expect(await service.start("co-7")).toEqual({ ok: true, runId: "run-1" });
+    expect(engine.started).toEqual(["run-1:co-7"]);
   });
 
   it("reports an engine that is busy or gone without marking a run active", async () => {

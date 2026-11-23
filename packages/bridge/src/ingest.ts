@@ -28,6 +28,20 @@ export const IngestCancelRequestSchema = z.strictObject({
   runId: z.string().min(1).max(64),
 });
 
+/** Omitted: scan every company. Given: scan only that company (a retry). */
+export const IngestStartRequestSchema = z
+  .strictObject({
+    companyId: z.string().min(1).max(64),
+  })
+  .optional();
+
+export type IngestStartRequest = z.input<typeof IngestStartRequestSchema>;
+
+/** The company's latest scan in the run log: a complete read (with its postings) or a failure code. */
+export type CompanyScan =
+  | { outcome: "scanned"; at: number; jobCount: number; closedCount: number }
+  | { outcome: "failed"; at: number; code: string };
+
 export interface CompanyRecord {
   id: string;
   name: string;
@@ -37,6 +51,8 @@ export interface CompanyRecord {
   slug: string | null;
   /** Epoch milliseconds. */
   createdAt: number;
+  /** Null before the company was ever scanned. */
+  lastScan: CompanyScan | null;
 }
 
 /** Why a company could not be added. */

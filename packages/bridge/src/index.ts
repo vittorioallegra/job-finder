@@ -2,6 +2,7 @@ import type { AiTestResult } from "./ai";
 import type { AppSettings, AppSettingsPatch } from "./settings";
 import type { SecretName, SecretsStatus } from "./secrets";
 import type { CvImportRequest, CvImportResult, Profile, ProfileRecord } from "./profile";
+import type { DiscoverySearchRequest, DiscoverySearchResult } from "./discovery";
 import type {
   CompanyAddRequest,
   CompanyAddResult,
@@ -14,6 +15,7 @@ import type {
 
 export * from "./ai";
 export * from "./ingest";
+export * from "./discovery";
 export * from "./settings";
 export * from "./secrets";
 export * from "./ipc";
@@ -52,9 +54,13 @@ export interface JobFinderBridge {
     /** Open jobs, newest first. */
     list(): Promise<JobListItem[]>;
   };
+  readonly discovery: {
+    /** Searches the web for ATS boards matching the criteria. Found boards are not added until the user adds them. */
+    search(input: DiscoverySearchRequest): Promise<DiscoverySearchResult>;
+  };
   readonly ingest: {
-    /** Starts a run over every company. Progress arrives through `onProgress`. */
-    start(): Promise<IngestStartResult>;
+    /** Starts a run over every company, or only over `companyId` (a retry). Progress arrives through `onProgress`. */
+    start(companyId?: string): Promise<IngestStartResult>;
     cancel(runId: string): Promise<void>;
     /** The latest run and its log, or null before any run. */
     latest(): Promise<LatestRun | null>;
