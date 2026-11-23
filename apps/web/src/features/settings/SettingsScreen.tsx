@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
 import {
   SETTING_LIMITS,
   type AppSettings,
@@ -11,6 +10,8 @@ import {
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { i18n, resolveUiLanguage } from "../../lib/i18n";
 import { Button } from "../../components/ui/Button";
+import { Card, CardTitle } from "../../components/ui/Card";
+import { PageHeader } from "../../components/ui/PageHeader";
 import { CheckboxInput } from "../../components/ui/CheckboxInput";
 import { SelectInput, type SelectOption } from "../../components/ui/SelectInput";
 import { TextInput } from "../../components/ui/TextInput";
@@ -57,13 +58,8 @@ export function SettingsScreen() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 p-8">
-      <nav>
-        <Link to="/" className="text-sm text-app-accent underline">
-          {t("settings.backHome")}
-        </Link>
-      </nav>
-      <h1 className="text-3xl font-semibold text-app-fg">{t("settings.title")}</h1>
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8">
+      <PageHeader title={t("settings.title")} />
 
       {state.status === "loading" ? (
         <p role="status" className="text-app-muted">
@@ -73,8 +69,8 @@ export function SettingsScreen() {
 
       {state.status === "error" ? (
         <div role="alert" className="flex flex-col items-start gap-3">
-          <p className="text-app-fg">{t("settings.loadFailed")}</p>
-          <Button variant="secondary" onClick={retry}>
+          <p className="text-app-danger">{t("settings.loadFailed")}</p>
+          <Button variant="secondary" size="sm" onClick={retry}>
             {t("settings.retry")}
           </Button>
         </div>
@@ -157,25 +153,25 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
   ];
 
   return (
-    <form onSubmit={save} className="flex flex-col gap-8" noValidate>
-      <section aria-labelledby="settings-ai" className="flex flex-col gap-4">
-        <h2 id="settings-ai" className="text-lg font-medium text-app-fg">
-          {t("settings.sections.ai")}
-        </h2>
-        <SelectInput
-          label={t("settings.ai.provider")}
-          options={providerOptions}
-          value={draft.aiProvider}
-          onChange={(event) =>
-            change("aiProvider", event.target.value as SettingsDraft["aiProvider"])
-          }
-        />
-        <TextInput
-          label={t("settings.ai.model")}
-          value={draft.aiModel}
-          maxLength={SETTING_LIMITS.modelMaxLength}
-          onChange={(event) => change("aiModel", event.target.value)}
-        />
+    <form onSubmit={save} className="flex flex-col gap-6" noValidate>
+      <Card as="section" aria-labelledby="settings-ai" className="flex flex-col gap-4">
+        <CardTitle id="settings-ai">{t("settings.sections.ai")}</CardTitle>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SelectInput
+            label={t("settings.ai.provider")}
+            options={providerOptions}
+            value={draft.aiProvider}
+            onChange={(event) =>
+              change("aiProvider", event.target.value as SettingsDraft["aiProvider"])
+            }
+          />
+          <TextInput
+            label={t("settings.ai.model")}
+            value={draft.aiModel}
+            maxLength={SETTING_LIMITS.modelMaxLength}
+            onChange={(event) => change("aiModel", event.target.value)}
+          />
+        </div>
         {draft.aiProvider === "openai-compatible" ? (
           <TextInput
             label={t("settings.ai.baseUrl")}
@@ -204,12 +200,10 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
           onStatus={setSecrets}
         />
         <AiConnectionTest bridge={bridge} />
-      </section>
+      </Card>
 
-      <section aria-labelledby="settings-search" className="flex flex-col gap-4">
-        <h2 id="settings-search" className="text-lg font-medium text-app-fg">
-          {t("settings.sections.search")}
-        </h2>
+      <Card as="section" aria-labelledby="settings-search" className="flex flex-col gap-4">
+        <CardTitle id="settings-search">{t("settings.sections.search")}</CardTitle>
         <CheckboxInput
           label={t("settings.search.duckduckgo")}
           hint={t("settings.search.duckduckgoHint")}
@@ -219,7 +213,7 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
           }
         />
         {(["brave", "tavily", "serper"] as const).map((provider) => (
-          <div key={provider} className="flex flex-col gap-3">
+          <div key={provider} className="flex flex-col gap-3 rounded-xl bg-app-sunken/60 p-4">
             <CheckboxInput
               label={t(`settings.search.${provider}`)}
               hint={t("settings.search.keyHint")}
@@ -237,35 +231,29 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
             />
           </div>
         ))}
-      </section>
+      </Card>
 
-      <section aria-labelledby="settings-language" className="flex flex-col gap-4">
-        <h2 id="settings-language" className="text-lg font-medium text-app-fg">
-          {t("settings.sections.language")}
-        </h2>
+      <Card as="section" aria-labelledby="settings-language" className="flex flex-col gap-4">
+        <CardTitle id="settings-language">{t("settings.sections.language")}</CardTitle>
         <SelectInput
           label={t("settings.language.label")}
           options={languageOptions}
           value={draft.language}
           onChange={(event) => change("language", event.target.value as SettingsDraft["language"])}
         />
-      </section>
+      </Card>
 
-      <section aria-labelledby="settings-notifications" className="flex flex-col gap-4">
-        <h2 id="settings-notifications" className="text-lg font-medium text-app-fg">
-          {t("settings.sections.notifications")}
-        </h2>
+      <Card as="section" aria-labelledby="settings-notifications" className="flex flex-col gap-4">
+        <CardTitle id="settings-notifications">{t("settings.sections.notifications")}</CardTitle>
         <CheckboxInput
           label={t("settings.notifications.enabled")}
           checked={draft.notifications}
           onChange={(event) => change("notifications", event.target.checked)}
         />
-      </section>
+      </Card>
 
-      <section aria-labelledby="settings-scheduler" className="flex flex-col gap-4">
-        <h2 id="settings-scheduler" className="text-lg font-medium text-app-fg">
-          {t("settings.sections.scheduler")}
-        </h2>
+      <Card as="section" aria-labelledby="settings-scheduler" className="flex flex-col gap-4">
+        <CardTitle id="settings-scheduler">{t("settings.sections.scheduler")}</CardTitle>
         <TextInput
           label={t("settings.scheduler.intervalHours")}
           hint={t("settings.scheduler.hint")}
@@ -276,12 +264,10 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
           value={draft.intervalHours}
           onChange={(event) => change("intervalHours", event.target.value)}
         />
-      </section>
+      </Card>
 
-      <section aria-labelledby="settings-window" className="flex flex-col gap-4">
-        <h2 id="settings-window" className="text-lg font-medium text-app-fg">
-          {t("settings.sections.window")}
-        </h2>
+      <Card as="section" aria-labelledby="settings-window" className="flex flex-col gap-4">
+        <CardTitle id="settings-window">{t("settings.sections.window")}</CardTitle>
         <SelectInput
           label={t("settings.window.closeBehavior")}
           options={closeOptions}
@@ -297,48 +283,42 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
             onChange={(event) => change("launchAtLogin", event.target.checked)}
           />
         )}
-      </section>
+      </Card>
 
-      <section aria-labelledby="settings-updates" className="flex flex-col gap-4">
-        <h2 id="settings-updates" className="text-lg font-medium text-app-fg">
-          {t("settings.sections.updates")}
-        </h2>
+      <Card as="section" aria-labelledby="settings-updates" className="flex flex-col gap-4">
+        <CardTitle id="settings-updates">{t("settings.sections.updates")}</CardTitle>
         <CheckboxInput
           label={t("settings.updates.checkEnabled")}
           hint={t("settings.updates.hint")}
           checked={draft.checkUpdates}
           onChange={(event) => change("checkUpdates", event.target.checked)}
         />
-      </section>
+      </Card>
 
       {isLinux && secrets.storage.optInRequired ? (
-        <section
-          aria-labelledby="settings-keyring"
-          className="flex flex-col gap-3 rounded-lg border border-app-border p-4"
-        >
-          <h2 id="settings-keyring" className="text-lg font-medium text-app-fg">
-            {t("settings.secrets.optInTitle")}
-          </h2>
+        <Card as="section" aria-labelledby="settings-keyring" className="flex flex-col gap-3">
+          <CardTitle id="settings-keyring">{t("settings.secrets.optInTitle")}</CardTitle>
           <p className="text-sm text-app-muted">{t("settings.secrets.optInBody")}</p>
           <CheckboxInput
             label={t("settings.secrets.optIn")}
             checked={allowBasicText}
             onChange={(event) => void toggleBasicText(event.target.checked)}
           />
-        </section>
+        </Card>
       ) : null}
 
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={saveState === "saving"}>
-            {saveState === "saving" ? t("settings.saving") : t("settings.save")}
-          </Button>
-          <p role="status" className="text-sm text-app-muted">
-            {saveState === "saved" ? t("settings.saved") : null}
-            {saveState === "invalid" ? t("settings.invalid") : null}
-            {saveState === "error" ? t("settings.saveFailed") : null}
-          </p>
-        </div>
+      <div className="sticky bottom-4 flex items-center justify-end gap-4 rounded-2xl border border-app-border bg-app-surface/95 px-5 py-3 shadow-pop backdrop-blur">
+        <p
+          role="status"
+          className={`text-sm ${saveState === "saved" ? "text-app-good" : saveState === "invalid" || saveState === "error" ? "text-app-danger" : "text-app-muted"}`}
+        >
+          {saveState === "saved" ? t("settings.saved") : null}
+          {saveState === "invalid" ? t("settings.invalid") : null}
+          {saveState === "error" ? t("settings.saveFailed") : null}
+        </p>
+        <Button type="submit" disabled={saveState === "saving"}>
+          {saveState === "saving" ? t("settings.saving") : t("settings.save")}
+        </Button>
       </div>
     </form>
   );

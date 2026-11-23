@@ -51,7 +51,6 @@
   },
   "settings": {
     "title": "Impostazioni",
-    "backHome": "Torna alla home",
     "loading": "Caricamento delle impostazioni…",
     "loadFailed": "Impossibile caricare le impostazioni.",
     "retry": "Riprova",

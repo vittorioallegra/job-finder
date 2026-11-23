@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { AiTestResult, JobFinderBridge, SecretName, SecretsStatus } from "@job-finder/bridge";
+import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { TextInput } from "../../components/ui/TextInput";
 
@@ -37,17 +38,25 @@ export function AiConnectionTest({ bridge }: { bridge: JobFinderBridge }) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div>
-        <Button
-          variant="secondary"
-          onClick={() => void run()}
-          disabled={state.status === "testing"}
-        >
-          {t("settings.ai.test.action")}
-        </Button>
-      </div>
-      <p role="status" className="text-sm text-app-muted">
+    <div className="flex flex-wrap items-center gap-3">
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => void run()}
+        disabled={state.status === "testing"}
+      >
+        {t("settings.ai.test.action")}
+      </Button>
+      <p
+        role="status"
+        className={`text-sm ${
+          state.status === "done" && state.result.ok
+            ? "text-app-good"
+            : state.status === "error" || state.status === "done"
+              ? "text-app-danger"
+              : "text-app-muted"
+        }`}
+      >
         {message}
       </p>
     </div>
@@ -104,18 +113,27 @@ export function SecretField({ bridge, name, label, secrets, onStatus }: SecretFi
         spellCheck={false}
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        hint={`${isSet ? t("settings.secrets.keySet") : t("settings.secrets.keyNotSet")} ${storageNote}`}
+        hint={storageNote}
       />
-      <div className="flex items-center gap-2">
-        <Button variant="secondary" onClick={() => void save()} disabled={value.trim() === ""}>
-          {t("settings.secrets.save")}
-        </Button>
-        <Button variant="secondary" onClick={() => void remove()} disabled={!isSet}>
-          {t("settings.secrets.remove")}
-        </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge tone={isSet ? "good" : "neutral"}>
+          {isSet ? t("settings.secrets.keySet") : t("settings.secrets.keyNotSet")}
+        </Badge>
         <span role="status" className="text-xs text-app-muted">
           {message}
         </span>
+        <span className="flex-1" />
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => void save()}
+          disabled={value.trim() === ""}
+        >
+          {t("settings.secrets.save")}
+        </Button>
+        <Button variant="danger" size="sm" onClick={() => void remove()} disabled={!isSet}>
+          {t("settings.secrets.remove")}
+        </Button>
       </div>
     </div>
   );

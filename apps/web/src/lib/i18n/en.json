@@ -51,7 +51,6 @@
   },
   "settings": {
     "title": "Settings",
-    "backHome": "Back to home",
     "loading": "Loading settings…",
     "loadFailed": "Settings could not be loaded.",
     "retry": "Try again",
