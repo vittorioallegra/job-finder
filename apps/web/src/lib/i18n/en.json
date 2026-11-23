@@ -527,7 +527,6 @@
   },
   "companies": {
     "title": "Companies",
-    "backHome": "Back to home",
     "backJobs": "Back to jobs",
     "loading": "Loading companies…",
     "loadFailed": "Companies could not be loaded.",

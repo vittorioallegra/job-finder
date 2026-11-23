@@ -527,7 +527,6 @@
   },
   "companies": {
     "title": "Aziende",
-    "backHome": "Torna alla home",
     "backJobs": "Torna ai lavori",
     "loading": "Caricamento delle aziende…",
     "loadFailed": "Non è stato possibile caricare le aziende.",

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { Building2 } from "lucide-react";
 import { Link } from "react-router";
 import type {
   CompanyAddFailureCode,
@@ -11,7 +12,11 @@ import type {
   SecretName,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
-import { Button } from "../../components/ui/Button";
+import { Badge } from "../../components/ui/Badge";
+import { Button, buttonClass } from "../../components/ui/Button";
+import { Card, CardTitle } from "../../components/ui/Card";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { PageHeader } from "../../components/ui/PageHeader";
 import { TextInput } from "../../components/ui/TextInput";
 
 type LoadState =
@@ -231,16 +236,15 @@ export function CompaniesScreen() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 p-8">
-      <nav className="flex gap-4">
-        <Link to="/" className="text-sm text-app-accent underline">
-          {t("companies.backHome")}
-        </Link>
-        <Link to="/jobs" className="text-sm text-app-accent underline">
-          {t("companies.backJobs")}
-        </Link>
-      </nav>
-      <h1 className="text-3xl font-semibold text-app-fg">{t("companies.title")}</h1>
+    <main className="flex flex-col gap-8">
+      <PageHeader
+        title={t("companies.title")}
+        actions={
+          <Link to="/jobs" className={buttonClass("secondary", "sm")}>
+            {t("companies.backJobs")}
+          </Link>
+        }
+      />
 
       {load.status === "loading" ? (
         <p role="status" className="text-app-muted">
@@ -250,8 +254,8 @@ export function CompaniesScreen() {
 
       {load.status === "error" ? (
         <div role="alert" className="flex flex-col items-start gap-3">
-          <p className="text-app-fg">{t("companies.loadFailed")}</p>
-          <Button variant="secondary" onClick={retryLoad}>
+          <p className="text-app-danger">{t("companies.loadFailed")}</p>
+          <Button variant="secondary" size="sm" onClick={retryLoad}>
             {t("companies.retry")}
           </Button>
         </div>
@@ -259,10 +263,12 @@ export function CompaniesScreen() {
 
       {load.status === "ready" ? (
         <>
-          <section aria-labelledby="companies-discover-title" className="flex flex-col gap-4">
-            <h2 id="companies-discover-title" className="text-xl font-medium text-app-fg">
-              {t("companies.discover.heading")}
-            </h2>
+          <Card
+            as="section"
+            aria-labelledby="companies-discover-title"
+            className="flex flex-col gap-4"
+          >
+            <CardTitle id="companies-discover-title">{t("companies.discover.heading")}</CardTitle>
             <p className="text-sm text-app-muted">{t("companies.discover.intro")}</p>
             {hasSearchKey === false ? (
               <p className="text-sm text-app-muted">
@@ -272,23 +278,25 @@ export function CompaniesScreen() {
                 </Link>
               </p>
             ) : null}
-            <form onSubmit={searchBoards} className="flex flex-col gap-3">
-              <TextInput
-                label={t("companies.discover.keywords")}
-                hint={t("companies.discover.keywordsHint")}
-                value={keywords}
-                maxLength={500}
-                required
-                onChange={(event) => setKeywords(event.target.value)}
-              />
-              <TextInput
-                label={t("companies.discover.locations")}
-                hint={t("companies.discover.locationsHint")}
-                value={locations}
-                maxLength={500}
-                onChange={(event) => setLocations(event.target.value)}
-              />
-              <div>
+            <form onSubmit={searchBoards} className="flex flex-col gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <TextInput
+                  label={t("companies.discover.keywords")}
+                  hint={t("companies.discover.keywordsHint")}
+                  value={keywords}
+                  maxLength={500}
+                  required
+                  onChange={(event) => setKeywords(event.target.value)}
+                />
+                <TextInput
+                  label={t("companies.discover.locations")}
+                  hint={t("companies.discover.locationsHint")}
+                  value={locations}
+                  maxLength={500}
+                  onChange={(event) => setLocations(event.target.value)}
+                />
+              </div>
+              <div className="flex justify-end">
                 <Button
                   type="submit"
                   disabled={search.status === "searching" || splitTerms(keywords).length === 0}
@@ -305,7 +313,7 @@ export function CompaniesScreen() {
             ) : null}
             {search.status === "failed" ? (
               <>
-                <p role="alert" className="text-sm text-app-fg">
+                <p role="alert" className="text-sm text-app-danger">
                   {t(`companies.discover.failure.${search.code}`)}
                 </p>
                 {search.code === "search-blocked" ? <SettingsLinkHint /> : null}
@@ -326,21 +334,25 @@ export function CompaniesScreen() {
                     return (
                       <li
                         key={`${candidate.ats}/${candidate.slug}`}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-app-border p-3"
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-app-sunken p-3"
                       >
                         <div className="min-w-0">
                           <p className="font-medium text-app-fg">{candidate.name}</p>
-                          <p className="text-sm text-app-muted">
-                            {t("companies.list.board", { ats: candidate.ats })}
+                          <p className="mt-0.5">
+                            <Badge>{t("companies.list.board", { ats: candidate.ats })}</Badge>
                           </p>
-                          <p className="break-all text-xs text-app-muted">{candidate.careersUrl}</p>
+                          <p className="mt-1 text-xs break-all text-app-muted">
+                            {candidate.careersUrl}
+                          </p>
                         </div>
                         {alreadyAdded ? (
-                          <p className="text-sm text-app-muted">
-                            {t("companies.discover.alreadyAdded")}
-                          </p>
+                          <Badge tone="good">{t("companies.discover.alreadyAdded")}</Badge>
                         ) : (
-                          <Button variant="secondary" onClick={() => void addCandidate(candidate)}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => void addCandidate(candidate)}
+                          >
                             {t("companies.discover.add", { name: candidate.name })}
                           </Button>
                         )}
@@ -351,92 +363,104 @@ export function CompaniesScreen() {
               </>
             ) : null}
             {discoverFailure ? (
-              <p role="alert" className="text-sm text-app-fg">
+              <p role="alert" className="text-sm text-app-danger">
                 {t(`companies.add.failure.${discoverFailure}`)}
               </p>
             ) : null}
-          </section>
+          </Card>
 
-          <section aria-labelledby="companies-add-title" className="flex flex-col gap-4">
-            <h2 id="companies-add-title" className="text-xl font-medium text-app-fg">
-              {t("companies.add.heading")}
-            </h2>
-            <form onSubmit={addCompany} className="flex flex-col gap-3">
-              <TextInput
-                label={t("companies.add.name")}
-                value={name}
-                maxLength={200}
-                required
-                onChange={(event) => setName(event.target.value)}
-              />
-              <TextInput
-                label={t("companies.add.careersUrl")}
-                hint={t("companies.add.careersUrlHint")}
-                type="url"
-                value={careersUrl}
-                required
-                onChange={(event) => setCareersUrl(event.target.value)}
-              />
+          <Card as="section" aria-labelledby="companies-add-title" className="flex flex-col gap-4">
+            <CardTitle id="companies-add-title">{t("companies.add.heading")}</CardTitle>
+            <form onSubmit={addCompany} className="flex flex-col gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <TextInput
+                  label={t("companies.add.name")}
+                  value={name}
+                  maxLength={200}
+                  required
+                  onChange={(event) => setName(event.target.value)}
+                />
+                <TextInput
+                  label={t("companies.add.careersUrl")}
+                  hint={t("companies.add.careersUrlHint")}
+                  type="url"
+                  value={careersUrl}
+                  required
+                  onChange={(event) => setCareersUrl(event.target.value)}
+                />
+              </div>
               {addFailure ? (
-                <p role="alert" className="text-sm text-app-fg">
+                <p role="alert" className="text-sm text-app-danger">
                   {t(`companies.add.failure.${addFailure}`)}
                 </p>
               ) : null}
               {added ? (
-                <p role="status" className="text-sm text-app-muted">
+                <p role="status" className="text-sm text-app-good">
                   {t("companies.add.added")}
                 </p>
               ) : null}
-              <div>
+              <div className="flex justify-end">
                 <Button type="submit" disabled={adding}>
                   {t("companies.add.submit")}
                 </Button>
               </div>
             </form>
-          </section>
+          </Card>
 
           <section aria-labelledby="companies-list-title" className="flex flex-col gap-4">
-            <h2 id="companies-list-title" className="text-xl font-medium text-app-fg">
+            <h2 id="companies-list-title" className="text-2xl font-semibold text-app-fg">
               {t("companies.list.heading")}
             </h2>
             {load.companies.length === 0 ? (
-              <p className="text-app-muted">{t("companies.list.empty")}</p>
+              <EmptyState
+                icon={<Building2 className="size-5" strokeWidth={1.8} aria-hidden="true" />}
+                title={t("companies.list.empty")}
+              />
             ) : (
-              <ul className="flex flex-col gap-2">
+              <ul className="grid gap-3 md:grid-cols-2">
                 {load.companies.map((company) => (
-                  <li
-                    key={company.id}
-                    className="flex flex-col gap-2 rounded-md border border-app-border p-3"
-                  >
-                    <p className="font-medium text-app-fg">{company.name}</p>
-                    <p className="text-sm text-app-muted">
-                      {company.ats
-                        ? t("companies.list.board", { ats: company.ats })
-                        : t("companies.list.careersPage")}
+                  <Card as="li" key={company.id} className="flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-display text-lg font-semibold text-app-fg">
+                        {company.name}
+                      </p>
+                      <Badge tone={company.ats ? "neutral" : "accent"}>
+                        {company.ats
+                          ? t("companies.list.board", { ats: company.ats })
+                          : t("companies.list.careersPage")}
+                      </Badge>
+                    </div>
+                    <p className="text-xs break-all text-app-muted">{company.careersUrl}</p>
+                    <p
+                      className={`text-sm ${company.lastScan?.outcome === "failed" && company.lastScan.code !== "no-parseable-jobs" ? "text-app-danger" : "text-app-fg"}`}
+                    >
+                      {scanSummary(company.lastScan)}
                     </p>
-                    <p className="break-all text-xs text-app-muted">{company.careersUrl}</p>
-                    <p className="text-sm text-app-fg">{scanSummary(company.lastScan)}</p>
-                    <div>
-                      <Button variant="secondary" onClick={() => void retryScan(company.id)}>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => void retryScan(company.id)}
+                      >
                         {t("companies.scan.retry")}
                       </Button>
+                      {scanNotice?.companyId === company.id ? (
+                        scanNotice.status === "started" ? (
+                          <p role="status" className="text-sm text-app-good">
+                            {t("companies.scan.started")}
+                          </p>
+                        ) : (
+                          <p role="alert" className="text-sm text-app-danger">
+                            {t(
+                              scanNotice.code === "already-running"
+                                ? "companies.scan.alreadyRunning"
+                                : "companies.scan.engineUnavailable",
+                            )}
+                          </p>
+                        )
+                      ) : null}
                     </div>
-                    {scanNotice?.companyId === company.id ? (
-                      scanNotice.status === "started" ? (
-                        <p role="status" className="text-sm text-app-muted">
-                          {t("companies.scan.started")}
-                        </p>
-                      ) : (
-                        <p role="alert" className="text-sm text-app-fg">
-                          {t(
-                            scanNotice.code === "already-running"
-                              ? "companies.scan.alreadyRunning"
-                              : "companies.scan.engineUnavailable",
-                          )}
-                        </p>
-                      )
-                    ) : null}
-                  </li>
+                  </Card>
                 ))}
               </ul>
             )}
