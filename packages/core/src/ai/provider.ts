@@ -33,7 +33,11 @@ export function createAiModel(
   if (modelId === "") {
     throw new AiError("not-configured", "No AI model is configured");
   }
-  const baseURL = config.baseUrl.trim() === "" ? undefined : config.baseUrl.trim();
+  // Only the OpenAI-compatible provider has a user-chosen endpoint. A base URL left over from an
+  // earlier setup must never redirect a hosted provider's API key and prompts to another host.
+  const trimmedUrl = config.baseUrl.trim();
+  const baseURL =
+    config.provider === "openai-compatible" && trimmedUrl !== "" ? trimmedUrl : undefined;
   const apiKey = config.apiKey?.trim() ? config.apiKey.trim() : undefined;
   const fetchImpl = options.fetch;
 

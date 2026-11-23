@@ -302,6 +302,7 @@ Approved: yes (2026-11-23)
   - SmartRecruiters adapter ended a scan as complete on an empty page while totalFound was higher, so a partial read could close jobs — `fix: fail a SmartRecruiters scan whose page is empty while more postings are announced`
 - review: pending
   - ApplicationForm swallowed a failed settings load, leaving the AI fallback state unset with no error or retry — `fix: show an error with a retry when the application form cannot load the AI settings`
+  - A base URL left from an OpenAI-compatible setup redirected the Anthropic or OpenAI API key and prompts to that host — `fix: ignore the stored base URL for hosted AI providers so their key only goes to the vendor`
 
 ### Decisions
 - Single-user, local-only app; published as open source on GitHub, each user runs it on their own machine.

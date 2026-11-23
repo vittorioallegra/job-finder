@@ -41,6 +41,27 @@ describe("createAiModel", () => {
     ).toBeUndefined();
   });
 
+  it("ignores a stored base URL for the hosted providers so their key never goes to another host", async () => {
+    // protects=an Anthropic or OpenAI key is only sent to the vendor's own host; fails_when=a base URL left from an earlier OpenAI-compatible setup redirects the hosted request; no_claim=the vendor endpoint paths;
+    for (const provider of ["anthropic", "openai"] as const) {
+      const urls: string[] = [];
+      const handle = createAiModel(
+        { ...base, provider, baseUrl: "http://192.168.1.20:11434/v1" },
+        {
+          fetch: (async (input: RequestInfo | URL) => {
+            urls.push(String(input));
+            return new Response("{}", { status: 500 });
+          }) as typeof fetch,
+        },
+      );
+      await (handle.model as unknown as { doGenerate(options: unknown): Promise<unknown> })
+        .doGenerate({ prompt: [{ role: "user", content: [{ type: "text", text: "hi" }] }] })
+        .catch(() => undefined);
+      expect(urls.length).toBeGreaterThan(0);
+      expect(urls.every((url) => !url.includes("192.168.1.20"))).toBe(true);
+    }
+  });
+
   it("uses native structured output for the hosted providers and the JSON-mode fallback for compatible servers", () => {
     expect(createAiModel(base).capabilities.nativeStructuredOutput).toBe(true);
     expect(createAiModel({ ...base, provider: "openai" }).capabilities.nativeStructuredOutput).toBe(

@@ -45,7 +45,7 @@ export function patchFromDraft(draft: SettingsDraft): AppSettingsPatch | null {
     ai: {
       provider: draft.aiProvider,
       model: draft.aiModel,
-      baseUrl: draft.aiBaseUrl,
+      baseUrl: draft.aiProvider === "openai-compatible" ? draft.aiBaseUrl : "",
       contextSize: Number(draft.aiContextSize),
     },
     search: { ...draft.search },
