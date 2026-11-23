@@ -33,10 +33,9 @@ Playwright attaches through the inspector. The shipped installers keep that fuse
 
 ## Cut a release
 
-0. Before the first release only: set `RELEASES_REPOSITORY` in
-   `packages/core/src/updates/release.ts` to the GitHub repository as `owner/name`. It is `null`
-   until the project has a remote, and while it is `null` the update check makes no request, so
-   the "new version available" notice can never appear.
+0. The update check reads releases from `RELEASES_REPOSITORY` in
+   `packages/core/src/updates/release.ts` (`vittorioallegra/job-finder`). Change it if the
+   repository moves; `null` turns the check off.
 1. Set `version` in `apps/desktop/package.json` (for example `0.2.0`) and merge it to `main`.
 2. Tag the commit `v<version>` and push the tag: `git tag v0.2.0 && git push origin v0.2.0`.
 3. The workflow stops early if the tag does not equal the `package.json` version.

@@ -85,6 +85,11 @@ export async function serveJourneyFixtures(): Promise<JourneyFixtures> {
         send(response, 404, "text/plain", "not found");
         return;
       }
+      // The daily update check: the repository has no published release yet, which GitHub answers with 404.
+      if (method === "GET" && /^\/repos\/[^/]+\/[^/]+\/releases\/latest$/.test(pathname)) {
+        send(response, 404, "application/json", JSON.stringify({ message: "Not Found" }));
+        return;
+      }
       if (method === "GET" && pathname === "/v1/boards/acme/jobs") {
         send(response, 200, "application/json", boardJson(url));
         return;

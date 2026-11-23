@@ -3,9 +3,9 @@ import { isNewerVersion, parseVersion } from "./version";
 
 /**
  * The GitHub repository whose published releases the update check reads, as `owner/name`.
- * Null until the repository is set: the check then does nothing and no request is made.
+ * Null turns the check off: it then does nothing and no request is made.
  */
-export const RELEASES_REPOSITORY: string | null = null;
+export const RELEASES_REPOSITORY: string | null = "vittorioallegra/job-finder";
 
 const REPOSITORY_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
