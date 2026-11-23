@@ -39,6 +39,13 @@ const api: JobFinderBridge = {
     save: (profile) => invoke("profile:save", profile),
     importCv: (request) => invoke("profile:import-cv", request),
   },
+  documents: {
+    get: (request) => invoke("documents:get", request),
+    generate: (request) => invoke("documents:generate", request),
+    save: (request) => invoke("documents:save", request),
+    exportPdf: (request) => invoke("documents:export", request),
+    reveal: (request) => invoke("documents:reveal", request),
+  },
   scores: {
     start: (input) => invoke("scores:start", input),
   },

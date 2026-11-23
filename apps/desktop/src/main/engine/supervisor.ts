@@ -1,5 +1,6 @@
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
 import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
+import type { GenerateDocumentOutcome } from "@job-finder/core/documents/generate";
 import type {
   DiscoveryCriteria,
   DiscoveryOutcome,
@@ -11,6 +12,7 @@ import type {
   DbCall,
   DbResult,
   EngineToMainMessage,
+  GenerateDocumentRequest,
   IngestAiSettings,
   IngestStartCode,
   ScoreJobsOutcome,
@@ -115,6 +117,8 @@ export interface EngineSupervisor {
    * fields; neither is logged. Rejects with EngineUnavailableError when the engine is gone.
    */
   scoreJobs(request: ScoreJobsRequest): Promise<ScoreJobsOutcome>;
+  /** Generates a tailored CV or cover letter with the AI in the engine. */
+  generateDocument(request: GenerateDocumentRequest): Promise<GenerateDocumentOutcome>;
   /** Asks the engine to stop a run. Ignored when no engine is running. */
   cancelIngestion(runId: string): void;
   readonly state: EngineSupervisorState;
@@ -151,6 +155,11 @@ interface PendingScoring {
   reject: (error: Error) => void;
 }
 
+interface PendingDocument {
+  resolve: (outcome: GenerateDocumentOutcome) => void;
+  reject: (error: Error) => void;
+}
+
 interface Current {
   handle: EngineHandle;
   ready: boolean;
@@ -160,6 +169,7 @@ interface Current {
   pendingIngestStarts: Map<number, PendingIngestStart>;
   pendingDiscoveries: Map<number, PendingDiscovery>;
   pendingScorings: Map<number, PendingScoring>;
+  pendingDocuments: Map<number, PendingDocument>;
 }
 
 /**
@@ -193,6 +203,7 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pendingIngestStarts: new Map(),
       pendingDiscoveries: new Map(),
       pendingScorings: new Map(),
+      pendingDocuments: new Map(),
     };
     current = state;
     phase = "running";
@@ -241,6 +252,10 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pending.reject(new EngineUnavailableError(reason));
     }
     state.pendingDiscoveries.clear();
+    for (const pending of state.pendingDocuments.values()) {
+      pending.reject(new EngineUnavailableError(reason));
+    }
+    state.pendingDocuments.clear();
     for (const pending of state.pendingScorings.values()) {
       pending.reject(new EngineUnavailableError(reason));
     }
@@ -286,6 +301,12 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
     if (message.type === "discover-companies-result") {
       const pending = state.pendingDiscoveries.get(message.id);
       state.pendingDiscoveries.delete(message.id);
+      pending?.resolve(message.outcome);
+      return;
+    }
+    if (message.type === "generate-document-result") {
+      const pending = state.pendingDocuments.get(message.id);
+      state.pendingDocuments.delete(message.id);
       pending?.resolve(message.outcome);
       return;
     }
@@ -420,6 +441,15 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       return new Promise<ScoreJobsOutcome>((resolve, reject) => {
         ready.pendingScorings.set(id, { resolve, reject });
         ready.handle.port.postMessage({ type: "score-jobs", id, request });
+      });
+    },
+    async generateDocument(request) {
+      const ready = current?.ready ? current : await waitUntilReady();
+      const id = nextRequestId;
+      nextRequestId += 1;
+      return new Promise<GenerateDocumentOutcome>((resolve, reject) => {
+        ready.pendingDocuments.set(id, { resolve, reject });
+        ready.handle.port.postMessage({ type: "generate-document", id, request });
       });
     },
     cancelIngestion(runId) {

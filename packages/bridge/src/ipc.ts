@@ -20,6 +20,18 @@ import {
 } from "./ingest";
 import type { DiscoverySearchResult } from "./discovery";
 import { DiscoverySearchRequestSchema } from "./discovery";
+import type {
+  ApplicationDocuments,
+  DocumentExportResult,
+  DocumentGenerateResult,
+  DocumentSaveResult,
+} from "./documents";
+import {
+  DocumentExportRequestSchema,
+  DocumentGenerateRequestSchema,
+  DocumentGetRequestSchema,
+  DocumentSaveRequestSchema,
+} from "./documents";
 import type { ScoreStartResult } from "./scoring";
 import { ScoreStartRequestSchema } from "./scoring";
 import type {
@@ -80,6 +92,11 @@ export const IPC_REQUEST_SCHEMAS = {
   "ingest:latest": z.undefined(),
   "discovery:search": DiscoverySearchRequestSchema,
   "scores:start": ScoreStartRequestSchema,
+  "documents:get": DocumentGetRequestSchema,
+  "documents:generate": DocumentGenerateRequestSchema,
+  "documents:save": DocumentSaveRequestSchema,
+  "documents:export": DocumentExportRequestSchema,
+  "documents:reveal": DocumentExportRequestSchema,
 } as const;
 
 export type IpcChannel = keyof typeof IPC_REQUEST_SCHEMAS;
@@ -116,6 +133,11 @@ export interface IpcResponses {
   "ingest:latest": LatestRun | null;
   "discovery:search": DiscoverySearchResult;
   "scores:start": ScoreStartResult;
+  "documents:get": ApplicationDocuments;
+  "documents:generate": DocumentGenerateResult;
+  "documents:save": DocumentSaveResult;
+  "documents:export": DocumentExportResult;
+  "documents:reveal": boolean;
 }
 
 export type IpcResponse<C extends IpcChannel> = IpcResponses[C];

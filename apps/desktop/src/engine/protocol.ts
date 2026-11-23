@@ -10,7 +10,10 @@ import type { BatchPlan, LookupRequest } from "@job-finder/core/ingest";
 import type { IngestEvent } from "@job-finder/core/ingest/events";
 import type { PageRenderResult } from "@job-finder/core/net";
 import type { ExplanationLanguage, ScoreOutcome, StoredScore } from "@job-finder/core/ranking";
-import type { ScoringFields } from "@job-finder/core/profile";
+import type { ScoringFields, Profile } from "@job-finder/core/profile";
+import type { DocumentJob } from "@job-finder/core/documents/prompt";
+import type { DocumentKind } from "@job-finder/core/documents/schema";
+import type { GenerateDocumentOutcome } from "@job-finder/core/documents/generate";
 
 /**
  * Database operations the engine may request. Main owns the database and executes these in
@@ -68,6 +71,20 @@ export interface ScoreJobsRequest {
 export type ScoreJobsOutcome = ScoreOutcome | { ok: false; code: "store-failed" };
 
 /**
+ * One document request. The engine gets the profile and the posting it needs, and the AI provider
+ * with its key; the key is used for the call and never stored. Nothing is written to the database
+ * here: main stores the answer.
+ */
+export interface GenerateDocumentRequest {
+  kind: DocumentKind;
+  profile: Profile;
+  job: DocumentJob;
+  /** The language of the text: the user's UI language. */
+  language: ExplanationLanguage;
+  ai: IngestAiSettings;
+}
+
+/**
  * Messages sent by main to the engine over the message port. `ai-test` carries the API key from
  * main to the engine: the only path a secret value takes out of main, and it never reaches the
  * renderer.
@@ -85,6 +102,8 @@ export type MainToEngineMessage =
   | { type: "ingest-cancel"; runId: string }
   /** Affinity scoring of open jobs with the AI; the answer is `score-jobs-result`. */
   | { type: "score-jobs"; id: number; request: ScoreJobsRequest }
+  /** A tailored CV or cover letter with the AI; the answer is `generate-document-result`. */
+  | { type: "generate-document"; id: number; request: GenerateDocumentRequest }
   /**
    * Web search for ATS boards. The engine makes the requests; main relays the criteria, the enabled
    * sources and, for keyed providers, their keys (the only path a search key takes out of main).
@@ -107,5 +126,6 @@ export type EngineToMainMessage =
   | { type: "ingest-start-result"; id: number; code: IngestStartCode }
   | { type: "discover-companies-result"; id: number; outcome: DiscoveryOutcome }
   | { type: "score-jobs-result"; id: number; outcome: ScoreJobsOutcome }
+  | { type: "generate-document-result"; id: number; outcome: GenerateDocumentOutcome }
   /** A run's progress and log entries. The final `run-finished` is sent after the run row is closed. */
   | { type: "ingest-progress"; event: IngestEvent };

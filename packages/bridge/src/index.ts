@@ -12,6 +12,16 @@ import type {
   ApplicationUpdateResult,
   DuplicateCheck,
 } from "./applications";
+import type {
+  ApplicationDocuments,
+  DocumentExportRequest,
+  DocumentExportResult,
+  DocumentGenerateRequest,
+  DocumentGenerateResult,
+  DocumentGetRequest,
+  DocumentSaveRequest,
+  DocumentSaveResult,
+} from "./documents";
 import type { AppSettings, AppSettingsPatch } from "./settings";
 import type { SecretName, SecretsStatus } from "./secrets";
 import type { CvImportRequest, CvImportResult, Profile, ProfileRecord } from "./profile";
@@ -46,6 +56,7 @@ export * from "./profile";
 export * from "./scoring";
 export * from "./jobs";
 export * from "./applications";
+export * from "./documents";
 
 /** Shape of the API the preload script exposes as `window.jobFinder`. Values never include secrets. */
 export interface JobFinderBridge {
@@ -105,6 +116,18 @@ export interface JobFinderBridge {
     update(request: ApplicationUpdateRequest): Promise<ApplicationUpdateResult>;
     /** Asks for a file with a native dialog and writes every application to it as CSV. */
     exportCsv(): Promise<ApplicationExportResult>;
+  };
+  readonly documents: {
+    /** The stored CV and cover letter of an application, each null until it is generated. */
+    get(request: DocumentGetRequest): Promise<ApplicationDocuments>;
+    /** Generates a CV or a cover letter with the AI in the engine. Replaces the stored draft of that kind. */
+    generate(request: DocumentGenerateRequest): Promise<DocumentGenerateResult>;
+    /** Saves the user's edits to a stored document, after the profile checks. */
+    save(request: DocumentSaveRequest): Promise<DocumentSaveResult>;
+    /** Renders the stored document to a PDF in the application's folder. */
+    exportPdf(request: DocumentExportRequest): Promise<DocumentExportResult>;
+    /** Shows an exported PDF in the file manager. Resolves false when there is none yet. */
+    reveal(request: DocumentExportRequest): Promise<boolean>;
   };
   readonly scores: {
     /**

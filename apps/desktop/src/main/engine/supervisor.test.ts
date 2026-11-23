@@ -104,6 +104,7 @@ async function startHarness(): Promise<Harness> {
     const { port1, port2 } = new MessageChannel();
     const runtime = createEngineRuntime(toPortLike(port2), {
       net: fakeNet(),
+      generateDocument: async () => ({ ok: false as const, code: "unknown" as const }),
       createScoring: () => ({
         score: async (request) => {
           control.scorings.push({ jobIds: request.jobIds, apiKey: request.ai.config.apiKey });

@@ -235,6 +235,13 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
         if (at >= 0) savedSearches.splice(at, 1);
       },
     },
+    documents: {
+      get: async ({ applicationId }) => ({ applicationId, cv: null, coverLetter: null }),
+      generate: async () => ({ ok: false as const, code: "engine-unavailable" as const }),
+      save: async () => ({ ok: false as const, code: "not-found" as const }),
+      exportPdf: async () => ({ ok: false as const, code: "export-failed" as const }),
+      reveal: async () => false,
+    },
     scores: {
       start: async () =>
         structuredClone(options.scoring ?? { ok: false, code: "engine-unavailable" }),

@@ -6,10 +6,12 @@ import type {
   SearchSourceConfig,
 } from "@job-finder/core/discovery/types";
 import { guardPageRender, type HttpClient, type PageRenderResult } from "@job-finder/core/net";
+import type { GenerateDocumentOutcome } from "@job-finder/core/documents/generate";
 import type {
   DbCall,
   DbResult,
   EngineToMainMessage,
+  GenerateDocumentRequest,
   MainToEngineMessage,
   ScoreJobsOutcome,
 } from "./protocol";
@@ -51,6 +53,8 @@ export interface EngineServices {
   createIngest(api: IngestApi): IngestController;
   /** Builds the affinity scoring runner over the runtime's database calls. */
   createScoring(db: (calls: DbCall[]) => Promise<DbResult[]>): ScoringRunner;
+  /** Generates a tailored CV or cover letter with the AI; the answer is checked before it returns. */
+  generateDocument(request: GenerateDocumentRequest): Promise<GenerateDocumentOutcome>;
 }
 
 /**
@@ -127,6 +131,14 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
         .score(request)
         .catch((): ScoreJobsOutcome => ({ ok: false, code: "store-failed" }))
         .then((outcome) => post(port, { type: "score-jobs-result", id, outcome }));
+      return;
+    }
+    if (message.type === "generate-document") {
+      const { id, request } = message;
+      void services
+        .generateDocument(request)
+        .catch((): GenerateDocumentOutcome => ({ ok: false, code: "unknown" }))
+        .then((outcome) => post(port, { type: "generate-document-result", id, outcome }));
       return;
     }
     if (message.type === "ingest-cancel") {
