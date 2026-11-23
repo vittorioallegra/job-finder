@@ -288,7 +288,7 @@ Approved: yes (2026-11-23)
 - [x] 12. Generic careers page adapter — `docs: record step 12 decisions and tick the step`
 - [x] 13. Matching and ranking — `docs: record step 13 decisions and tick the step`
 - [x] 14. Search and filters UI — `feat: filter, sort and flag jobs, with saved searches`
-- [ ] 15. Application tracker
+- [x] 15. Application tracker — `feat: add the applications screen, bookmarks and the hide-applied filter`
 - [ ] 16. CV and cover letter
 - [ ] 17. Autofill core and ATS adapters
 - [ ] 18. Autofill AI fallback
@@ -473,7 +473,23 @@ Approved: yes (2026-11-23)
 - Step 14: the bookmark action and the "hide applied" filter need `applications`, so they move to step 15.
 - Step 14: not exercised: real postings and real scores (the fixture set is hand-written, 7 jobs); the screen in a browser for layout and keyboard order (jsdom only); the packaged app; the desktop E2E covers the window and engine start only.
 
+- Step 15: tables `applications` (migration `0011_applications`) and `application_events` (`0012_application_events`), one migration each, with populated-fixture tests in `application-migrations.test.ts`. A bookmark is an application with status `bookmarked`; a job may have several applications, so `applications` has no unique key on `job_id`.
+- Step 15: status moves (`core/applications`): bookmarked to preparing; preparing to ready or withdrawn; ready to preparing, applied or withdrawn; applied to interviewing, rejected or withdrawn; interviewing to offer, rejected or withdrawn. Offer, rejected and withdrawn end the application. Moving back from ready to preparing is the one backward step, kept so a prepared application can be reopened; the plan did not name it.
+- Step 15: removing a bookmark deletes that bookmarked application and its events (no other status is removed). Bookmarking a job that already has any application changes nothing.
+- Step 15: "start preparing" moves the job's open bookmark to preparing, or returns its open preparing application, so a bookmark is never duplicated. Only a new application goes through the duplicate guard as a new row.
+- Step 15: the duplicate guard counts applications past `preparing` (ready, applied, interviewing, offer, rejected, withdrawn), which is spec #5's wording. Spec AC8 says "applied"; the guard follows #5 so a ready application also warns. Same job or same fingerprint: any age, two confirmations. Same company: `status_changed_at` within 90 days, one confirmation. Bookmarks and preparing applications never warn.
+- Step 15: the confirmations are counted by the caller. `applications:start` takes `confirmations` (0 to 2) and is refused with the warning until it reaches the required number. The job detail asks for one click on a same-company warning and two clicks, with a second prompt, on a same-job warning. The engine cannot tell whether two clicks were real; that is the renderer's job.
+- Step 15: `status_changed_at` is the clock of the 90-day window. Notes do not change it. A status change and its note are one event.
+- Step 15: "hide applied" (`hideApplied`, default on, as spec #4 says) hides jobs with an application in `applied`, `interviewing`, `offer`, `rejected` or `withdrawn`. It is a hard filter, so applied jobs are not scored under the default filter. A ready or preparing application does not hide its job.
+- Step 15: the job list and detail show the status of the job's latest application (by `status_changed_at`), so a bookmark shows as "Bookmarked" and a second preparation shows the newer status.
+- Step 15: the SQLite proxy maps each result row by column name, so two selected columns with one name (`companies.id` and `applications.id` are both `id`) silently shift the values. The company id is read from `jobs.company_id` instead. Any new join must avoid duplicate column names in its select.
+- Step 15: CSV export: main shows the native save dialog and writes the file (UTF-8 with a byte order mark, so Excel reads accents). Fixed columns: company, job title, status, status changed, created, job URL, apply URL, notes. Notes are joined with " | ", each prefixed by its time. The core CSV writer prefixes apostrophes to cells that start with = + - @, a tab or a carriage return, and quotes cells with commas, quotes or line breaks. The export reads applications only, so no settings or keys can reach it.
+- Step 15: the board shows one column per status (only the chosen status when a status filter is set). Both views read the whole list, which is fine for one user. Notes are plain text, up to 2000 characters.
+- Step 15: the in-memory bridge (web dev page, no engine) keeps applications in the page only, and its job list does not reflect status changes. It is a development aid, not a second store.
+- Step 15: preparing does not open documents or the apply window; those are steps 16 and 17. `applications:start` only records the state.
+- Step 15: not exercised: the CSV file opened in Excel or Numbers; the screens in a real browser for layout, phone width and keyboard order (jsdom tests only); the board with real data; the packaged app (the desktop E2E covers the window and engine start only); the duplicate guard on real postings from two sources.
+
 ### Open questions
 
 ### Next
-Step 15: Application tracker (tables `applications`, `application_events`; bookmark is an application with status `bookmarked`; status machine, events, duplicate guard, list and board views, CSV export; the bookmark action and the "hide applied" filter from step 14 are added with it).
+Step 16: CV and cover letter (AI returns a structured CV that references profile item ids; validator: employers, titles, dates and degrees must match the profile verbatim, skills match the profile including aliases, numbers in bullets must appear in the source bullet; HTML templates (ATS-readable), in-app editor, PDF via hidden window `printToPDF`, files stored per application).
