@@ -6,7 +6,7 @@ Native desktop app (Electron 45 + React 19), pnpm workspace. Full plan: `docs/pl
 
 - Install: `pnpm setup` (runs `pnpm install`)
 - Dev web renderer only: `pnpm dev` (Vite on http://localhost:5173; no preload, so settings and secrets use an in-memory bridge; open `/?demo` for made-up sample data, `?demo=off` to clear it)
-- Dev desktop app: `pnpm desktop:dev`
+- Dev desktop app: `pnpm desktop:dev`; with sample data in a separate `<userData>-demo` folder and no scheduled scans: `JOB_FINDER_DEMO=1 pnpm desktop:dev` (dataset: `packages/bridge/src/demo.ts`)
 - Build desktop: `pnpm desktop:build` (output in `apps/desktop/out`)
 - Package installers for this OS: `pnpm desktop:dist` (output in `apps/desktop/dist`; release steps in `docs/release.md`)
 - Packaged smoke test: `JOB_FINDER_PACKAGED_APP=<executable> pnpm --filter @job-finder/desktop test:e2e:packaged`

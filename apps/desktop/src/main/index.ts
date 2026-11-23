@@ -76,6 +76,7 @@ import { resolveTrayIconPath } from "./tray/icon";
 import { createUpdateService, type UpdateService } from "./updates/update-service";
 import { createAppStatusStore } from "./app-status";
 import { applyLaunchAtLogin } from "./login-item";
+import { demoDataDirectory, seedDemoDatabase } from "./demo/seed";
 
 const isDevelopment = !app.isPackaged && Boolean(process.env["ELECTRON_RENDERER_URL"]);
 const rendererDirectory = join(__dirname, "../renderer");
@@ -93,6 +94,12 @@ protocol.registerSchemesAsPrivileged([
 const APP_USER_MODEL_ID = "dev.job-finder.desktop";
 if (process.platform === "win32") {
   app.setAppUserModelId(APP_USER_MODEL_ID);
+}
+
+// Development demo (JOB_FINDER_DEMO=1): sample data in a userData folder of its own.
+const demoDirectory = demoDataDirectory(process.env, app.isPackaged, app.getPath("userData"));
+if (demoDirectory) {
+  app.setPath("userData", demoDirectory);
 }
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
@@ -167,6 +174,9 @@ if (gotSingleInstanceLock) {
         "info",
         `applied ${database.migration.pending} migration(s); backup: ${database.migration.backupPath ?? "none"}`,
       );
+    }
+    if (demoDirectory && (await seedDemoDatabase(database.db))) {
+      logger.log("info", `demo data written to ${demoDirectory}`);
     }
     const interrupted = await reconcileInterruptedRuns(database.db);
     if (interrupted > 0) {
@@ -430,25 +440,28 @@ if (gotSingleInstanceLock) {
       sink: notificationSink,
       open: (request) => openNewJobs.open(request),
     });
-    scheduler = createScheduler({
-      now: () => Date.now(),
-      settings: async () => {
-        const stored = await settingsRepository.get();
-        return {
-          intervalHours: stored.scheduler.intervalHours,
-          notificationsEnabled: stored.notifications.enabled,
-        };
-      },
-      savedSearches: () => savedSearchRepository.list(),
-      lastRunFinishedAt: () => lastFinishedIngestRunAt(database.db),
-      startRun: () => ingestion.start(),
-      newMatches: (searches, since) =>
-        findNewMatches(searches, since, (filter) =>
-          ingestRepository.listJobs({ filter, sort: "newest" }, Date.now(), 500),
-        ),
-      notify: notifyNewJobs,
-      log: (level, message) => logger.log(level, message),
-    });
+    // The demo never scans on a schedule: its companies and postings are made up.
+    scheduler = demoDirectory
+      ? null
+      : createScheduler({
+          now: () => Date.now(),
+          settings: async () => {
+            const stored = await settingsRepository.get();
+            return {
+              intervalHours: stored.scheduler.intervalHours,
+              notificationsEnabled: stored.notifications.enabled,
+            };
+          },
+          savedSearches: () => savedSearchRepository.list(),
+          lastRunFinishedAt: () => lastFinishedIngestRunAt(database.db),
+          startRun: () => ingestion.start(),
+          newMatches: (searches, since) =>
+            findNewMatches(searches, since, (filter) =>
+              ingestRepository.listJobs({ filter, sort: "newest" }, Date.now(), 500),
+            ),
+          notify: notifyNewJobs,
+          log: (level, message) => logger.log(level, message),
+        });
 
     registerIpcHandlers(
       ipcMain,
@@ -545,7 +558,7 @@ if (gotSingleInstanceLock) {
     }
 
     // Catch-up at start: a saved search that is due runs once now. The update check runs once a day.
-    void scheduler.check();
+    void scheduler?.check();
     void updates.checkIfDue();
 
     app.on("activate", showMainWindow);
