@@ -1,10 +1,21 @@
-// protects=the engine answers an AI connection test with the service's result, reports an unexpected service failure as unknown without its message, and keeps answering pings;
+// protects=the engine renders pages through main only after the URL is resolved and allowed by robots.txt, and matches main's answer to its request id; the engine answers an AI connection test with the service's result, reports an unexpected service failure as unknown without its message, and keeps answering pings;
 // fails_when=a test request gets no reply, a thrown error text is passed back to main, or the reply is sent to a different request id;
 // no_claim=the real provider call and the utility process transport are not exercised here; the supervisor test covers the round trip through main.
 import { describe, expect, it } from "vitest";
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
+import type { HttpClient } from "@job-finder/core/net";
 import type { PortLike } from "./port";
 import { createEngineRuntime, type EngineServices } from "./runtime";
+
+/** Resolves every URL as given and allows it; the page-render tests replace this where needed. */
+function fakeNet(overrides: Partial<HttpClient> = {}): HttpClient {
+  return {
+    resolve: (url) => url,
+    isAllowed: async () => true,
+    get: async (url) => ({ ok: false, code: "network", url }),
+    ...overrides,
+  };
+}
 
 interface FakePort extends PortLike {
   deliver(message: unknown): void;
@@ -41,6 +52,7 @@ describe("engine runtime", () => {
   it("answers an AI test with the service result under the same request id", async () => {
     const port = fakePort();
     const services: EngineServices = {
+      net: fakeNet(),
       testAiConnection: async () => ({ ok: true, model: "claude-test" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
     };
@@ -57,6 +69,7 @@ describe("engine runtime", () => {
   it("reports an unexpected service failure as unknown, without the error text", async () => {
     const port = fakePort();
     const services: EngineServices = {
+      net: fakeNet(),
       testAiConnection: async () => {
         throw new Error(`boom with ${config.apiKey}`);
       },
@@ -75,6 +88,7 @@ describe("engine runtime", () => {
   it("answers a CV import with the service outcome under the same request id", async () => {
     const port = fakePort();
     const services: EngineServices = {
+      net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async (request) => {
         expect(request.fileName).toBe("cv.txt");
@@ -98,6 +112,7 @@ describe("engine runtime", () => {
   it("reports an unexpected CV import failure as unknown", async () => {
     const port = fakePort();
     const services: EngineServices = {
+      net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => {
         throw new Error("parser crashed on the CV text");
@@ -120,6 +135,7 @@ describe("engine runtime", () => {
   it("still answers pings", () => {
     const port = fakePort();
     createEngineRuntime(port, {
+      net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
     });
@@ -127,5 +143,85 @@ describe("engine runtime", () => {
     port.deliver({ type: "ping", id: 1 });
 
     expect(port.sent).toEqual([{ type: "pong", id: 1 }]);
+  });
+
+  describe("page render", () => {
+    function servicesWith(net: HttpClient): EngineServices {
+      return {
+        net,
+        testAiConnection: async () => ({ ok: false, code: "unknown" }),
+        importCv: async () => ({ ok: false, code: "unknown" }),
+      };
+    }
+
+    it("sends the request with an id and resolves with main's answer", async () => {
+      const port = fakePort();
+      const runtime = createEngineRuntime(port, servicesWith(fakeNet()));
+
+      const pending = runtime.renderPage("https://jobs.example.test/careers");
+      await settle();
+      const sent = port.sent.at(-1) as { type: string; id: number; url: string };
+      port.deliver({
+        type: "page-render-result",
+        id: sent.id,
+        result: { ok: true, url: sent.url, html: "<main>jobs</main>" },
+      });
+
+      expect(sent).toEqual({
+        type: "page-render",
+        id: expect.any(Number),
+        url: "https://jobs.example.test/careers",
+      });
+      await expect(pending).resolves.toEqual({
+        ok: true,
+        url: "https://jobs.example.test/careers",
+        html: "<main>jobs</main>",
+      });
+    });
+
+    it("sends the fixture-resolved URL, not the original one", async () => {
+      const port = fakePort();
+      const runtime = createEngineRuntime(
+        port,
+        servicesWith(
+          fakeNet({
+            resolve: (url) => url.replace("https://jobs.example.test", "http://127.0.0.1:4010"),
+          }),
+        ),
+      );
+
+      void runtime.renderPage("https://jobs.example.test/careers");
+      await settle();
+
+      expect(port.sent).toEqual([
+        { type: "page-render", id: expect.any(Number), url: "http://127.0.0.1:4010/careers" },
+      ]);
+    });
+
+    it("never sends a URL that robots.txt disallows", async () => {
+      const port = fakePort();
+      const runtime = createEngineRuntime(
+        port,
+        servicesWith(fakeNet({ isAllowed: async () => false })),
+      );
+
+      const result = await runtime.renderPage("https://jobs.example.test/private");
+
+      expect(result).toEqual({ ok: false, code: "blocked-by-robots" });
+      expect(port.sent).toEqual([]);
+    });
+
+    it("never sends a URL that is not an http or https address", async () => {
+      const port = fakePort();
+      const runtime = createEngineRuntime(
+        port,
+        servicesWith(fakeNet({ resolve: () => undefined })),
+      );
+
+      const result = await runtime.renderPage("file:///etc/hosts");
+
+      expect(result).toEqual({ ok: false, code: "invalid-url" });
+      expect(port.sent).toEqual([]);
+    });
   });
 });

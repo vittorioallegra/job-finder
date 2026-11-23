@@ -1,5 +1,6 @@
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
 import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
+import type { PageRenderResult } from "@job-finder/core/net";
 import type { DbCall, DbResult, EngineToMainMessage } from "../../engine/protocol";
 import type { PortLike } from "../../engine/port";
 
@@ -18,9 +19,15 @@ export interface EngineDatabase {
   reconcileInterruptedRuns(): Promise<number>;
 }
 
+/** Loads JavaScript-rendered pages for the engine. Failures come back as codes, never as throws. */
+export interface PageRenderer {
+  render(url: string): Promise<PageRenderResult>;
+}
+
 export interface EngineSupervisorOptions {
   launch: () => EngineHandle;
   database: EngineDatabase;
+  pages: PageRenderer;
   log: (level: LogLevel, message: string) => void;
   /** Delay before the first restart; doubles per consecutive crash. */
   restartDelayMs?: number;
@@ -198,6 +205,18 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       const pending = state.pendingCvImports.get(message.id);
       state.pendingCvImports.delete(message.id);
       pending?.resolve(message.outcome);
+      return;
+    }
+    if (message.type === "page-render") {
+      const { id, url } = message;
+      void options.pages
+        .render(url)
+        .catch((): PageRenderResult => ({ ok: false, code: "unknown" }))
+        .then((result) => {
+          if (state === current) {
+            state.handle.port.postMessage({ type: "page-render-result", id, result });
+          }
+        });
     }
   }
 

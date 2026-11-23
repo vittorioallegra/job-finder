@@ -9,6 +9,9 @@ import { createAiConnectionService } from "./ai/connection";
 import { createCvImportService } from "./profile/cv-import";
 import { createProfileRepository } from "./profile/repository";
 import { createUtilityProcessLauncher } from "./engine/launcher";
+import { engineEnvironment } from "./engine/fixture-env";
+import { createPageLoader } from "./page-loader/loader";
+import { openPageWindow } from "./page-loader/electron-window";
 import { startEngineSupervisor } from "./engine/supervisor";
 import { createFileLogger } from "./logging/file-logger";
 import { originOf } from "./security/origin";
@@ -112,11 +115,15 @@ if (gotSingleInstanceLock) {
       );
     }
     const supervisor = startEngineSupervisor({
-      launch: createUtilityProcessLauncher(enginePath),
+      launch: createUtilityProcessLauncher(
+        enginePath,
+        engineEnvironment(process.env, app.isPackaged),
+      ),
       database: {
         execute: (calls) => executeDbCalls(database.db, calls),
         reconcileInterruptedRuns: () => reconcileInterruptedRuns(database.db),
       },
+      pages: createPageLoader({ openWindow: openPageWindow }),
       log: (level, message) => logger.log(level, message),
     });
     app.on("will-quit", () => {

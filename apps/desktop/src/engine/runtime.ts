@@ -1,11 +1,17 @@
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
 import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
+import { guardPageRender, type HttpClient, type PageRenderResult } from "@job-finder/core/net";
 import type { DbCall, DbResult, EngineToMainMessage, MainToEngineMessage } from "./protocol";
 import type { PortLike } from "./port";
 
 export interface EngineRuntime {
   /** Sends one batch of database calls to main and resolves with one result per call, in order. */
   db(calls: DbCall[]): Promise<DbResult[]>;
+  /**
+   * Renders a JavaScript page through main's hidden loader. The URL is resolved and checked
+   * against robots.txt first; a refused URL never reaches main.
+   */
+  renderPage(url: string): Promise<PageRenderResult>;
   close(): void;
 }
 
@@ -13,6 +19,8 @@ export interface EngineRuntime {
 export interface EngineServices {
   testAiConnection(config: AiProviderConfig): Promise<AiConnectionResult>;
   importCv(request: CvImportRequest): Promise<CvImportOutcome>;
+  /** The engine's HTTP path: fixture override, robots.txt and the per-host queue. */
+  net: HttpClient;
 }
 
 /**
@@ -22,6 +30,7 @@ export interface EngineServices {
 export function createEngineRuntime(port: PortLike, services: EngineServices): EngineRuntime {
   let nextId = 1;
   const pending = new Map<number, (results: DbResult[]) => void>();
+  const pendingPages = new Map<number, (result: PageRenderResult) => void>();
 
   port.on("message", (data) => {
     const message = data as MainToEngineMessage;
@@ -48,9 +57,23 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
     if (message.type === "db-result") {
       pending.get(message.id)?.(message.results);
       pending.delete(message.id);
+      return;
+    }
+    if (message.type === "page-render-result") {
+      pendingPages.get(message.id)?.(message.result);
+      pendingPages.delete(message.id);
     }
   });
   port.start();
+
+  const sendPageRender = (url: string): Promise<PageRenderResult> =>
+    new Promise((resolve) => {
+      const id = nextId;
+      nextId += 1;
+      pendingPages.set(id, resolve);
+      post(port, { type: "page-render", id, url });
+    });
+  const renderGuarded = guardPageRender(services.net, sendPageRender);
 
   return {
     db(calls) {
@@ -61,6 +84,7 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
         post(port, { type: "db", id, calls });
       });
     },
+    renderPage: renderGuarded,
     close() {
       port.close();
     },

@@ -1,5 +1,5 @@
-// protects=the engine answers pings and database batches served by main, and after a crash the supervisor logs the exit, marks runs left running as interrupted and serves the restarted engine; calls in flight at a crash, or made after the supervisor gave up or stopped, reject with EngineUnavailableError instead of hanging;
-// fails_when=a ping or a batch returns the wrong results, a run stays running after its engine crashed, the exit reason is not logged, no restart happens (including when reconciling runs fails), or a call hangs instead of rejecting;
+// protects=the engine answers pings and database batches served by main, and a page render it asks for is loaded by main and answered under the same request id, and after a crash the supervisor logs the exit, marks runs left running as interrupted and serves the restarted engine; calls in flight at a crash, or made after the supervisor gave up or stopped, reject with EngineUnavailableError instead of hanging;
+// fails_when=a ping or a batch returns the wrong results, a page render gets no answer or another request's answer, a run stays running after its engine crashed, the exit reason is not logged, no restart happens (including when reconciling runs fails), or a call hangs instead of rejecting;
 // no_claim=utility-process spawning, the real MessageChannelMain wiring and the bundled engine entry are covered by the desktop E2E smoke, not here.
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -11,6 +11,7 @@ import { openAppDatabase, type AppDatabase } from "../db/database";
 import { executeDbCalls, reconcileInterruptedRuns } from "../db/operations";
 import type { AiProviderConfig } from "@job-finder/core/ai";
 import type { CvImportRequest } from "@job-finder/core/cv";
+import type { HttpClient } from "@job-finder/core/net";
 import type { PortLike } from "../../engine/port";
 import { createEngineRuntime, type EngineRuntime } from "../../engine/runtime";
 import {
@@ -19,6 +20,14 @@ import {
   type EngineHandle,
   type EngineSupervisor,
 } from "./supervisor";
+
+function fakeNet(): HttpClient {
+  return {
+    resolve: (url) => url,
+    isAllowed: async () => true,
+    get: async (url) => ({ ok: false, code: "network", url }),
+  };
+}
 
 function toPortLike(port: MessagePort): PortLike {
   return {
@@ -48,6 +57,8 @@ interface Harness {
     /** Configs the engine received for AI connection tests. */
     aiConfigs: AiProviderConfig[];
     cvRequests: CvImportRequest[];
+    /** URLs main was asked to render through the page loader. */
+    pageUrls: string[];
   };
 }
 
@@ -69,10 +80,12 @@ async function startHarness(): Promise<Harness> {
     aiHangs: false,
     aiConfigs: [],
     cvRequests: [],
+    pageUrls: [],
   };
   const launch = (): EngineHandle => {
     const { port1, port2 } = new MessageChannel();
     const runtime = createEngineRuntime(toPortLike(port2), {
+      net: fakeNet(),
       testAiConnection: (config) => {
         control.aiConfigs.push(config);
         if (control.aiHangs) {
@@ -110,6 +123,12 @@ async function startHarness(): Promise<Harness> {
   };
   const supervisor = startEngineSupervisor({
     launch,
+    pages: {
+      render: async (url) => {
+        control.pageUrls.push(url);
+        return { ok: true, url, html: "<main>job</main>" };
+      },
+    },
     database: {
       execute: (calls) => executeDbCalls(database.db, calls),
       reconcileInterruptedRuns: () =>
@@ -317,5 +336,20 @@ describe("engine supervisor", () => {
     supervisor.stop();
     await waiting;
     await expect(withTimeout(supervisor.ping(), 200)).rejects.toMatchObject({ reason: "stopped" });
+  });
+  it("loads a page render the engine asks for through main and answers under the same id", async () => {
+    const { supervisor, launches, control } = await startHarness();
+    await supervisor.ping();
+
+    const result = await (launches[0] as EngineLaunch).runtime.renderPage(
+      "https://jobs.example.test/careers",
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      url: "https://jobs.example.test/careers",
+      html: "<main>job</main>",
+    });
+    expect(control.pageUrls).toEqual(["https://jobs.example.test/careers"]);
   });
 });
