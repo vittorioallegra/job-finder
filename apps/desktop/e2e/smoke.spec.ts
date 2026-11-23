@@ -20,7 +20,8 @@ test("window opens and a second launch does not open a second window", async () 
 
   try {
     const window = await app.firstWindow();
-    await expect(window.getByRole("heading", { level: 1 })).toHaveText("Job Finder");
+    // The brand link names the app in every UI language.
+    await expect(window.getByRole("link", { name: /Job Finder/ })).toBeVisible();
     const logFile = join(userDataDir, "logs", "main.log");
     await expect
       .poll(() => (existsSync(logFile) ? readFileSync(logFile, "utf8") : ""), { timeout: 30_000 })

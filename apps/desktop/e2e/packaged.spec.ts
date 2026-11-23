@@ -49,7 +49,7 @@ test.describe("packaged app", () => {
 
     try {
       const window = await app.firstWindow();
-      await expect(window.getByRole("heading", { level: 1 })).toHaveText("Job Finder");
+      await expect(window.getByRole("link", { name: /Job Finder/ })).toBeVisible();
 
       const logFile = join(userDataDir, "logs", "main.log");
       const readLog = () => (existsSync(logFile) ? readFileSync(logFile, "utf8") : "");
