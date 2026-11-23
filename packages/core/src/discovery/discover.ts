@@ -30,10 +30,7 @@ const DEFAULT_CONFIG: SearchSourceConfig = { duckduckgo: true, keyed: [] };
 
 /** The search sources a configuration enables: DuckDuckGo when its toggle is on, then each keyed provider. */
 export function searchSourcesFor(config: SearchSourceConfig): SearchSource[] {
-  return [
-    ...(config.duckduckgo ? [duckDuckGoSource] : []),
-    ...config.keyed.map(createKeyedSource),
-  ];
+  return [...(config.duckduckgo ? [duckDuckGoSource] : []), ...config.keyed.map(createKeyedSource)];
 }
 
 /**
@@ -93,9 +90,7 @@ export async function discoverCompanies(
   }
 
   if (succeeded > 0) {
-    return blocked
-      ? { ok: true, candidates, searchBlocked: true }
-      : { ok: true, candidates };
+    return blocked ? { ok: true, candidates, searchBlocked: true } : { ok: true, candidates };
   }
   return { ok: false, code: blocked ? "search-blocked" : "search-failed" };
 }

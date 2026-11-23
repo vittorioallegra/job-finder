@@ -34,7 +34,12 @@ describe("company discovery", () => {
       ],
     }));
 
-    const outcome = await discoverCompanies(criteria, { http, sources: [source], maxQueries: 1, ...noBoardSources });
+    const outcome = await discoverCompanies(criteria, {
+      http,
+      sources: [source],
+      maxQueries: 1,
+      ...noBoardSources,
+    });
 
     expect(outcome).toEqual({
       ok: true,
@@ -58,7 +63,11 @@ describe("company discovery", () => {
   it("stops at the first challenge and reports it as blocked when nothing was found", async () => {
     const { source, queries } = scriptedSource(() => ({ ok: false, code: "blocked" }));
 
-    const outcome = await discoverCompanies(criteria, { http, sources: [source], ...noBoardSources });
+    const outcome = await discoverCompanies(criteria, {
+      http,
+      sources: [source],
+      ...noBoardSources,
+    });
 
     expect(outcome).toEqual({ ok: false, code: "search-blocked" });
     expect(queries).toHaveLength(1);
@@ -73,7 +82,11 @@ describe("company discovery", () => {
         : { ok: false, code: "blocked" };
     });
 
-    const outcome = await discoverCompanies(criteria, { http, sources: [source], ...noBoardSources });
+    const outcome = await discoverCompanies(criteria, {
+      http,
+      sources: [source],
+      ...noBoardSources,
+    });
 
     expect(outcome).toEqual({
       ok: true,
@@ -93,7 +106,12 @@ describe("company discovery", () => {
   it("reports a failure when every query failed without a challenge", async () => {
     const { source } = scriptedSource(() => ({ ok: false, code: "network" }));
 
-    const outcome = await discoverCompanies(criteria, { http, sources: [source], maxQueries: 3, ...noBoardSources });
+    const outcome = await discoverCompanies(criteria, {
+      http,
+      sources: [source],
+      maxQueries: 3,
+      ...noBoardSources,
+    });
 
     expect(outcome).toEqual({ ok: false, code: "search-failed" });
   });
@@ -115,7 +133,12 @@ describe("company discovery", () => {
       ok: true,
       searchBlocked: true,
       candidates: [
-        { ats: "lever", slug: "globex", careersUrl: "https://jobs.lever.co/globex", name: "globex" },
+        {
+          ats: "lever",
+          slug: "globex",
+          careersUrl: "https://jobs.lever.co/globex",
+          name: "globex",
+        },
       ],
     });
   });

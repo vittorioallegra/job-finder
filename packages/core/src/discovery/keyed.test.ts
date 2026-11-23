@@ -58,7 +58,10 @@ describe("keyed search providers", () => {
   it("Serper: posts the query with the key in the API header and reads organic links", async () => {
     const { http, requests } = clientWith(
       JSON.stringify({
-        organic: [{ link: "https://example.com/careers" }, { link: "https://apply.workable.com/acme" }],
+        organic: [
+          { link: "https://example.com/careers" },
+          { link: "https://apply.workable.com/acme" },
+        ],
       }),
     );
     const source = createKeyedSource({ provider: "serper", apiKey: KEY });
@@ -75,10 +78,14 @@ describe("keyed search providers", () => {
 
   it("drops result links that are not http or https", async () => {
     const { http } = clientWith(
-      JSON.stringify({ results: [{ url: "javascript:alert(1)" }, { url: "https://jobs.lever.co/a" }] }),
+      JSON.stringify({
+        results: [{ url: "javascript:alert(1)" }, { url: "https://jobs.lever.co/a" }],
+      }),
     );
 
-    const result = await createKeyedSource({ provider: "tavily", apiKey: KEY }).search("q", { http });
+    const result = await createKeyedSource({ provider: "tavily", apiKey: KEY }).search("q", {
+      http,
+    });
 
     expect(result).toEqual({ ok: true, urls: ["https://jobs.lever.co/a"] });
   });
@@ -86,7 +93,9 @@ describe("keyed search providers", () => {
   it("reports a reply of the wrong shape as invalid-response, without the body", async () => {
     const { http } = clientWith(JSON.stringify({ unexpected: `leaked ${KEY}` }));
 
-    const result = await createKeyedSource({ provider: "tavily", apiKey: KEY }).search("q", { http });
+    const result = await createKeyedSource({ provider: "tavily", apiKey: KEY }).search("q", {
+      http,
+    });
 
     expect(result).toEqual({ ok: false, code: "invalid-response" });
     expect(JSON.stringify(result)).not.toContain(KEY);
@@ -95,7 +104,9 @@ describe("keyed search providers", () => {
   it("reports an error status, such as a rejected key, as a failure", async () => {
     const { http } = clientWith("denied", 401);
 
-    const result = await createKeyedSource({ provider: "serper", apiKey: KEY }).search("q", { http });
+    const result = await createKeyedSource({ provider: "serper", apiKey: KEY }).search("q", {
+      http,
+    });
 
     expect(result).toEqual({ ok: false, code: "http-status" });
   });

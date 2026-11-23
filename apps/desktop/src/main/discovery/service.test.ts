@@ -2,7 +2,11 @@
 // fails_when=the terms change on the way, a found board is dropped, a keyed provider runs without its toggle or key, a key is returned to the caller, an unreachable engine is reported as a search failure, or an error message leaks to the renderer;
 // no_claim=the engine's requests to the search providers, which the core and engine tests cover, and the IPC payload check, which the handler tests cover.
 import { describe, expect, it } from "vitest";
-import type { DiscoveryCriteria, DiscoveryOutcome, SearchSourceConfig } from "@job-finder/core/discovery/types";
+import type {
+  DiscoveryCriteria,
+  DiscoveryOutcome,
+  SearchSourceConfig,
+} from "@job-finder/core/discovery/types";
 import { DEFAULT_APP_SETTINGS, type AppSettings } from "@job-finder/bridge";
 import { EngineUnavailableError } from "../engine/supervisor";
 import { createDiscoveryService, type DiscoveryEngine } from "./service";
@@ -40,7 +44,9 @@ function secretsWith(keys: Record<string, string>) {
 const noKeys = secretsWith({});
 const found: DiscoveryOutcome = {
   ok: true,
-  candidates: [{ ats: "lever", slug: "globex", careersUrl: "https://jobs.lever.co/globex", name: "globex" }],
+  candidates: [
+    { ats: "lever", slug: "globex", careersUrl: "https://jobs.lever.co/globex", name: "globex" },
+  ],
 };
 
 describe("discovery service", () => {
@@ -114,7 +120,11 @@ describe("discovery service", () => {
   });
 
   it("reports no engine, or an engine that is gone, as engine-unavailable", async () => {
-    const none = createDiscoveryService({ engine: () => null, settings: settingsWith(), secrets: noKeys });
+    const none = createDiscoveryService({
+      engine: () => null,
+      settings: settingsWith(),
+      secrets: noKeys,
+    });
     expect(await none.search({ keywords: ["x"], locations: [] })).toEqual({
       ok: false,
       code: "engine-unavailable",

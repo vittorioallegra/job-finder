@@ -16,7 +16,12 @@ function indexClient(route: Route) {
     requests.push(url.toString());
     return route(url.searchParams.get("url") ?? "");
   }) as typeof fetch;
-  const http = createHttpClient({ fetch: fetchFake, intervalMs: 0, sleep: async () => {}, maxAttempts: 1 });
+  const http = createHttpClient({
+    fetch: fetchFake,
+    intervalMs: 0,
+    sleep: async () => {},
+    maxAttempts: 1,
+  });
   return { http, requests };
 }
 
@@ -37,12 +42,16 @@ describe("Common Crawl index", () => {
   it("reads one URL per line and skips lines that are not captures", () => {
     const body = `${ndjson("https://jobs.lever.co/globex/1")}\nnot json\n{"other":1}\n\n${ndjson("https://jobs.lever.co/acme")}`;
 
-    expect(parseCdxLines(body)).toEqual(["https://jobs.lever.co/globex/1", "https://jobs.lever.co/acme"]);
+    expect(parseCdxLines(body)).toEqual([
+      "https://jobs.lever.co/globex/1",
+      "https://jobs.lever.co/acme",
+    ]);
   });
 
   it("returns the board URLs of every ATS domain and treats a domain with no captures as empty", async () => {
     const { http, requests } = indexClient((domain) => {
-      if (domain === "jobs.lever.co") return new Response(ndjson("https://jobs.lever.co/globex/1"), { status: 200 });
+      if (domain === "jobs.lever.co")
+        return new Response(ndjson("https://jobs.lever.co/globex/1"), { status: 200 });
       return new Response("", { status: 404 });
     });
 
@@ -72,7 +81,9 @@ describe("Common Crawl index", () => {
   });
 
   it("answers a repeat read of the same domain from the response cache", async () => {
-    const { http, requests } = indexClient(() => new Response(ndjson("https://jobs.lever.co/a"), { status: 200 }));
+    const { http, requests } = indexClient(
+      () => new Response(ndjson("https://jobs.lever.co/a"), { status: 200 }),
+    );
 
     await commonCrawlSource.urls({ http });
     const firstCount = requests.length;

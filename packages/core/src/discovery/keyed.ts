@@ -45,7 +45,9 @@ async function runKeyed(
     return { ok: false, code: "invalid-response" };
   }
   const urls = read(parsed);
-  return urls === undefined ? { ok: false, code: "invalid-response" } : { ok: true, urls: targets(urls) };
+  return urls === undefined
+    ? { ok: false, code: "invalid-response" }
+    : { ok: true, urls: targets(urls) };
 }
 
 /** A keyed web search source. The factory takes the key once; the source never returns it. */
@@ -64,7 +66,9 @@ export function createKeyedSource(config: KeyedSearchConfig): SearchSource {
             }),
           (body) => {
             const parsed = BraveResponse.safeParse(body);
-            return parsed.success ? (parsed.data.web?.results ?? []).map((item) => item.url) : undefined;
+            return parsed.success
+              ? (parsed.data.web?.results ?? []).map((item) => item.url)
+              : undefined;
           },
         );
       }

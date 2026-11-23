@@ -1,4 +1,9 @@
-import type { DiscoveryCriteria, DiscoveryOutcome, KeyedSearchConfig, SearchSourceConfig } from "@job-finder/core/discovery/types";
+import type {
+  DiscoveryCriteria,
+  DiscoveryOutcome,
+  KeyedSearchConfig,
+  SearchSourceConfig,
+} from "@job-finder/core/discovery/types";
 import type { DiscoverySearchRequest, DiscoverySearchResult, SecretName } from "@job-finder/bridge";
 import { EngineUnavailableError } from "../engine/supervisor";
 import type { SecretStore } from "../secrets/store";
@@ -6,7 +11,10 @@ import type { SettingsRepository } from "../settings/repository";
 
 /** The engine side of a discovery search, as seen from main. */
 export interface DiscoveryEngine {
-  discoverCompanies(criteria: DiscoveryCriteria, config: SearchSourceConfig): Promise<DiscoveryOutcome>;
+  discoverCompanies(
+    criteria: DiscoveryCriteria,
+    config: SearchSourceConfig,
+  ): Promise<DiscoveryOutcome>;
 }
 
 export interface DiscoveryService {
