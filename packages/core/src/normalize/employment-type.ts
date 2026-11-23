@@ -8,10 +8,10 @@ const RULES: Array<[EmploymentType, RegExp]> = [
   ["freelance", /\b(freelance|freelancer|self employed)\b/],
   ["temporary", /\b(temporary|temp|interim|tempo determinato|befristet)\b/],
   ["contract", /\b(contract|contractor|fixed term)\b/],
-  ["part_time", /\b(part time|parttime|teilzeit|tempo parziale|working student|mini job)\b/],
+  ["part_time", /\b(part[- ]?time|teilzeit|tempo parziale|working student|mini job)\b/],
   [
     "full_time",
-    /\b(full time|fulltime|vollzeit|tempo pieno|permanent|unbefristet|tempo indeterminato)\b/,
+    /\b(full[- ]?time|vollzeit|tempo pieno|permanent|unbefristet|tempo indeterminato)\b/,
   ],
 ];
 

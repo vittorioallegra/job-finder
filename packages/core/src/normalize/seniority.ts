@@ -5,8 +5,8 @@ import { foldForMatch } from "./text";
 const RULES: Array<[SeniorityLevel, RegExp]> = [
   ["lead", /\b(lead|staff|principal|head|director|vp|chief)\b/],
   ["senior", /\b(senior|sr)\b/],
-  ["mid", /\b(mid|intermediate|mid level)\b/],
-  ["junior", /\b(junior|jr|entry level|graduate)\b/],
+  ["mid", /\b(mid|intermediate|mid[- ]level)\b/],
+  ["junior", /\b(junior|jr|entry[- ]level|graduate)\b/],
   ["intern", /\b(intern|internship|trainee|tirocinante|praktikant)\b/],
 ];
 

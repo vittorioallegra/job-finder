@@ -19,7 +19,10 @@ describe("countryCodeFor", () => {
     expect(countryCodeFor("Italia")).toBe("IT");
     expect(countryCodeFor("UK")).toBe("GB");
     expect(countryCodeFor("U.S.A.")).toBe("US");
-    expect(countryCodeFor("it")).toBe("IT");
+    expect(countryCodeFor("Georgia")).toBeUndefined();
+    expect(countryCodeFor("France")).toBe("FR");
+    expect(countryCodeFor("United Kingdom")).toBe("GB");
+    expect(countryCodeFor("CA")).toBeUndefined();
     expect(countryCodeFor("European Union")).toBeUndefined();
     expect(countryCodeFor("EU")).toBeUndefined();
     expect(countryCodeFor("Atlantis")).toBeUndefined();
@@ -27,6 +30,19 @@ describe("countryCodeFor", () => {
 });
 
 describe("normalizeLocation", () => {
+  it("does not read a US state or a state code as a country", () => {
+    expect(normalizeLocation("Atlanta, Georgia")).toEqual({
+      raw: "Atlanta, Georgia",
+      city: "Atlanta",
+      region: "Georgia",
+    });
+    expect(normalizeLocation("San Francisco, CA")).toEqual({
+      raw: "San Francisco, CA",
+      city: "San Francisco",
+      region: "CA",
+    });
+  });
+
   it("reads city, region and country from comma-separated text", () => {
     expect(normalizeLocation("Berlin, Berlin, Deutschland")).toEqual({
       raw: "Berlin, Berlin, Deutschland",

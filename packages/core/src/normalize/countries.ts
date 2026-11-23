@@ -1,10 +1,35 @@
 import { foldForMatch } from "./text";
 
 /**
- * Codes CLDR lists as regions but that are not countries, so a location such as "European Union"
- * is never read as a country.
+ * Codes CLDR lists as regions or deprecated codes, or that are not countries at all. "UK" is a
+ * deprecated code for GB and "FX" for France; "EU" is a union. None of them is read from text.
  */
-const NOT_COUNTRIES = new Set(["EU", "EZ", "UN", "QO", "AC", "TA"]);
+const NOT_COUNTRIES = new Set([
+  "AC",
+  "AN",
+  "BU",
+  "CS",
+  "DD",
+  "EU",
+  "EZ",
+  "FX",
+  "NT",
+  "QO",
+  "QU",
+  "SU",
+  "TA",
+  "TP",
+  "UK",
+  "UN",
+  "YU",
+  "ZR",
+]);
+
+/**
+ * Names that are also a place inside another country ("Atlanta, Georgia" is a US state). Free
+ * text never reads them as countries; structured country codes still do.
+ */
+const AMBIGUOUS_NAMES = new Set(["georgia"]);
 
 const ALIASES: Record<string, string> = {
   uk: "GB",
@@ -31,7 +56,8 @@ function buildIndex(): Map<string, string> {
         const code = first + second;
         if (NOT_COUNTRIES.has(code)) continue;
         const name = names.of(code);
-        if (name && name !== code) map.set(foldForMatch(name), code);
+        const folded = name ? foldForMatch(name) : "";
+        if (name && name !== code && !AMBIGUOUS_NAMES.has(folded)) map.set(folded, code);
       }
     }
   }
@@ -39,27 +65,14 @@ function buildIndex(): Map<string, string> {
   return map;
 }
 
-function countryIndex(): Map<string, string> {
-  index ??= buildIndex();
-  return index;
-}
-
 /**
- * ISO 3166-1 alpha-2 code for a country name (English, Italian or German) or a two-letter code.
- * Returns undefined for anything else, including regions such as "European Union".
+ * ISO 3166-1 alpha-2 code for a country name in English, Italian or German. Two-letter codes are
+ * not read from free text: "CA" is Canada and also California. Structured fields carry their code
+ * directly. Returns undefined for anything else, including regions such as "European Union".
  */
 export function countryCodeFor(value: string): string | undefined {
   const folded = foldForMatch(value.replace(/\./g, ""));
   if (folded === "") return undefined;
-  const alias = ALIASES[folded];
-  if (alias !== undefined) return alias;
-  if (/^[a-z]{2}$/.test(folded)) {
-    const code = folded.toUpperCase();
-    return NOT_COUNTRIES.has(code) || !isKnownRegion(code) ? undefined : code;
-  }
-  return countryIndex().get(folded);
-}
-
-function isKnownRegion(code: string): boolean {
-  return new Intl.DisplayNames(["en"], { type: "region" }).of(code) !== code;
+  index ??= buildIndex();
+  return index.get(folded);
 }
