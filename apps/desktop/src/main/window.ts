@@ -1,6 +1,7 @@
 import { BrowserWindow, shell } from "electron";
 import type { MainLanguage } from "./i18n";
 import { createTranslator } from "./i18n";
+import { originOf } from "./security/origin";
 
 export interface WindowOptions {
   preloadPath: string;
@@ -30,7 +31,7 @@ export function createMainWindow(options: WindowOptions): BrowserWindow {
     },
   });
 
-  const allowedOrigin = new URL(options.rendererUrl).origin;
+  const allowedOrigin = originOf(options.rendererUrl);
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//.test(url)) {
       void shell.openExternal(url);
@@ -38,7 +39,7 @@ export function createMainWindow(options: WindowOptions): BrowserWindow {
     return { action: "deny" };
   });
   window.webContents.on("will-navigate", (event, url) => {
-    if (new URL(url).origin !== allowedOrigin) {
+    if (originOf(url) !== allowedOrigin) {
       event.preventDefault();
     }
   });

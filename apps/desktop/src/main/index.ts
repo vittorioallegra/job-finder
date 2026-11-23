@@ -1,12 +1,16 @@
-import { app, BrowserWindow, dialog, net, protocol, session } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, safeStorage, net, protocol, session } from "electron";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { openAppDatabase, resolveMigrationsFolder, type AppDatabase } from "./db/database";
 import { executeDbCalls, reconcileInterruptedRuns } from "./db/operations";
+import { registerIpcHandlers } from "./ipc/handlers";
 import { createUtilityProcessLauncher } from "./engine/launcher";
 import { startEngineSupervisor } from "./engine/supervisor";
 import { createFileLogger } from "./logging/file-logger";
+import { originOf } from "./security/origin";
+import { createSecretStore, createSettingsSecretRows } from "./secrets/store";
+import { createSettingsRepository } from "./settings/repository";
 import { APP_HOST, APP_SCHEME, resolveAppRequest } from "./protocol/app-protocol";
 import { createTranslator, resolveMainLanguage } from "./i18n";
 import { buildContentSecurityPolicy } from "./security/csp";
@@ -117,12 +121,24 @@ if (gotSingleInstanceLock) {
       database.close();
     });
 
+    const rendererUrl = isDevelopment
+      ? (process.env["ELECTRON_RENDERER_URL"] as string)
+      : `${APP_SCHEME}://${APP_HOST}/`;
+    const settingsRepository = createSettingsRepository(database.db);
+    const secretStore = createSecretStore({
+      safeStorage,
+      rows: createSettingsSecretRows(database.db),
+      isBasicTextAllowed: async () => (await settingsRepository.get()).secrets.allowBasicText,
+    });
+    registerIpcHandlers(
+      ipcMain,
+      { settings: settingsRepository, secrets: secretStore },
+      originOf(rendererUrl) ?? rendererUrl,
+    );
+
     try {
       registerAppProtocol();
       applySecurityPolicy();
-      const rendererUrl = isDevelopment
-        ? (process.env["ELECTRON_RENDERER_URL"] as string)
-        : `${APP_SCHEME}://${APP_HOST}/`;
       mainWindow = createMainWindow({ preloadPath, rendererUrl, language });
     } catch (error) {
       logger.log("error", `window creation failed: ${String(error)}`);
@@ -132,13 +148,7 @@ if (gotSingleInstanceLock) {
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) {
-        mainWindow = createMainWindow({
-          preloadPath,
-          rendererUrl: isDevelopment
-            ? (process.env["ELECTRON_RENDERER_URL"] as string)
-            : `${APP_SCHEME}://${APP_HOST}/`,
-          language,
-        });
+        mainWindow = createMainWindow({ preloadPath, rendererUrl, language });
       }
     });
   });
