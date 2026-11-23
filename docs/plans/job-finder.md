@@ -274,7 +274,7 @@ Architecture: agreed
 Approved: yes (2026-11-23)
 
 ### Steps
-- [ ] 1. Workspace scaffold
+- [x] 1. Workspace scaffold — `docs: add CLAUDE.md, README, license, contributing guide and repo conventions test`
 - [ ] 2. Engine walking skeleton and persistence foundation
 - [ ] 3. CI and release pipeline
 - [ ] 4. Bridge, settings and secrets
@@ -321,4 +321,4 @@ Approved: yes (2026-11-23)
 ### Open questions
 
 ### Next
-Step 1: workspace scaffold (pnpm workspace, Electron/electron-vite shell, React renderer, i18n, lint, tests, CLAUDE.md).
+Step 2: engine walking skeleton and persistence foundation (node:sqlite adapter, migrator with backup, engine utilityProcess).
