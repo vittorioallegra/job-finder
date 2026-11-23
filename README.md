@@ -21,10 +21,27 @@ pnpm verify         # typecheck, lint, format check, unit tests and Electron E2E
 
 For day-to-day commands, see `CLAUDE.md`.
 
+## Finding companies
+
+The Companies screen searches for job boards. Three sources feed it:
+
+- Common Crawl's URL index (keyless) lists boards on the ATS domains. It is not filtered by your keywords.
+- DuckDuckGo's HTML search (keyless) is best-effort: it can refuse automated requests, and the app
+  never tries to get past such a refusal.
+- Brave Search, Tavily and Serper are keyed. They are used only when their toggle is on in Settings
+  and a key is saved there.
+
+For reliable results, add a free-tier key for one of the keyed providers in Settings. Keys are kept
+in the operating system's keychain (or, on Linux without a keyring, only after you opt in in
+Settings), are sent only to the provider they belong to, and are never shown in the interface or
+written to logs.
+
 ## Privacy
 
-The app runs locally. In this scaffold stage the renderer makes no network connections; outbound
-connections (job sources, AI providers, update checks) will be listed here as they are added.
+The app runs locally. Outbound connections are made only for the features you use: job sources
+(ATS APIs and careers pages), AI providers you configure, the discovery sources above (Common
+Crawl, DuckDuckGo, and a keyed provider only when you saved its key) and the update check, which
+you can turn off in Settings.
 
 ## Documentation
 

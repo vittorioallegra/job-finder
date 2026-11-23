@@ -284,7 +284,7 @@ Approved: yes (2026-11-23)
 - [x] 8. Normalization and ATS adapters — `docs: add ATS adapter guide and record step 8 decisions`
 - [x] 9. Ingestion pipeline vertical slice — `docs: record step 9 decisions and tick the step`
 - [x] 10. Discovery A: web search and companies — `docs: record step 10 decisions and tick the step`
-- [ ] 11. Discovery B: Common Crawl and keyed providers
+- [x] 11. Discovery B: Common Crawl and keyed providers — `docs: record step 11 decisions and tick the step`
 - [ ] 12. Generic careers page adapter
 - [ ] 13. Matching and ranking
 - [ ] 14. Search and filters UI
@@ -417,7 +417,18 @@ Approved: yes (2026-11-23)
 - Step 10: no migration: the existing `companies` and `run_events` tables cover the step.
 - Step 10: not exercised: a real results page from DuckDuckGo (only the hand-written results fixture and the recorded challenge); a real search from the app (the challenge blocks scripted clients here); a scan of a live board from the app; discovery in the packaged app (the E2E run covers the window and the engine start only).
 
+- Step 11: Common Crawl index pinned to `CC-MAIN-2026-43-index` (read from `collinfo.json` on 2026-11-23). It is queried per ATS domain with `matchType=domain`, status 200, URL only, at most 500 captures per domain. The sample is partial by design: the index is sorted by URL, so it seeds the company list rather than listing every board.
+- Step 11: Common Crawl ignores the keywords and locations (the index holds no posting text). It runs once per discovery as a board source, not once per query, and its boards are added to the candidates. Its responses use the shared HTTP client's 10-minute cache. A domain that answers 404 has no captures and counts as empty; the run fails only when every domain fails.
+- Step 11: discovery runs each enabled search source for every query. A source that answers with a challenge is not asked again, while the other sources keep running. The outcome is `ok` with `searchBlocked: true` when a source was blocked but others gave boards; `search-blocked` only when nothing succeeded and a source was blocked.
+- Step 11: keyed providers run only with their Settings toggle on and a key saved. Each enabled provider runs every query, so one search can make up to twelve requests per provider: quotas are the user's to watch. Each query asks for 20 results.
+- Step 11: keys reach the engine only in the `discover-companies` message, which main builds from SecretStore. Keys travel in headers (`X-Subscription-Token` for Brave, `Authorization: Bearer` for Tavily, `X-API-KEY` for Serper), never in a URL, a log line or the renderer. Parsing rejects a reply of the wrong shape as `invalid-response` without echoing the body.
+- Step 11: the endpoints were checked against public documentation on 2026-11-23: Brave `api.search.brave.com/res/v1/web/search` (GET, `web.results[].url`) and Tavily `api.tavily.com/search` (POST, `results[].url`). For Serper only the response path (`organic[].link`) was confirmed; the endpoint `google.serper.dev/search` and the `X-API-KEY` header come from its public API and were not confirmed on the page read.
+- Step 11: `createHttpClient` gains `post(url, { body, headers })` and per-request headers. The queue, robots.txt, retries and fixture override apply to both. Only GET requests without headers are cached, so keyed reads and POSTs are never served from the cache.
+- Step 11: the Companies screen reads the key status and shows a hint with a link to Settings when no search key is saved, and again when keyless search is blocked. The Settings key hint now recommends a free-tier key. The README documents the free-tier key and the discovery sources.
+- Step 11: no table or migration. Settings toggles and secret rows from step 4 cover the step.
+- Step 11: not exercised: any live call to Common Crawl or a keyed provider (none made, per the rules); the CDX line format on a live response (the parser skips malformed lines); a discovery run from the packaged app (the E2E run covers the window and the engine start only); a real search with a saved key from the app.
+
 ### Open questions
 
 ### Next
-Step 11: Discovery B: Common Crawl and keyed providers (Common Crawl CDX index client enumerating company slugs on ATS domains, scoped and cached; optional Brave, Tavily and Serper clients enabled only with a key).
+Step 12: Generic careers page adapter (fetch or render a careers page, reduce HTML to text and links, AI-extract postings into the normalized model, follow posting links up to a bounded depth; "no parseable jobs" marking).
