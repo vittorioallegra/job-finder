@@ -239,6 +239,23 @@ describe("autofill service on the Greenhouse fixture", () => {
     expect(select.value).toBe("yes");
   });
 
+  it("blocks form submits scripted by the page after filling, until the user interacts", async () => {
+    // protects=the page cannot submit the form from a change handler or script while autofill fills it; fails_when=form.submit() or requestSubmit() reaches the form after autofill without a user click or key press; no_claim=trusted user input, which jsdom cannot produce;
+    const window = scriptedWindow("generic.html");
+    const { service } = serviceWith([window], {
+      application: detail({ applyUrl: "https://careers.acme.test/apply/7" }),
+    });
+    await service.start({ applicationId: "a1" });
+    const form = document.querySelector("form") as HTMLFormElement;
+    const submits = vi.fn((event: Event) => event.preventDefault());
+    form.addEventListener("submit", submits);
+
+    form.requestSubmit();
+    form.submit();
+
+    expect(submits).not.toHaveBeenCalled();
+  });
+
   it("uploads no CV that has no PDF yet, and reports it as not exported", async () => {
     const window = scriptedWindow("greenhouse.html");
     const { service } = serviceWith([window], { exists: { cv: false, "cover-letter": true } });

@@ -194,9 +194,10 @@ describe("page scripts never submit", () => {
   );
 
   it("contains no click, key press or submit call in any script", () => {
-    const sources = [discoverExpression("f"), fillExpression([]), highlightExpression([])].join(
-      "\n",
-    );
+    // The guard that cancels scripted submits names them on purpose; it is the only exception.
+    const sources = [discoverExpression("f"), fillExpression([]), highlightExpression([])]
+      .join("\n")
+      .replace(/\/\* submit-guard:start \*\/[\s\S]*?\/\* submit-guard:end \*\//, "");
     expect(sources).not.toMatch(
       /\.click\s*\(|\.submit\s*\(|requestSubmit|keydown|keypress|keyup|KeyboardEvent|MouseEvent|"Enter"/i,
     );

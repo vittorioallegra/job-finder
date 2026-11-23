@@ -192,6 +192,33 @@ const FILL = `function (actions) {
     el.dispatchEvent(new Event("change", { bubbles: true }));
     return el.value === value;
   }
+  /* submit-guard:start */
+  // The app never submits, and filling must not do it either: a change handler may call
+  // form.submit() or advance a step. Until the user's own first click or key press in the page,
+  // scripted submits are cancelled; real user input lifts the guard so the user can submit.
+  if (!window.__jfSubmitGuard) {
+    var guard = { submit: HTMLFormElement.prototype.submit, requestSubmit: HTMLFormElement.prototype.requestSubmit };
+    var block = function (event) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+    var lift = function (event) {
+      if (!event.isTrusted) return;
+      HTMLFormElement.prototype.submit = guard.submit;
+      HTMLFormElement.prototype.requestSubmit = guard.requestSubmit;
+      document.removeEventListener("submit", block, true);
+      document.removeEventListener("pointerdown", lift, true);
+      document.removeEventListener("keydown", lift, true);
+      window.__jfSubmitGuard = false;
+    };
+    HTMLFormElement.prototype.submit = function () {};
+    HTMLFormElement.prototype.requestSubmit = function () {};
+    document.addEventListener("submit", block, true);
+    document.addEventListener("pointerdown", lift, true);
+    document.addEventListener("keydown", lift, true);
+    window.__jfSubmitGuard = true;
+  }
+  /* submit-guard:end */
   var results = [];
   for (var i = 0; i < actions.length; i++) {
     var action = actions[i];
