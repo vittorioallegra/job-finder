@@ -8,7 +8,9 @@
     "subtitle": "La configurazione è in corso.",
     "emptyTitle": "Non c'è ancora nulla",
     "emptyBody": "Ricerche e risultati compariranno qui.",
-    "openSettings": "Impostazioni"
+    "openSettings": "Impostazioni",
+    "openOnboarding": "Configura il profilo",
+    "openProfile": "Profilo"
   },
   "settings": {
     "title": "Impostazioni",
@@ -109,6 +111,146 @@
       "optInBody": "Le chiavi possono essere salvate su disco solo senza cifratura del portachiavi. Finché non lo consenti, restano solo per questa sessione.",
       "optIn": "Consenti di salvare le chiavi su disco senza cifratura del portachiavi",
       "optInFailed": "Impossibile salvare questa scelta."
+    }
+  },
+  "profile": {
+    "title": "Profilo",
+    "backHome": "Torna alla home",
+    "loading": "Caricamento del profilo…",
+    "loadFailed": "Non è stato possibile caricare il profilo.",
+    "retry": "Riprova",
+    "empty": {
+      "title": "Nessun profilo",
+      "body": "Crea il profilo da un CV oppure parti da uno vuoto.",
+      "start": "Crea dal CV"
+    },
+    "save": "Salva profilo",
+    "saving": "Salvataggio…",
+    "saved": "Profilo salvato.",
+    "invalid": "Alcuni campi non sono validi o sono incompleti. Non è stato salvato nulla.",
+    "saveFailed": "Non è stato possibile salvare il profilo.",
+    "entry": "Voce {{number}}",
+    "remove": "Rimuovi la voce {{number}}",
+    "sections": {
+      "contact": "Contatti",
+      "summary": "Riepilogo",
+      "experience": "Esperienza",
+      "education": "Istruzione",
+      "skills": "Competenze",
+      "languages": "Lingue",
+      "certifications": "Certificazioni",
+      "links": "Link",
+      "defaults": "Predefiniti per le candidature",
+      "answers": "Risposte standard"
+    },
+    "fields": {
+      "fullName": "Nome e cognome",
+      "email": "Email",
+      "phone": "Telefono",
+      "location": "Luogo",
+      "headline": "Titolo professionale",
+      "summary": "Riepilogo",
+      "company": "Azienda",
+      "jobTitle": "Ruolo",
+      "startDate": "Inizio",
+      "endDate": "Fine",
+      "bullets": "Risultati",
+      "bulletsHint": "Una per riga.",
+      "institution": "Istituto",
+      "degree": "Titolo di studio",
+      "field": "Materia",
+      "skillName": "Competenza",
+      "skillLevel": "Livello",
+      "levelHint": "Per esempio: base, intermedio, avanzato, esperto.",
+      "aliases": "Conosciuta anche come",
+      "aliasesHint": "Separa con le virgole.",
+      "languageName": "Lingua",
+      "languageLevel": "Livello",
+      "certName": "Certificazione",
+      "issuer": "Ente",
+      "date": "Data",
+      "linkLabel": "Etichetta",
+      "linkUrl": "URL",
+      "country": "Codice paese",
+      "countryHint": "Due lettere, per esempio IT.",
+      "status": "Stato",
+      "noticePeriod": "Preavviso",
+      "salaryAmount": "Retribuzione desiderata",
+      "salaryCurrency": "Valuta",
+      "currencyHint": "Tre lettere, per esempio EUR.",
+      "salaryPeriod": "Periodo",
+      "relocate": "Disponibile al trasferimento",
+      "pronouns": "Pronomi",
+      "question": "Domanda",
+      "answer": "Risposta"
+    },
+    "periods": {
+      "none": "Non indicato",
+      "hour": "all'ora",
+      "day": "al giorno",
+      "month": "al mese",
+      "year": "all'anno"
+    },
+    "relocate": {
+      "unset": "Non indicato",
+      "yes": "Sì",
+      "no": "No"
+    },
+    "add": {
+      "experience": "Aggiungi esperienza",
+      "education": "Aggiungi istruzione",
+      "skill": "Aggiungi competenza",
+      "language": "Aggiungi lingua",
+      "certification": "Aggiungi certificazione",
+      "link": "Aggiungi link",
+      "workAuthorization": "Aggiungi autorizzazione al lavoro",
+      "answer": "Aggiungi risposta standard"
+    }
+  },
+  "onboarding": {
+    "title": "Configura il profilo",
+    "backHome": "Torna alla home",
+    "steps": {
+      "label": "Passaggi di configurazione",
+      "ai": "Provider AI",
+      "cv": "CV",
+      "review": "Verifica"
+    },
+    "loading": "Caricamento…",
+    "loadFailed": "Non è stato possibile caricare le impostazioni.",
+    "retry": "Riprova",
+    "ai": {
+      "title": "Provider AI",
+      "intro": "Un modello AI legge il CV e compila il profilo. Scegli il provider e verifica la connessione.",
+      "save": "Salva provider",
+      "saving": "Salvataggio…",
+      "saved": "Provider salvato.",
+      "saveFailed": "Non è stato possibile salvare il provider. Controlla l'URL di base.",
+      "continue": "Continua con il CV"
+    },
+    "cv": {
+      "title": "Il tuo CV",
+      "intro": "Scegli un CV in PDF, DOCX o testo semplice. Controllerai ogni campo nel passaggio successivo.",
+      "fileLabel": "File del CV",
+      "fileHint": "PDF, DOCX o TXT, fino a 10 MB.",
+      "consentNote": "Per leggere il CV, il suo testo viene inviato a {{provider}}. Non viene inviato nulla finché non premi Importa.",
+      "consent": "Acconsento all'invio del testo del mio CV a {{provider}}.",
+      "import": "Importa CV",
+      "importing": "Lettura del CV…",
+      "manual": "Inserisci il profilo a mano",
+      "failed": "Non è stato possibile importare il CV: {{reason}}.",
+      "reasons": {
+        "unsupported-type": "sono supportati solo file PDF, DOCX e testo semplice",
+        "too-large": "il file supera 10 MB o contiene troppo testo",
+        "unreadable": "il file non può essere letto",
+        "empty-document": "il file non contiene testo",
+        "consent-required": "non hai acconsentito all'invio del CV al provider"
+      }
+    },
+    "review": {
+      "title": "Verifica il profilo",
+      "intro": "Controlla ogni campo prima di salvare. Non viene salvato nulla finché non premi Salva.",
+      "contextWarning": "Il CV potrebbe superare la dimensione di contesto del modello, quindi alcune parti potrebbero mancare. Controlla i campi estratti."
     }
   }
 }

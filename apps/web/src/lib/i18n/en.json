@@ -8,7 +8,9 @@
     "subtitle": "Setup is in progress.",
     "emptyTitle": "Nothing here yet",
     "emptyBody": "Searches and results will appear here.",
-    "openSettings": "Settings"
+    "openSettings": "Settings",
+    "openOnboarding": "Set up your profile",
+    "openProfile": "Profile"
   },
   "settings": {
     "title": "Settings",
@@ -109,6 +111,146 @@
       "optInBody": "Keys can be stored on disk only without keyring encryption. Until you allow that, they are kept for this session only.",
       "optIn": "Allow storing keys on disk without keyring encryption",
       "optInFailed": "That choice could not be saved."
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "backHome": "Back to home",
+    "loading": "Loading profile…",
+    "loadFailed": "The profile could not be loaded.",
+    "retry": "Try again",
+    "empty": {
+      "title": "No profile yet",
+      "body": "Set up your profile from a CV, or start from an empty one.",
+      "start": "Set up from a CV"
+    },
+    "save": "Save profile",
+    "saving": "Saving…",
+    "saved": "Profile saved.",
+    "invalid": "Some fields are invalid or incomplete. Nothing was saved.",
+    "saveFailed": "The profile could not be saved.",
+    "entry": "Entry {{number}}",
+    "remove": "Remove entry {{number}}",
+    "sections": {
+      "contact": "Contact",
+      "summary": "Summary",
+      "experience": "Experience",
+      "education": "Education",
+      "skills": "Skills",
+      "languages": "Languages",
+      "certifications": "Certifications",
+      "links": "Links",
+      "defaults": "Application defaults",
+      "answers": "Standard answers"
+    },
+    "fields": {
+      "fullName": "Full name",
+      "email": "Email",
+      "phone": "Phone",
+      "location": "Location",
+      "headline": "Headline",
+      "summary": "Summary",
+      "company": "Company",
+      "jobTitle": "Job title",
+      "startDate": "Start",
+      "endDate": "End",
+      "bullets": "Achievements",
+      "bulletsHint": "One per line.",
+      "institution": "Institution",
+      "degree": "Degree",
+      "field": "Field of study",
+      "skillName": "Skill",
+      "skillLevel": "Level",
+      "levelHint": "For example: basic, intermediate, advanced, expert.",
+      "aliases": "Also known as",
+      "aliasesHint": "Separate with commas.",
+      "languageName": "Language",
+      "languageLevel": "Level",
+      "certName": "Certification",
+      "issuer": "Issuer",
+      "date": "Date",
+      "linkLabel": "Label",
+      "linkUrl": "URL",
+      "country": "Country code",
+      "countryHint": "Two letters, such as IT.",
+      "status": "Status",
+      "noticePeriod": "Notice period",
+      "salaryAmount": "Salary expectation",
+      "salaryCurrency": "Currency",
+      "currencyHint": "Three letters, such as EUR.",
+      "salaryPeriod": "Period",
+      "relocate": "Willing to relocate",
+      "pronouns": "Pronouns",
+      "question": "Question",
+      "answer": "Answer"
+    },
+    "periods": {
+      "none": "Not set",
+      "hour": "per hour",
+      "day": "per day",
+      "month": "per month",
+      "year": "per year"
+    },
+    "relocate": {
+      "unset": "Not set",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "add": {
+      "experience": "Add experience",
+      "education": "Add education",
+      "skill": "Add skill",
+      "language": "Add language",
+      "certification": "Add certification",
+      "link": "Add link",
+      "workAuthorization": "Add work authorization",
+      "answer": "Add standard answer"
+    }
+  },
+  "onboarding": {
+    "title": "Set up your profile",
+    "backHome": "Back to home",
+    "steps": {
+      "label": "Setup steps",
+      "ai": "AI provider",
+      "cv": "CV",
+      "review": "Review"
+    },
+    "loading": "Loading…",
+    "loadFailed": "Settings could not be loaded.",
+    "retry": "Try again",
+    "ai": {
+      "title": "AI provider",
+      "intro": "An AI model reads your CV and fills in the profile. Choose the provider and check the connection.",
+      "save": "Save provider",
+      "saving": "Saving…",
+      "saved": "Provider saved.",
+      "saveFailed": "The provider could not be saved. Check the base URL.",
+      "continue": "Continue to the CV"
+    },
+    "cv": {
+      "title": "Your CV",
+      "intro": "Choose a PDF, DOCX or plain-text CV. You check every field on the next step.",
+      "fileLabel": "CV file",
+      "fileHint": "PDF, DOCX or TXT, up to 10 MB.",
+      "consentNote": "To read your CV, its text is sent to {{provider}}. Nothing is sent until you press Import.",
+      "consent": "I agree to send my CV text to {{provider}}.",
+      "import": "Import CV",
+      "importing": "Reading your CV…",
+      "manual": "Enter the profile by hand",
+      "failed": "The CV could not be imported: {{reason}}.",
+      "reasons": {
+        "unsupported-type": "only PDF, DOCX and plain-text files are supported",
+        "too-large": "the file is larger than 10 MB or has too much text",
+        "unreadable": "the file could not be read",
+        "empty-document": "the file contains no text",
+        "consent-required": "you did not agree to send the CV to the provider"
+      }
+    },
+    "review": {
+      "title": "Check your profile",
+      "intro": "Check every field before saving. Nothing is saved until you press Save.",
+      "contextWarning": "The CV may be longer than the model's context size, so parts of it may be missing. Check the extracted fields."
     }
   }
 }

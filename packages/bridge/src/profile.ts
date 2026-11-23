@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ProfileSchema, type CvExtraction, type Profile } from "@job-finder/core/profile";
+import type { CvExtraction, Profile } from "@job-finder/core/profile";
 
 /** Largest CV upload the renderer may send. Must equal `CV_MAX_BYTES` in packages/core/src/cv (tested). */
 export const CV_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
@@ -56,5 +56,18 @@ export const CvImportRequestSchema = z.strictObject({
 
 export type CvImportRequest = z.input<typeof CvImportRequestSchema>;
 
-export { ProfileSchema };
-export type { Profile, CvExtraction };
+// The renderer builds and validates profile drafts with these; they come from core but load no Node code.
+export {
+  ProfileSchema,
+  emptyProfile,
+  PROFILE_LIMITS,
+  SALARY_PERIODS,
+} from "@job-finder/core/profile";
+export type {
+  CvExtraction,
+  Profile,
+  ProfileApplicationDefaults,
+  ProfileContact,
+  ProfileExperience,
+  SalaryPeriod,
+} from "@job-finder/core/profile";

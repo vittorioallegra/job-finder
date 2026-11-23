@@ -16,9 +16,17 @@ export function HomeScreen() {
         </h2>
         <p className="text-app-muted">{t("home.emptyBody")}</p>
       </section>
-      <Link to="/settings" className="w-fit text-app-accent underline">
-        {t("home.openSettings")}
-      </Link>
+      <nav className="flex flex-col items-start gap-2">
+        <Link to="/onboarding" className="text-app-accent underline">
+          {t("home.openOnboarding")}
+        </Link>
+        <Link to="/profile" className="text-app-accent underline">
+          {t("home.openProfile")}
+        </Link>
+        <Link to="/settings" className="text-app-accent underline">
+          {t("home.openSettings")}
+        </Link>
+      </nav>
     </main>
   );
 }
