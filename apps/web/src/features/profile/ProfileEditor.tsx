@@ -8,6 +8,7 @@ import {
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Button } from "../../components/ui/Button";
+import { Card, CardTitle } from "../../components/ui/Card";
 import { SelectInput, type SelectOption } from "../../components/ui/SelectInput";
 import { TextArea } from "../../components/ui/TextArea";
 import { TextInput } from "../../components/ui/TextInput";
@@ -70,8 +71,8 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
   const levelHint = t("profile.fields.levelHint");
 
   return (
-    <form onSubmit={save} className="flex flex-col gap-8" noValidate>
-      <Section id="profile-contact" title={t("profile.sections.contact")}>
+    <form onSubmit={save} className="flex flex-col gap-6" noValidate>
+      <Section id="profile-contact" title={t("profile.sections.contact")} columns>
         <TextInput
           label={t("profile.fields.fullName")}
           value={draft.contact.fullName}
@@ -418,30 +419,42 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
         />
       </Section>
 
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={saveState === "saving"}>
-            {saveState === "saving" ? t("profile.saving") : t("profile.save")}
-          </Button>
-          <p role="status" className="text-sm text-app-muted">
-            {saveState === "saved" ? t("profile.saved") : null}
-            {saveState === "invalid" ? t("profile.invalid") : null}
-            {saveState === "error" ? t("profile.saveFailed") : null}
-          </p>
-        </div>
+      <div className="sticky bottom-4 flex items-center justify-end gap-4 rounded-2xl border border-app-border bg-app-surface/95 px-5 py-3 shadow-pop backdrop-blur">
+        <p
+          role="status"
+          className={`text-sm ${saveState === "saved" ? "text-app-good" : saveState === "invalid" || saveState === "error" ? "text-app-danger" : "text-app-muted"}`}
+        >
+          {saveState === "saved" ? t("profile.saved") : null}
+          {saveState === "invalid" ? t("profile.invalid") : null}
+          {saveState === "error" ? t("profile.saveFailed") : null}
+        </p>
+        <Button type="submit" disabled={saveState === "saving"}>
+          {saveState === "saving" ? t("profile.saving") : t("profile.save")}
+        </Button>
       </div>
     </form>
   );
 }
 
-function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+function Section({
+  id,
+  title,
+  columns = false,
+  children,
+}: {
+  id: string;
+  title: string;
+  /** Lay the fields out in two columns from the small breakpoint up. */
+  columns?: boolean;
+  children: ReactNode;
+}) {
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-4">
-      <h2 id={id} className="text-lg font-medium text-app-fg">
-        {title}
-      </h2>
-      {children}
-    </section>
+    <Card as="section" aria-labelledby={id} className="flex flex-col gap-4">
+      <CardTitle id={id}>{title}</CardTitle>
+      <div className={columns ? "grid gap-4 sm:grid-cols-2" : "flex flex-col gap-4"}>
+        {children}
+      </div>
+    </Card>
   );
 }
 
@@ -472,7 +485,7 @@ function ListEditor<T>({
           key={index}
           role="group"
           aria-label={entryLabel(index + 1)}
-          className="flex flex-col gap-3 rounded-lg border border-app-border p-4"
+          className="flex flex-col gap-3 rounded-xl bg-app-sunken/60 p-4"
         >
           {renderFields(item, (patch) =>
             onItems(
@@ -481,9 +494,10 @@ function ListEditor<T>({
               ),
             ),
           )}
-          <div>
+          <div className="flex justify-end">
             <Button
-              variant="secondary"
+              variant="danger"
+              size="sm"
               onClick={() => onItems(items.filter((_, position) => position !== index))}
             >
               {removeLabel(index + 1)}
@@ -492,7 +506,7 @@ function ListEditor<T>({
         </div>
       ))}
       <div>
-        <Button variant="secondary" onClick={() => onItems([...items, newItem()])}>
+        <Button variant="secondary" size="sm" onClick={() => onItems([...items, newItem()])}>
           {addLabel}
         </Button>
       </div>

@@ -152,7 +152,6 @@
   },
   "profile": {
     "title": "Profile",
-    "backHome": "Back to home",
     "loading": "Loading profile…",
     "loadFailed": "The profile could not be loaded.",
     "retry": "Try again",

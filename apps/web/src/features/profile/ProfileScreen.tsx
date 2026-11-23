@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { UserRound } from "lucide-react";
 import { Link } from "react-router";
 import type { ProfileRecord } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
-import { Button } from "../../components/ui/Button";
+import { Button, buttonClass } from "../../components/ui/Button";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { PageHeader } from "../../components/ui/PageHeader";
 import { ProfileEditor } from "./ProfileEditor";
 import { draftFromProfile } from "./profile-draft";
 
@@ -46,13 +49,8 @@ export function ProfileScreen() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 p-8">
-      <nav>
-        <Link to="/" className="text-sm text-app-accent underline">
-          {t("profile.backHome")}
-        </Link>
-      </nav>
-      <h1 className="text-3xl font-semibold text-app-fg">{t("profile.title")}</h1>
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8">
+      <PageHeader title={t("profile.title")} />
 
       {state.status === "loading" ? (
         <p role="status" className="text-app-muted">
@@ -62,26 +60,24 @@ export function ProfileScreen() {
 
       {state.status === "error" ? (
         <div role="alert" className="flex flex-col items-start gap-3">
-          <p className="text-app-fg">{t("profile.loadFailed")}</p>
-          <Button variant="secondary" onClick={retry}>
+          <p className="text-app-danger">{t("profile.loadFailed")}</p>
+          <Button variant="secondary" size="sm" onClick={retry}>
             {t("profile.retry")}
           </Button>
         </div>
       ) : null}
 
       {state.status === "empty" ? (
-        <section
-          aria-labelledby="profile-empty-title"
-          className="flex flex-col items-start gap-3 rounded-lg border border-app-border p-6"
-        >
-          <h2 id="profile-empty-title" className="text-lg font-medium text-app-fg">
-            {t("profile.empty.title")}
-          </h2>
-          <p className="text-app-muted">{t("profile.empty.body")}</p>
-          <Link to="/onboarding" className="text-app-accent underline">
-            {t("profile.empty.start")}
-          </Link>
-        </section>
+        <EmptyState
+          icon={<UserRound className="size-5" strokeWidth={1.8} aria-hidden="true" />}
+          title={t("profile.empty.title")}
+          body={t("profile.empty.body")}
+          action={
+            <Link to="/onboarding" className={buttonClass("accent")}>
+              {t("profile.empty.start")}
+            </Link>
+          }
+        />
       ) : null}
 
       {state.status === "ready" ? (

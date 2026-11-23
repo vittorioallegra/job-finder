@@ -152,7 +152,6 @@
   },
   "profile": {
     "title": "Profilo",
-    "backHome": "Torna alla home",
     "loading": "Caricamento del profilo…",
     "loadFailed": "Non è stato possibile caricare il profilo.",
     "retry": "Riprova",
