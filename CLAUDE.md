@@ -18,16 +18,17 @@ Native desktop app (Electron 45 + React 19), pnpm workspace. Full plan: `docs/pl
 - One test file, failures only: `pnpm exec vitest run --reporter=dot apps/web/src/lib/i18n/i18n.test.ts`
 - One test project: `pnpm exec vitest run --project desktop --reporter=dot`
 - Electron E2E: `pnpm test:e2e:desktop` (builds first, then runs Playwright against `apps/desktop/out`)
+- Record AI fixtures (live calls, manual only): `JOB_FINDER_AI_PROVIDER=<anthropic|openai|openai-compatible> JOB_FINDER_AI_MODEL=<model> [JOB_FINDER_AI_BASE_URL=<url>] [JOB_FINDER_AI_API_KEY=<key>] pnpm fixtures:record`; writes sanitized `packages/core/src/ai/fixtures/ai-<provider>.json`
 - New migration after a schema change: `pnpm --filter @job-finder/desktop db:generate --name <name>` (drizzle-kit generate; commit the new SQL and `meta/` files, never edit generated files)
 - Everything: `pnpm verify`
 
 ## Folder map
 
-- `apps/desktop/` Electron shell: `build/` (app icon, `after-pack.mjs` fuses hook), `electron-builder.yml` (installers), `src/main` (window, protocol, logging, security, i18n, `db/` SQLite adapter, migrator and operations, `engine/` utility-process supervisor, `settings/` repository, `secrets/` safeStorage store, `ipc/` guarded handlers), `src/engine` (engine utility process: entry, typed message protocol, runtime), `drizzle/` (generated SQL migrations), `src/preload`, `e2e/` (Playwright: dev smoke and `packaged.spec.ts`), `electron.vite.config.ts`
+- `apps/desktop/` Electron shell: `build/` (app icon, `after-pack.mjs` fuses hook), `electron-builder.yml` (installers), `src/main` (window, protocol, logging, security, i18n, `db/` SQLite adapter, migrator and operations, `engine/` utility-process supervisor, `settings/` repository, `secrets/` safeStorage store, `ai/` connection test, `ipc/` guarded handlers), `src/engine` (engine utility process: entry, typed message protocol, runtime), `drizzle/` (generated SQL migrations), `src/preload`, `e2e/` (Playwright: dev smoke and `packaged.spec.ts`), `electron.vite.config.ts`
 - `scripts/` repo tooling (`release-notes.mjs`, unit-tested)
 - `.github/workflows/` `ci.yml` (typecheck, lint, tests) and `desktop.yml` (installers, packaged smoke, draft release)
 - `apps/web/` React renderer: `src/app` (router, shell), `src/features/<name>` (screens), `src/lib/i18n` (en.json, it.json), `src/styles.css` (tokens)
-- `packages/core/` pure TypeScript domain logic, no Electron or React imports; `src/db/schema.ts` holds the drizzle schema
+- `packages/core/` pure TypeScript domain logic, no Electron or React imports; `src/db/schema.ts` holds the drizzle schema; `src/ai/` provider factory (import as `@job-finder/core/ai`), structured output with one repair retry, token check, record/replay fetch and its recorded `fixtures/`
 - `packages/bridge/` typed contract between preload and renderer: zod schemas for settings, secrets and IPC payloads
 - `tests/repo/` repository-level conventions tests
 - `docs/` specs, plans, `release.md` (installers, releases, unsigned apps)
@@ -41,6 +42,7 @@ Native desktop app (Electron 45 + React 19), pnpm workspace. Full plan: `docs/pl
 - Settings are one JSON row per section (`settings.<section>`). Secrets are safeStorage ciphertext in rows `secret.<name>`; the renderer sees only storage mode and set / not set. Linux `basic_text` keys reach disk only after the Settings opt-in.
 - Protocol: the renderer loads from `app://renderer/`, served only through `resolveAppRequest` (path-traversal guard).
 - Electron main/preload build as CommonJS (no `"type": "module"` in `apps/desktop`); the preload runs in the sandbox, so it may import only `electron` and types.
+- AI calls run in the engine, never in the renderer. Automated tests never reach the network: they inject `createReplayFetch` (or a scripted fetch) into `createAiModel`. The API key reaches the engine only through the `ai-test` message, never the renderer.
 - Only main opens SQLite. The engine asks for database work through the typed `DbCall` batches in `apps/desktop/src/engine/protocol.ts`; main executes them through drizzle's sqlite-proxy over `node:sqlite`.
 - Migrations run from `apps/desktop/drizzle` in development and from `resources/drizzle` when packaged (`extraResources` in `electron-builder.yml`). A backup (`VACUUM INTO`) is written before migrating a populated database.
 - Install scripts go through `allowBuilds` in `pnpm-workspace.yaml`. Allowed only when the package cannot work without it (`electron: true`, it downloads the runtime). Denied when the package works without it: `esbuild: false` (it uses its platform binary package), `electron-winstaller: false` (Windows Squirrel only; we build NSIS). Record each change in the plan's Decisions.

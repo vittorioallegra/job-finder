@@ -42,7 +42,24 @@
       "baseUrlHint": "Required for OpenAI-compatible endpoints such as Ollama or LM Studio.",
       "contextSize": "Context size (tokens)",
       "contextSizeHint": "How much text is sent to the model in one request.",
-      "apiKey": "API key"
+      "apiKey": "API key",
+      "test": {
+        "action": "Test connection",
+        "hint": "Tests the saved provider, model and key.",
+        "testing": "Testing…",
+        "connected": "Connected to {{model}}.",
+        "unavailable": "AI unavailable: {{reason}}.",
+        "reasons": {
+          "not-configured": "the model, key or base URL is missing",
+          "invalid-key": "the provider rejected the API key",
+          "model-not-found": "the provider does not know this model",
+          "rate-limited": "the provider is rate limiting requests",
+          "unreachable": "the provider could not be reached",
+          "invalid-output": "the provider answered in an unexpected format",
+          "unknown": "unexpected error",
+          "engine-unavailable": "the AI worker is not running"
+        }
+      }
     },
     "search": {
       "duckduckgo": "DuckDuckGo",

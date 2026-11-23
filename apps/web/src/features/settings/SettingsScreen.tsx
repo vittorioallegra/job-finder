@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import {
   SETTING_LIMITS,
+  type AiTestResult,
   type AppSettings,
   type SecretName,
   type SecretsStatus,
@@ -202,6 +203,7 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
           secrets={secrets}
           onStatus={setSecrets}
         />
+        <AiConnectionTest bridge={bridge} />
       </section>
 
       <section aria-labelledby="settings-search" className="flex flex-col gap-4">
@@ -339,6 +341,56 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
         </div>
       </div>
     </form>
+  );
+}
+
+type AiTestState =
+  | { status: "idle" }
+  | { status: "testing" }
+  | { status: "done"; result: AiTestResult }
+  | { status: "error" };
+
+/** Runs the engine-side test of the saved AI settings. Shows loading, connected, or AI unavailable with a reason. */
+function AiConnectionTest({ bridge }: { bridge: JobFinderBridge }) {
+  const { t } = useTranslation();
+  const [state, setState] = useState<AiTestState>({ status: "idle" });
+
+  async function run() {
+    setState({ status: "testing" });
+    try {
+      setState({ status: "done", result: await bridge.ai.testConnection() });
+    } catch {
+      setState({ status: "error" });
+    }
+  }
+
+  let message: string = t("settings.ai.test.hint");
+  if (state.status === "testing") {
+    message = t("settings.ai.test.testing");
+  } else if (state.status === "done" && state.result.ok) {
+    message = t("settings.ai.test.connected", { model: state.result.model });
+  } else if (state.status === "done" || state.status === "error") {
+    const code = state.status === "done" && !state.result.ok ? state.result.code : "unknown";
+    message = t("settings.ai.test.unavailable", {
+      reason: t(`settings.ai.test.reasons.${code}`),
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div>
+        <Button
+          variant="secondary"
+          onClick={() => void run()}
+          disabled={state.status === "testing"}
+        >
+          {t("settings.ai.test.action")}
+        </Button>
+      </div>
+      <p role="status" className="text-sm text-app-muted">
+        {message}
+      </p>
+    </div>
   );
 }
 

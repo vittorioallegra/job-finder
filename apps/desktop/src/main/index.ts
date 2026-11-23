@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { openAppDatabase, resolveMigrationsFolder, type AppDatabase } from "./db/database";
 import { executeDbCalls, reconcileInterruptedRuns } from "./db/operations";
 import { registerIpcHandlers } from "./ipc/handlers";
+import { createAiConnectionService } from "./ai/connection";
 import { createUtilityProcessLauncher } from "./engine/launcher";
 import { startEngineSupervisor } from "./engine/supervisor";
 import { createFileLogger } from "./logging/file-logger";
@@ -130,9 +131,14 @@ if (gotSingleInstanceLock) {
       rows: createSettingsSecretRows(database.db),
       isBasicTextAllowed: async () => (await settingsRepository.get()).secrets.allowBasicText,
     });
+    const aiConnection = createAiConnectionService({
+      settings: settingsRepository,
+      secrets: secretStore,
+      engine: supervisor,
+    });
     registerIpcHandlers(
       ipcMain,
-      { settings: settingsRepository, secrets: secretStore },
+      { settings: settingsRepository, secrets: secretStore, ai: aiConnection },
       originOf(rendererUrl) ?? rendererUrl,
     );
 

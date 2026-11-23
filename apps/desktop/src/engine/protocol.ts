@@ -1,4 +1,5 @@
 import type { RunStatus } from "@job-finder/core";
+import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
 
 /**
  * Database operations the engine may request. Main owns the database and executes these in
@@ -13,10 +14,18 @@ export type DbCall =
 
 export type DbResult = { ok: true; value: unknown } | { ok: false; error: string };
 
-/** Messages sent by main to the engine over the message port. */
+/**
+ * Messages sent by main to the engine over the message port. `ai-test` carries the API key from
+ * main to the engine: the only path a secret value takes out of main, and it never reaches the
+ * renderer.
+ */
 export type MainToEngineMessage =
-  { type: "ping"; id: number } | { type: "db-result"; id: number; results: DbResult[] };
+  | { type: "ping"; id: number }
+  | { type: "db-result"; id: number; results: DbResult[] }
+  | { type: "ai-test"; id: number; config: AiProviderConfig };
 
 /** Messages sent by the engine to main over the message port. */
 export type EngineToMainMessage =
-  { type: "pong"; id: number } | { type: "db"; id: number; calls: DbCall[] };
+  | { type: "pong"; id: number }
+  | { type: "db"; id: number; calls: DbCall[] }
+  | { type: "ai-test-result"; id: number; result: AiConnectionResult };

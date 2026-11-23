@@ -42,7 +42,24 @@
       "baseUrlHint": "Richiesto per endpoint compatibili con OpenAI, come Ollama o LM Studio.",
       "contextSize": "Dimensione del contesto (token)",
       "contextSizeHint": "Quanto testo viene inviato al modello in una singola richiesta.",
-      "apiKey": "Chiave API"
+      "apiKey": "Chiave API",
+      "test": {
+        "action": "Verifica connessione",
+        "hint": "Verifica il provider, il modello e la chiave salvati.",
+        "testing": "Verifica in corso…",
+        "connected": "Connesso a {{model}}.",
+        "unavailable": "AI non disponibile: {{reason}}.",
+        "reasons": {
+          "not-configured": "mancano modello, chiave o URL base",
+          "invalid-key": "il provider ha rifiutato la chiave API",
+          "model-not-found": "il provider non riconosce questo modello",
+          "rate-limited": "il provider sta limitando le richieste",
+          "unreachable": "impossibile raggiungere il provider",
+          "invalid-output": "il provider ha risposto in un formato inatteso",
+          "unknown": "errore imprevisto",
+          "engine-unavailable": "il processo AI non è in esecuzione"
+        }
+      }
     },
     "search": {
       "duckduckgo": "DuckDuckGo",

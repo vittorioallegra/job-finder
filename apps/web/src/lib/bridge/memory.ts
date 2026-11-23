@@ -2,6 +2,7 @@ import {
   applySettingsPatch,
   DEFAULT_APP_SETTINGS,
   SECRET_NAMES,
+  type AiTestResult,
   type AppSettings,
   type AppSettingsPatch,
   type JobFinderBridge,
@@ -14,6 +15,8 @@ export interface MemoryBridgeOptions {
   platform?: string;
   settings?: AppSettings;
   storage?: SecretStorageInfo;
+  /** Outcome of "test connection". Defaults to AI unavailable, since there is no engine here. */
+  aiTest?: AiTestResult;
 }
 
 /**
@@ -49,6 +52,10 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
         keys[name] = false;
         return status();
       },
+    },
+    ai: {
+      testConnection: async () =>
+        structuredClone(options.aiTest ?? { ok: false, code: "engine-unavailable" }),
     },
   };
 }

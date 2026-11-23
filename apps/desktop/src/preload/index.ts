@@ -27,6 +27,9 @@ const api: JobFinderBridge = {
     set: (name: SecretName, value: string) => invoke("secrets:set", { name, value }),
     clear: (name: SecretName) => invoke("secrets:clear", { name }),
   },
+  ai: {
+    testConnection: () => invoke("ai:test-connection"),
+  },
 };
 
 contextBridge.exposeInMainWorld("jobFinder", Object.freeze(api));

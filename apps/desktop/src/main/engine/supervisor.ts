@@ -1,3 +1,4 @@
+import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
 import type { DbCall, DbResult, EngineToMainMessage } from "../../engine/protocol";
 import type { PortLike } from "../../engine/port";
 
@@ -58,6 +59,11 @@ function describeError(error: unknown): string {
 export interface EngineSupervisor {
   /** Resolves once the current engine answers a ping; waits through restarts. */
   ping(): Promise<void>;
+  /**
+   * Runs an AI connection test in the engine. The config carries the API key, so it is sent to
+   * the engine only and never logged or returned to the renderer.
+   */
+  testAiConnection(config: AiProviderConfig): Promise<AiConnectionResult>;
   readonly state: EngineSupervisorState;
   stop(): void;
 }
@@ -67,10 +73,16 @@ interface Pending {
   reject: (error: Error) => void;
 }
 
+interface PendingAiTest {
+  resolve: (result: AiConnectionResult) => void;
+  reject: (error: Error) => void;
+}
+
 interface Current {
   handle: EngineHandle;
   ready: boolean;
   pendingPings: Map<number, Pending>;
+  pendingAiTests: Map<number, PendingAiTest>;
 }
 
 /**
@@ -87,7 +99,7 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
   let phase: EngineSupervisorState = "running";
   let stopped = false;
   let restartTimer: ReturnType<typeof setTimeout> | undefined;
-  let nextPingId = 1;
+  let nextRequestId = 1;
   let readyWaiters: Pending[] = [];
 
   function spawn(): void {
@@ -95,7 +107,12 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       return;
     }
     const handle = options.launch();
-    const state: Current = { handle, ready: false, pendingPings: new Map() };
+    const state: Current = {
+      handle,
+      ready: false,
+      pendingPings: new Map(),
+      pendingAiTests: new Map(),
+    };
     current = state;
     phase = "running";
     handle.port.on("message", (data) => onMessage(state, data as EngineToMainMessage));
@@ -116,8 +133,8 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
     resolve: () => void,
     reject: (error: Error) => void = () => {},
   ): void {
-    const id = nextPingId;
-    nextPingId += 1;
+    const id = nextRequestId;
+    nextRequestId += 1;
     state.pendingPings.set(id, { resolve, reject });
     state.handle.port.postMessage({ type: "ping", id });
   }
@@ -127,6 +144,10 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pending.reject(new EngineUnavailableError(reason));
     }
     state.pendingPings.clear();
+    for (const pending of state.pendingAiTests.values()) {
+      pending.reject(new EngineUnavailableError(reason));
+    }
+    state.pendingAiTests.clear();
   }
 
   function rejectReadyWaiters(reason: EngineUnavailableReason): void {
@@ -151,6 +172,12 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
           state.handle.port.postMessage({ type: "db-result", id: message.id, results });
         }
       });
+      return;
+    }
+    if (message.type === "ai-test-result") {
+      const pending = state.pendingAiTests.get(message.id);
+      state.pendingAiTests.delete(message.id);
+      pending?.resolve(message.result);
     }
   }
 
@@ -190,21 +217,36 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
 
   spawn();
 
+  /** Resolves with the engine that is ready to take requests; waits through restarts. */
+  async function waitUntilReady(): Promise<Current> {
+    let target = current;
+    while (!target?.ready) {
+      if (stopped) {
+        throw new EngineUnavailableError("stopped");
+      }
+      if (phase === "failed") {
+        throw new EngineUnavailableError("gave_up");
+      }
+      await new Promise<void>((resolve, reject) => readyWaiters.push({ resolve, reject }));
+      target = current;
+    }
+    return target;
+  }
+
+  // A ready engine gets the request in the same tick, so a crash right after the call still finds it pending.
   return {
     async ping() {
-      let target = current;
-      while (!target?.ready) {
-        if (stopped) {
-          throw new EngineUnavailableError("stopped");
-        }
-        if (phase === "failed") {
-          throw new EngineUnavailableError("gave_up");
-        }
-        await new Promise<void>((resolve, reject) => readyWaiters.push({ resolve, reject }));
-        target = current;
-      }
-      const ready = target;
+      const ready = current?.ready ? current : await waitUntilReady();
       await new Promise<void>((resolve, reject) => sendPing(ready, resolve, reject));
+    },
+    async testAiConnection(config) {
+      const ready = current?.ready ? current : await waitUntilReady();
+      const id = nextRequestId;
+      nextRequestId += 1;
+      return new Promise<AiConnectionResult>((resolve, reject) => {
+        ready.pendingAiTests.set(id, { resolve, reject });
+        ready.handle.port.postMessage({ type: "ai-test", id, config });
+      });
     },
     get state() {
       return phase;

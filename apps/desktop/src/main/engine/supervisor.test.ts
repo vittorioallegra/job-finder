@@ -9,6 +9,7 @@ import { MessageChannel, type MessagePort } from "node:worker_threads";
 import { afterEach, describe, expect, it } from "vitest";
 import { openAppDatabase, type AppDatabase } from "../db/database";
 import { executeDbCalls, reconcileInterruptedRuns } from "../db/operations";
+import type { AiProviderConfig } from "@job-finder/core/ai";
 import type { PortLike } from "../../engine/port";
 import { createEngineRuntime, type EngineRuntime } from "../../engine/runtime";
 import {
@@ -38,7 +39,14 @@ interface Harness {
   logs: string[];
   database: AppDatabase;
   /** When `deadOnArrival` is true, each new engine dies before it can answer a ping. When `reconcileFails` is true, reconciling runs rejects. */
-  control: { deadOnArrival: boolean; reconcileFails: boolean };
+  control: {
+    deadOnArrival: boolean;
+    reconcileFails: boolean;
+    /** When true, AI connection tests never get an answer, so a crash has to reject them. */
+    aiHangs: boolean;
+    /** Configs the engine received for AI connection tests. */
+    aiConfigs: AiProviderConfig[];
+  };
 }
 
 const repoMigrations = resolve(__dirname, "../../../drizzle");
@@ -53,10 +61,23 @@ async function startHarness(): Promise<Harness> {
   });
   const launches: EngineLaunch[] = [];
   const logs: string[] = [];
-  const control = { deadOnArrival: false, reconcileFails: false };
+  const control: Harness["control"] = {
+    deadOnArrival: false,
+    reconcileFails: false,
+    aiHangs: false,
+    aiConfigs: [],
+  };
   const launch = (): EngineHandle => {
     const { port1, port2 } = new MessageChannel();
-    const runtime = createEngineRuntime(toPortLike(port2));
+    const runtime = createEngineRuntime(toPortLike(port2), {
+      testAiConnection: (config) => {
+        control.aiConfigs.push(config);
+        if (control.aiHangs) {
+          return new Promise(() => {});
+        }
+        return Promise.resolve({ ok: true, model: config.model });
+      },
+    });
     const exit = new EventEmitter();
     launches.push({
       runtime,
@@ -225,6 +246,36 @@ describe("engine supervisor", () => {
     launches[1]?.crash();
     await waitFor(() => supervisor.state === "failed");
     expect(launches).toHaveLength(5);
+  });
+
+  it("runs an AI connection test in the engine and hands it the key only there", async () => {
+    const { supervisor, control } = await startHarness();
+    const result = await supervisor.testAiConnection({
+      provider: "openai-compatible",
+      model: "local-model",
+      baseUrl: "http://localhost:11434/v1",
+      apiKey: "sk-test-key",
+    });
+    expect(result).toEqual({ ok: true, model: "local-model" });
+    expect(control.aiConfigs).toEqual([expect.objectContaining({ apiKey: "sk-test-key" })]);
+  });
+
+  it("rejects an AI connection test in flight when the engine crashes", async () => {
+    const { supervisor, launches, control } = await startHarness();
+    await supervisor.ping();
+
+    control.aiHangs = true;
+    const inFlight = expect(
+      supervisor.testAiConnection({
+        provider: "anthropic",
+        model: "claude-test",
+        baseUrl: "",
+        apiKey: "sk-test-key",
+      }),
+    ).rejects.toMatchObject({ name: "EngineUnavailableError", reason: "crashed" });
+    launches[0]?.crash();
+    await inFlight;
+    control.aiHangs = false;
   });
 
   it("rejects calls waiting for a restart when the supervisor is stopped", async () => {

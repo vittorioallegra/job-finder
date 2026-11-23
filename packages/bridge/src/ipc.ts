@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { AppSettings } from "./settings";
 import { AppSettingsPatchSchema } from "./settings";
+import type { AiTestResult } from "./ai";
 import type { SecretsStatus } from "./secrets";
 import { SecretClearRequestSchema, SecretSetRequestSchema } from "./secrets";
 
@@ -14,6 +15,7 @@ export const IPC_REQUEST_SCHEMAS = {
   "secrets:status": z.undefined(),
   "secrets:set": SecretSetRequestSchema,
   "secrets:clear": SecretClearRequestSchema,
+  "ai:test-connection": z.undefined(),
 } as const;
 
 export type IpcChannel = keyof typeof IPC_REQUEST_SCHEMAS;
@@ -26,6 +28,7 @@ export interface IpcResponses {
   "secrets:status": SecretsStatus;
   "secrets:set": SecretsStatus;
   "secrets:clear": SecretsStatus;
+  "ai:test-connection": AiTestResult;
 }
 
 export type IpcResponse<C extends IpcChannel> = IpcResponses[C];

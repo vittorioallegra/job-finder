@@ -1,5 +1,5 @@
-// protects=the settings screen loads the saved values, saves only valid changes through the bridge, retries after a failed read, and never shows a stored key value; Linux shows the keyring opt-in and hides launch at login;
-// fails_when=a value is sent without validation, a key value is rendered, a failed read shows a blank form, or Linux shows launch at login;
+// protects=the settings screen loads the saved values, saves only valid changes through the bridge, retries after a failed read, and never shows a stored key value; Linux shows the keyring opt-in and hides launch at login; the AI connection test shows the model or the AI unavailable reason;
+// fails_when=a value is sent without validation, a key value is rendered, a failed read shows a blank form, Linux shows launch at login, or a failed AI test shows no reason;
 // no_claim=visual layout, keyboard focus order and the real OS keychain are not checked here.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -174,5 +174,26 @@ describe("settings screen", () => {
   it("shows launch at login outside Linux", async () => {
     await render(createMemoryBridge({ platform: "darwin" }));
     expect(container.textContent).toContain("Launch at login");
+  });
+
+  it("tests the AI connection and explains an unavailable AI with the reason", async () => {
+    const memory = createMemoryBridge({ aiTest: { ok: false, code: "invalid-key" } });
+    const testConnection = vi.fn(memory.ai.testConnection);
+    await render({ ...memory, ai: { testConnection } });
+    await act(async () => {
+      button(container, "Test connection").click();
+    });
+    await act(async () => {});
+    expect(testConnection).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toContain("AI unavailable: the provider rejected the API key.");
+  });
+
+  it("reports the model when the connection test passes", async () => {
+    await render(createMemoryBridge({ aiTest: { ok: true, model: "claude-test" } }));
+    await act(async () => {
+      button(container, "Test connection").click();
+    });
+    await act(async () => {});
+    expect(container.textContent).toContain("Connected to claude-test.");
   });
 });

@@ -14,6 +14,7 @@
     "desktop:dev": "pnpm --filter @job-finder/desktop dev",
     "desktop:build": "pnpm --filter @job-finder/desktop build",
     "desktop:dist": "pnpm --filter @job-finder/desktop dist",
+    "fixtures:record": "JOB_FINDER_RECORD_AI=1 vitest run --project core --reporter=verbose packages/core/src/ai/record-fixtures.test.ts",
     "typecheck": "pnpm -r --no-bail typecheck && node node_modules/typescript7/bin/tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",

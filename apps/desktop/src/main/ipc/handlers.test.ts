@@ -57,7 +57,13 @@ function spyServices() {
       calls.push("secrets.onBasicTextAllowedChanged");
     },
   } as unknown as SecretStore;
-  const services: IpcServices = { settings, secrets };
+  const ai = {
+    testConnection: async () => {
+      calls.push("ai.testConnection");
+      return { ok: false as const, code: "not-configured" as const };
+    },
+  };
+  const services: IpcServices = { settings, secrets, ai };
   return { services, calls };
 }
 
@@ -121,6 +127,23 @@ describe("IPC sender and payload guard", () => {
     expect(calls).toEqual(["settings.update", "secrets.onBasicTextAllowedChanged"]);
   });
 
+  it("runs the AI connection test only for the app window", async () => {
+    const { services, calls } = spyServices();
+    await expect(
+      handleInvoke(
+        "ai:test-connection",
+        services,
+        topFrame("https://example.com/"),
+        undefined,
+        APP_ORIGIN,
+      ),
+    ).rejects.toThrow("untrusted sender");
+    expect(calls).toEqual([]);
+
+    await handleInvoke("ai:test-connection", services, topFrame(), undefined, APP_ORIGIN);
+    expect(calls).toEqual(["ai.testConnection"]);
+  });
+
   it("registers every channel in the contract", () => {
     const registered: string[] = [];
     registerIpcHandlers(
@@ -129,7 +152,14 @@ describe("IPC sender and payload guard", () => {
       APP_ORIGIN,
     );
     expect(registered.sort()).toEqual(
-      ["secrets:clear", "secrets:set", "secrets:status", "settings:get", "settings:update"].sort(),
+      [
+        "ai:test-connection",
+        "secrets:clear",
+        "secrets:set",
+        "secrets:status",
+        "settings:get",
+        "settings:update",
+      ].sort(),
     );
   });
 });

@@ -4,6 +4,7 @@ import {
   type IpcChannel,
   type SecretName,
 } from "@job-finder/bridge";
+import type { AiConnectionService } from "../ai/connection";
 import { originOf } from "../security/origin";
 import type { SecretStore } from "../secrets/store";
 import type { SettingsRepository } from "../settings/repository";
@@ -11,6 +12,7 @@ import type { SettingsRepository } from "../settings/repository";
 export interface IpcServices {
   settings: SettingsRepository;
   secrets: SecretStore;
+  ai: AiConnectionService;
 }
 
 /** The parts of an Electron invoke event that the sender check reads. */
@@ -68,6 +70,8 @@ export async function handleInvoke(
       const { name } = payload as { name: SecretName };
       return services.secrets.clear(name);
     }
+    case "ai:test-connection":
+      return services.ai.testConnection();
   }
 }
 

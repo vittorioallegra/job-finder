@@ -1,3 +1,4 @@
+import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
 import type { DbCall, DbResult, EngineToMainMessage, MainToEngineMessage } from "./protocol";
 import type { PortLike } from "./port";
 
@@ -7,11 +8,16 @@ export interface EngineRuntime {
   close(): void;
 }
 
+/** Work the engine does for main that needs the network or the AI layer. */
+export interface EngineServices {
+  testAiConnection(config: AiProviderConfig): Promise<AiConnectionResult>;
+}
+
 /**
- * Engine side of the message port: answers pings and issues batched database requests.
- * Pure over `PortLike`, so it runs in a utility process and in tests alike.
+ * Engine side of the message port: answers pings, runs AI work and issues batched database
+ * requests. Pure over `PortLike`, so it runs in a utility process and in tests alike.
  */
-export function createEngineRuntime(port: PortLike): EngineRuntime {
+export function createEngineRuntime(port: PortLike, services: EngineServices): EngineRuntime {
   let nextId = 1;
   const pending = new Map<number, (results: DbResult[]) => void>();
 
@@ -19,6 +25,14 @@ export function createEngineRuntime(port: PortLike): EngineRuntime {
     const message = data as MainToEngineMessage;
     if (message.type === "ping") {
       post(port, { type: "pong", id: message.id });
+      return;
+    }
+    if (message.type === "ai-test") {
+      const { id, config } = message;
+      void services
+        .testAiConnection(config)
+        .catch((): AiConnectionResult => ({ ok: false, code: "unknown" }))
+        .then((result) => post(port, { type: "ai-test-result", id, result }));
       return;
     }
     if (message.type === "db-result") {
