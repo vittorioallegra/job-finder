@@ -70,6 +70,38 @@ async function sourceRows(database: AppDatabase) {
 }
 
 describe("ingestion database operations", () => {
+  it("stores the new title, description and salary when a posting is seen again", async () => {
+    const database = await openDatabase();
+    await database.db.insert(companies).values({
+      id: "co-1",
+      name: "Acme",
+      careersUrl: "https://boards.greenhouse.io/acme",
+      ats: "greenhouse",
+      slug: "acme",
+      createdAt: 1,
+    });
+    // protects=a reseen posting updates the stored job content; fails_when=a changed title, description or salary stays as first stored, so the content hash never changes and scores are never invalidated; no_claim=the scoring rules;
+    await completeScan(database, "run-1", [posting("greenhouse", "1")], 100);
+    const changed: NormalizedJob = {
+      ...posting("greenhouse", "1"),
+      title: "Senior Backend Engineer",
+      description: "Lead the platform team.",
+      salary: { min: 90000, max: 110000, currency: "EUR", period: "year" },
+    };
+
+    await completeScan(database, "run-2", [changed], 200);
+
+    const rows = await database.db
+      .select({ title: jobs.title, description: jobs.description, salary: jobs.salary })
+      .from(jobs);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      title: "Senior Backend Engineer",
+      description: "Lead the platform team.",
+    });
+    expect(JSON.parse(rows[0]?.salary ?? "null")).toMatchObject({ min: 90000, max: 110000 });
+  });
+
   it("stores one opening from two sources once and closes it only when both sources are gone", async () => {
     const database = await openDatabase();
     await database.db.insert(companies).values({

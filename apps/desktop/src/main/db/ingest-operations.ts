@@ -114,6 +114,29 @@ export async function persistPlan(db: AppDb, plan: BatchPlan): Promise<void> {
       .where(inArray(jobs.id, plan.touches));
   }
 
+  for (const update of plan.updates) {
+    const job = update.job;
+    await db
+      .update(jobs)
+      .set({
+        fingerprint: update.fingerprint,
+        title: job.title,
+        description: job.description,
+        url: job.url,
+        applyUrl: job.applyUrl,
+        language: job.language ?? null,
+        locations: JSON.stringify(job.locations),
+        workMode: job.workMode,
+        remoteScope: job.remoteScope ?? null,
+        employmentType: job.employmentType,
+        seniority: job.seniority,
+        salary: job.salary ? JSON.stringify(job.salary) : null,
+        visaSponsorship: job.visaSponsorship,
+        postedAt: parseTime(job.postedAt),
+      })
+      .where(eq(jobs.id, update.id));
+  }
+
   for (const source of plan.sources) {
     await db
       .insert(jobSources)

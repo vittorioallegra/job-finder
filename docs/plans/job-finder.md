@@ -315,6 +315,7 @@ Approved: yes (2026-11-23)
   - Teamtailor and Personio feeds with unreadable items returned ok with fewer or no jobs, closing the company's postings (the other adapters already fail on a wrong shape) — `fix: fail a Teamtailor or Personio scan whose feed items cannot be read`
   - Two overlapping starts of one job (a double click) could both pass the duplicate check and create two applications — `fix: run application starts one at a time so a double click creates one application`
   - The CSV formula guard missed values with leading whitespace or full-width = + - @ — `fix: guard CSV cells that start with spaces or full-width formula characters`
+  - A re-seen job never stored its changed title, description or salary, so score invalidation by content hash could never trigger — `fix: store the current content of a job seen again so changed postings are re-scored`
 
 ### Decisions
 - Single-user, local-only app; published as open source on GitHub, each user runs it on their own machine.

@@ -43,11 +43,23 @@ export interface SourceWrite {
   runId: string;
 }
 
-/** Writes for one batch. `touches` are existing jobs seen again (their last seen time moves, a closed job reopens). */
+/** The current content of an existing job that was seen again. */
+export interface JobUpdate {
+  id: string;
+  fingerprint: string;
+  job: NormalizedJob;
+}
+
+/**
+ * Writes for one batch. `touches` are existing jobs seen again (their last seen time moves, a
+ * closed job reopens); `updates` carry what the source reports now, so a changed title,
+ * description or salary is stored and the content hash that invalidates scores can change.
+ */
 export interface BatchPlan {
   seenAt: number;
   inserts: JobInsert[];
   touches: string[];
+  updates: JobUpdate[];
   sources: SourceWrite[];
 }
 
@@ -94,6 +106,7 @@ export function planBatch(input: PlanBatchInput): BatchPlan {
   const inserts: JobInsert[] = [];
   const insertedIds = new Set<string>();
   const touched = new Set<string>();
+  const updates = new Map<string, JobUpdate>();
   const sources: SourceWrite[] = [];
   const seenKeys = new Set<string>();
 
@@ -125,7 +138,13 @@ export function planBatch(input: PlanBatchInput): BatchPlan {
       jobIdByKey.set(key, jobId);
     }
 
-    if (!insertedIds.has(jobId)) touched.add(jobId);
+    if (!insertedIds.has(jobId)) {
+      touched.add(jobId);
+      // The first posting of the batch that reports the job gives its content, so a job with
+      // several sources does not flip between them within one scan.
+      if (!updates.has(jobId))
+        updates.set(jobId, { id: jobId, fingerprint: fingerprint(job), job });
+    }
     sources.push({
       source: job.source,
       sourceJobId: job.sourceJobId,
@@ -137,5 +156,11 @@ export function planBatch(input: PlanBatchInput): BatchPlan {
     });
   }
 
-  return { seenAt: input.seenAt, inserts, touches: [...touched], sources };
+  return {
+    seenAt: input.seenAt,
+    inserts,
+    touches: [...touched],
+    updates: [...updates.values()],
+    sources,
+  };
 }
