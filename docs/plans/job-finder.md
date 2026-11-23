@@ -268,7 +268,6 @@ bottleneck (decision deferred, not planned).
 ## Progress
 
 Phase: done
-Next: Closing: summary and publish decision
 Branch: main
 Base: 08b4fe9
 Spec: docs/specs/job-finder.md
@@ -581,10 +580,40 @@ Approved: yes (2026-11-23)
 - Step 20: `RELEASES_REPOSITORY` stays `null` as instructed; `docs/release.md` says it must be set before the first release.
 - Step 20: `CLAUDE.md` is 70 lines; it now names the journey's fixture server, the hand-made AI fixture and the canary command.
 - Step 20: not exercised: the E2E on Windows and Linux (macOS only); `pnpm test:e2e:packaged` (the packaged app); the live canary (not run; no live call was made in this step); the live smoke test; real model output quality; the scoring path in the E2E; the UI clicks of each screen in the journey.
+- Review: any ended scan moves the scheduler's schedule, cancelled and interrupted ones included. The simple rule wins over a crash-loop guard.
+- Review: the HTTP client refuses loopback, link-local and private-network hosts by their literal address or name, on the request and on every redirect hop (except the loopback test fixtures). Known limit, accepted for a local single-user app: DNS rebinding, and a public name that resolves to a private address, are not caught. No DNS resolution is done.
+- Review: cloud AI consent is tied to the provider and, for an OpenAI-compatible endpoint, the origin it was given for (`aiConsentTarget`); changing either asks again, and main checks it (`hasAiConsent`). Stored API keys are not cleared automatically when the provider changes.
+- Review: the fixture base URL override is never honoured in a packaged app, not even under `JOB_FINDER_E2E`; the packaged smoke test does not use fixtures.
+- Review: each page-loader and PDF render has its own in-memory partition, so concurrent renders never share handlers, request filters or storage.
 
 ### Open questions
 
 - Step 19: `RELEASES_REPOSITORY` in `packages/core/src/updates/release.ts` is null, because the repository has no git remote and no `owner/name` in its metadata. Set it to the GitHub repository (`owner/name`) before release; until then the update check makes no request.
 
+### Known limitations / follow-ups
+
+Found in review, not blocking, left as recorded suggestions:
+
+- Fuses: `EnableEmbeddedAsarIntegrityValidation` is off; turn it on for macOS and Windows builds.
+- The main window's session sets no permission-check or device-permission handler (only the request handler).
+- The autofill download rule's mouse-down branch never fires, because `before-input-event` reports key events only.
+- The page loader's subresource filter still allows loopback and LAN targets, and the page HTML is read in full before the size check.
+- The update link check accepts any `github.com` path, not only this repository's releases.
+- "Test connection" rejects with a raw error when the stored key cannot be decrypted.
+- `sqlite-proxy` maps columns by position; a future join with duplicate column names would shift fields.
+- `.localhost` hosts count as loopback in the cloud-consent check.
+- Log redaction misses the Tavily, Serper and Brave key formats (none is logged today).
+- Keyed-API POSTs are retried on network errors and 5xx.
+- `persistPlan` is several statements without a transaction.
+- SmartRecruiters offset pagination can skip a posting when the listing changes mid-scan.
+- Score caching ignores the provider and base URL.
+- Migrations that rebuild a referenced table fail with foreign keys on.
+- One invalid saved-search row makes the whole list (and the scheduler) fail.
+- `foldForMatch` makes "C#" and "C" share a fingerprint.
+- `JobsScreen.refreshJobs` has no guard against stale responses.
+- A single-company retry run pushes back the full schedule.
+- Autofill: page scripts run in the page's main world; frame ids are not tied to the frame that returned them; hidden label text feeds the rules; AI standard answers and drafts are only weakly tied to the field and may reach email, tel and url inputs; honeypot false positives (Select2, opacity-0 controls) are never reported; late-rendering forms and cross-site iframes report "ok" with zero fields; the debugger stays attached until the window closes.
+- Tailored CV and cover-letter validation checks numbers only in free text; PDF export does not re-validate after a profile edit; a stale PDF can be uploaded after the document is edited.
+
 ### Next
-Phase 4: run qa, then review, against docs/specs/job-finder.md (diff base 08b4fe9)
+Closing: summary and publish decision

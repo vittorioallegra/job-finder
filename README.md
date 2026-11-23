@@ -161,6 +161,12 @@ and nothing that identifies you.
 - The database, your keys (in the keychain), the logs, the generated PDFs and the desktop
   notifications, tray and launch-at-login setting stay on your computer.
 
+**Local network**
+
+- The app refuses to fetch `localhost`, loopback, link-local and private-network addresses, also
+  when a page redirects there. Known limit: a public name that resolves to a private address
+  (DNS rebinding) is not caught, because the app does not resolve names itself.
+
 **What the app does not control**
 
 - The Chromium engine inside Electron may make its own background connections that the app does
