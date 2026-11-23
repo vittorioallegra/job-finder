@@ -291,7 +291,7 @@ Approved: yes (2026-11-23)
 - [x] 15. Application tracker — `feat: add the applications screen, bookmarks and the hide-applied filter`
 - [x] 16. CV and cover letter — `feat: add the CV and cover letter panel to application details`
 - [x] 17. Autofill core and ATS adapters — `feat: open and autofill the application form from its detail screen`
-- [ ] 18. Autofill AI fallback
+- [x] 18. Autofill AI fallback — `feat: fill unmapped form fields with the AI, marking drafts for review`
 - [ ] 19. Scheduler, notifications, tray, updates
 - [ ] 20. End-to-end and docs
 
@@ -521,7 +521,19 @@ Approved: yes (2026-11-23)
 - Step 17 tests: the page scripts run in jsdom on the fixture pages (`apps/desktop/src/main/autofill/fixtures/`, hand-written and modeled on the public markup of Greenhouse, Lever and Ashby, not recorded from live forms; nothing is fetched). The service test runs the real scripts and planner over a scripted window. The Electron E2E serves the same fixtures on loopback, seeds a ready application and a CV PDF, and checks in the real window the values, the uploaded file, the session (not persistent), that DevTools is attached, that the fixture received no submission, and that closing the window leaves the application ready. On the loopback host the ATS is generic, so the E2E does not cover the ATS rules.
 - Step 17: not exercised: real Greenhouse, Lever and Ashby forms and their current markup; cross-origin iframes and closed shadow roots; the save dialog; how the highlight looks and keyboard order inside the form window; the E2E on Windows and Linux (run here on macOS only).
 
+- Step 18: the AI maps only the fields the rules left as `unmapped`, up to 80 per call. Checkboxes, radio groups, honeypots and controls that already hold a value are never sent. The fallback is off by default; the form panel asks per run ("Ask the AI to fill the fields the rules leave").
+- Step 18: the AI answers each field with one of three things: a profile key (the value comes from the profile through the rules' own checks, so the AI supplies no value for a key), a stored question (for the `standardAnswer` key only), or a draft (free text, for text and textarea fields only). A field with both or neither of key and draft is left empty.
+- Step 18: a draft is typed only when it is at most 2000 characters and every number in it appears in the profile. Otherwise the field is left as `ai-unverified`. The check covers numbers only: a draft can still misstate a non-numeric fact, so every draft is marked in the page (dashed outline, `data-jf-drafted`) and listed in the panel for the user to check.
+- Step 18: the AI sees the form's labels, names and option texts, the list of stored questions, and the profile's headline, summary, experience, education, skills, languages and certifications. Contact details, links and the text of stored answers are not sent. Cloud providers need consent, which main checks before the form window opens (`consent-required`); the panel repeats the consent checkbox.
+- Step 18: drafts are written in the posting's language when it is en or it, else in the UI language (`documentLanguageFor`, as for CV and cover letter).
+- Step 18: a field the AI leaves empty is reported as `ai-no-answer`. When the AI cannot answer (no provider or model, rejected key, rate limit, unreachable provider, engine down, or no usable answer after the schema's one repair retry), the panel shows "AI unavailable" with the reason and the rules-based fill still applies. The window never waits on the AI to open.
+- Step 18: the engine gets one new message pair (`map-form-fields` and its result), built like `score-jobs` and `generate-document`: main reads the key and passes it along, and nothing is stored. No table, no dependency, no new DevTools command; the form is still never submitted.
+- Step 18: the AI can map a field to the wrong key (for example an authorization question to the relocation key). The planner's checks only ensure the key resolves to a value the profile holds, not that it answers the question, so the user reviews every fill before submitting. Known limit.
+- Step 18: the generic fixture is the only fixture with free-text questions; the Greenhouse, Lever and Ashby fixtures are covered by the rules and not sent to the AI.
+- Step 18 tests: the AI is a scripted double in service and adapter tests, and a scripted provider in core (`generate`-style fetch with replies in order). The desktop E2E runs with the AI off; no live model is called.
+- Step 18: not exercised: real models and their choice of keys, the quality and language of drafts, the highlight and the drafted-field outline on screen, the Settings link from the panel in the real app, the AI path inside the real Electron window (only the scripted window runs it), and E2E on Windows and Linux (run here on macOS only).
+
 ### Open questions
 
 ### Next
-Step 18: Autofill AI fallback (AI maps form fields to profile keys and stored answers only, output constrained to known keys, page text treated as untrusted; drafted answers for free-text questions visibly marked as AI-drafted; the same never-submit guard as step 17).
+Step 19: Scheduler, notifications, tray, updates (scheduler in the engine with interval 1–168 h, default 24 h, catch-up at start, wall-clock check on `powerMonitor` resume and an injected clock for tests; one native notification per run with new jobs and a click that opens the filtered results, also at cold start; Windows AppUserModelID; tray or menu-bar icon with Open, Search now and Quit; close prompt with keep-running or quit and a remembered choice; launch at login on macOS and Windows; update check against GitHub Releases with a "new version available" banner and a settings toggle).
