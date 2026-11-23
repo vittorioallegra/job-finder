@@ -33,6 +33,10 @@ Playwright attaches through the inspector. The shipped installers keep that fuse
 
 ## Cut a release
 
+0. Before the first release only: set `RELEASES_REPOSITORY` in
+   `packages/core/src/updates/release.ts` to the GitHub repository as `owner/name`. It is `null`
+   until the project has a remote, and while it is `null` the update check makes no request, so
+   the "new version available" notice can never appear.
 1. Set `version` in `apps/desktop/package.json` (for example `0.2.0`) and merge it to `main`.
 2. Tag the commit `v<version>` and push the tag: `git tag v0.2.0 && git push origin v0.2.0`.
 3. The workflow stops early if the tag does not equal the `package.json` version.
@@ -67,7 +71,7 @@ Only download installers from the project's GitHub Releases page, and check the 
 
 ## Not covered yet
 
-- Code signing, notarization and an auto-updater. The app will show a "new version available"
-  check instead (step 19 of the plan).
+- Code signing, notarization and an auto-updater. The app shows a "new version available" notice
+  from the release check and opens the release page; it never downloads or installs an update.
 - The packaged smoke test does not exercise the installers themselves, only the unpacked app they
   contain.

@@ -1,52 +1,184 @@
 # Job Finder
 
-An open-source, local desktop app for macOS, Windows and Linux that finds job openings on
-company careers pages and ATS boards, ranks them against your profile, tracks applications,
-and prepares each application for you to review. It never submits an application for you.
+An open-source, local desktop app for macOS, Windows and Linux. It finds job openings on
+company careers pages and ATS job boards, ranks them against your profile, tracks your
+applications with a duplicate guard, and prepares each application (a tailored CV, a cover
+letter and a filled-in form) for you to review. It never submits an application for you.
 
-Status: early development. The workspace scaffold is in place; features arrive in later steps
-of `docs/plans/job-finder.md`.
+## Install
 
-## Requirements
+Installers are attached to the project's GitHub Releases page. Download the one for your
+system:
 
-- Node.js 26 and pnpm 12 (see `packageManager` in `package.json`)
+- macOS: `job-finder-<version>-arm64.dmg` (Apple silicon) or `-x64.dmg` (Intel)
+- Windows: `job-finder-<version>-x64.exe`
+- Linux: `job-finder-<version>-x64.AppImage` or `-x64.deb`
 
-## Getting started
+The installers are not signed or notarized, so the system warns the first time you open
+them. `docs/release.md` explains how to open them on each system. Check the release notes
+before you install.
+
+To run from source instead you need Node.js 26 and pnpm 12 (see `packageManager` in
+`package.json`):
 
 ```sh
 pnpm setup          # install dependencies
 pnpm desktop:dev    # run the desktop app in development
-pnpm verify         # typecheck, lint, format check, unit tests and Electron E2E
+pnpm desktop:dist   # package an installer for this system (apps/desktop/dist)
 ```
 
-For day-to-day commands, see `CLAUDE.md`.
+## First launch
 
-## Finding companies
+1. The app opens onboarding. Enter your profile (contact details, experience, education,
+   skills and languages), or import a CV: the text is read on your machine and one AI call
+   extracts a draft. Nothing is saved until you press save.
+2. Open Settings and choose an AI provider (see below). Test the connection there.
+3. On the Companies screen, search for job boards, or add a company by its careers URL.
+   The app scans each company's board and keeps its postings.
+4. On the Jobs screen, open a posting. Bookmark it or prepare it: the app creates an
+   application and you can generate a tailored CV and cover letter.
+5. Open the form from the application. The app fills what your profile covers in a separate
+   window and highlights the rest. You review it and press submit yourself. The app never
+   presses submit. Then mark the application as applied.
 
-The Companies screen searches for job boards. Three sources feed it:
+Your data (the database, the documents and the logs) stays in the app's user data folder.
 
-- Common Crawl's URL index (keyless) lists boards on the ATS domains. It is not filtered by your keywords.
-- DuckDuckGo's HTML search (keyless) is best-effort: it can refuse automated requests, and the app
-  never tries to get past such a refusal.
-- Brave Search, Tavily and Serper are keyed. They are used only when their toggle is on in Settings
-  and a key is saved there.
+## AI providers
 
-For reliable results, add a free-tier key for one of the keyed providers in Settings. Keys are kept
-in the operating system's keychain (or, on Linux without a keyring, only after you opt in in
-Settings), are sent only to the provider they belong to, and are never shown in the interface or
-written to logs.
+The app uses an AI model for four things: scoring jobs against your profile, importing a CV,
+writing tailored documents, and (only when you turn it on for a form) mapping form fields the
+rules could not map. Choose one provider in Settings:
+
+- **Anthropic** (`anthropic`): needs an API key from your Anthropic account and a model name.
+  This is a cloud service and you pay for its use.
+- **OpenAI** (`openai`): needs an API key from your OpenAI account and a model name. Also a cloud
+  service that you pay for.
+- **OpenAI-compatible** (`openai-compatible`): any server with the OpenAI chat API. Set its base
+  URL, for example a local Ollama server (below). A key is optional.
+
+A provider on your own machine (`localhost`, `127.0.0.1`, `::1` or `*.localhost`) needs no
+consent. Any other address is treated as a cloud provider: the app then asks for your consent
+before it sends your CV, your profile or a job to it, and it does not send them until you say
+yes. The AI is never called from the interface itself; it runs in a separate process of the app.
+
+### Ollama (free, local)
+
+1. Install Ollama from `https://ollama.com` and start it.
+2. Pull a model, for example `ollama pull llama3.1`. Use a model that follows instructions
+   and handles JSON well; larger models give better results.
+3. In Settings choose `openai-compatible`, set the base URL to `http://localhost:11434/v1`,
+   set the model name to the one you pulled, and leave the key empty.
+4. Test the connection. Ollama runs on your machine, so no data leaves it.
+
+## Search keys (free tier)
+
+Job discovery works without any key: DuckDuckGo's HTML search and Common Crawl's URL index
+are used. DuckDuckGo can refuse automated requests; the app then reports that the search was
+blocked and never tries to get around it. For more reliable results, add a key for one of the
+keyed search providers:
+
+- Brave Search, Tavily or Serper. Each offers a free tier with a key. Check the provider's
+  current limits before you rely on them.
+
+Turn the provider's toggle on in Settings and save its key. Keys are kept in the operating
+system's keychain (on Linux without a keyring, only after you opt in in Settings). A key is
+sent only to the provider it belongs to. It is never shown in the interface or written to logs.
 
 ## Privacy
 
-The app runs locally. Outbound connections are made only for the features you use: job sources
-(ATS APIs and careers pages), AI providers you configure, the discovery sources above (Common
-Crawl, DuckDuckGo, and a keyed provider only when you saved its key) and the update check, which
-you can turn off in Settings.
+The app has no account, no telemetry and no server of its own. Your profile, applications,
+documents and logs are stored on your computer. This is the complete list of outbound
+connections the app makes. Each one is started by a feature you use, except the update check,
+which you can turn off in Settings.
+
+Every request to a job source, search provider or update endpoint first reads that host's
+`robots.txt`. All of these requests use the user agent `Mozilla/5.0 (compatible; job-finder)`
+and nothing that identifies you.
+
+**Job discovery (keyless, on by default)**
+
+- `html.duckduckgo.com`: web search for ATS boards. Sends the keywords and locations you search
+  for. Only when the DuckDuckGo toggle is on (it is on by default).
+- `index.commoncrawl.org`: Common Crawl's URL index, read for each ATS domain. Sends the domain
+  names only, not your keywords. Always used by discovery.
+
+**Keyed search providers (only when their toggle is on and a key is saved)**
+
+- `api.search.brave.com`, `api.tavily.com` and `google.serper.dev`: the search query, with your
+  key, to that provider only.
+
+**Job sources (for the companies you add)**
+
+- ATS public job-board APIs: `boards-api.greenhouse.io`, `api.lever.co`, `api.ashbyhq.com`,
+  `apply.workable.com`, `api.smartrecruiters.com`, `jobs.smartrecruiters.com`,
+  `<company>.jobs.personio.de`, `<company>.recruitee.com`, `<company>.teamtailor.com`. The
+  company's board token (taken from its careers URL) is in the request path.
+- Careers pages you add, on any host. When a page is empty in its HTML, it is rendered in a
+  hidden window (below). A generic careers page may link to posting pages one hop away, on the
+  same careers host only.
+
+**JavaScript pages (hidden loader)**
+
+- A careers or posting page that needs JavaScript is rendered in a hidden, sandboxed window.
+  That page can load its own scripts, styles, images and fonts from any `http` or `https` host,
+  as the page asks. Its navigation is limited to the page's own origin, and it has no
+  permissions and no downloads.
+
+**Application forms (apply window)**
+
+- The job's apply link opens in its own window, in a memory-only session with no permissions.
+  The form page and the resources it loads (scripts, styles, images, fonts, and any third-party
+  services the form uses) are fetched from their hosts as the page asks. The app fills the fields
+  and never submits the form. Submitting is always your own action in that window.
+
+**AI providers (only the one you configure)**
+
+- The provider you choose in Settings: `api.anthropic.com` or `api.openai.com` by default, or the
+  base URL you set for an OpenAI-compatible server. A local server (Ollama) stays on your
+  machine. A cloud provider receives only what a feature sends: the CV text you import, your
+  profile, the postings being scored or drafted, the form fields for the AI autofill fallback,
+  and the text of public careers pages that the AI reads. Consent is required for the CV
+  import, scoring, documents and the form AI fallback when the provider is in the cloud.
+  Careers-page text is sent without a separate consent prompt.
+- The connection test sends one fixed short request.
+
+**Update check (on by default, off in Settings)**
+
+- `api.github.com`: the latest release of the project's repository, asked once at start and then
+  once a day. It sends no data about you. Until the repository is set in the code, no request
+  is made at all.
+- `github.com`: opened in your browser only when you choose the update notice.
+
+**Opened in your browser (only on your click)**
+
+- A job or company link you open from the app, and the release page. The app opens them with
+  your system's browser.
+
+**Not network traffic**
+
+- The interface cannot reach the network itself: its content security policy allows connections
+  to the app only.
+- The database, your keys (in the keychain), the logs, the generated PDFs and the desktop
+  notifications, tray and launch-at-login setting stay on your computer.
+
+**What the app does not control**
+
+- The Chromium engine inside Electron may make its own background connections that the app does
+  not expose. The app does not turn them off, and this list does not cover them.
 
 ## Documentation
 
 - Specification: `docs/specs/job-finder.md`
 - Implementation plan: `docs/plans/job-finder.md`
+- Live smoke test (manual, with real services): `docs/live-smoke-test.md`
+- Adding an ATS adapter: `docs/adding-an-ats-adapter.md`
+- Releases and installers: `docs/release.md`
+
+## Development
+
+For day-to-day commands and the code map, see `CLAUDE.md`. `pnpm verify` runs the typecheck,
+lint, format check, unit tests and the Electron end-to-end journey. The end-to-end journey never
+reaches the network: it uses a local fixture server and replayed AI answers.
 
 ## License
 
