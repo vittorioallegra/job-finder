@@ -10,6 +10,7 @@
     "./ai": "./src/ai/index.ts",
     "./cv": "./src/cv/index.ts",
     "./net": "./src/net/index.ts",
+    "./normalize": "./src/normalize/index.ts",
     "./profile": "./src/profile/schema.ts"
   },
   "scripts": {
@@ -20,6 +21,7 @@
     "@ai-sdk/openai": "4.0.122",
     "@ai-sdk/openai-compatible": "3.0.94",
     "ai": "7.0.179",
+    "cheerio": "1.2.0",
     "drizzle-orm": "0.45.4",
     "mammoth": "1.13.0",
     "p-queue": "10.0.0",
