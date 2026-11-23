@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Application — Acme (Ashby fixture)</title>
+  </head>
+  <body>
+    <div id="root">
+      <form action="/submitted" method="post">
+        <label for="ash-name">Name *</label>
+        <input id="ash-name" name="_systemfield_name" type="text" required />
+
+        <label for="ash-email">Email *</label>
+        <input id="ash-email" name="_systemfield_email" type="email" required />
+
+        <label for="ash-phone">Phone</label>
+        <input id="ash-phone" name="_systemfield_phone" type="tel" />
+
+        <label for="ash-linkedin">LinkedIn Profile</label>
+        <input id="ash-linkedin" name="_systemfield_linkedin_url" type="url" />
+
+        <label for="ash-why">Why do you want to work here?</label>
+        <textarea id="ash-why" name="question_why"></textarea>
+
+        <label for="ash-notice">Notice period</label>
+        <input id="ash-notice" name="question_notice" type="text" />
+
+        <label>Resume *</label>
+        <input type="file" name="_systemfield_resume" style="display: none" accept=".pdf" />
+        <button type="button">Upload file</button>
+
+        <button type="submit">Submit application</button>
+      </form>
+    </div>
+  </body>
+</html>

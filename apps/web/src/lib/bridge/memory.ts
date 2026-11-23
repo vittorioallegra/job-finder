@@ -235,6 +235,9 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
         if (at >= 0) savedSearches.splice(at, 1);
       },
     },
+    autofill: {
+      start: async () => ({ ok: false as const, code: "autofill-failed" as const }),
+    },
     documents: {
       get: async ({ applicationId }) => ({
         applicationId,

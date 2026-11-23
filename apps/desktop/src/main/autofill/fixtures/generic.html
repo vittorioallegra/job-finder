@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Apply — Acme careers (generic fixture)</title>
+  </head>
+  <body>
+    <form action="/submitted" method="post">
+      <label for="g-name">Your name</label>
+      <input id="g-name" name="applicant_name" type="text" />
+
+      <label for="g-mail">E-mail</label>
+      <input id="g-mail" name="applicant_mail" type="email" />
+
+      <label for="g-tel">Telephone</label>
+      <input id="g-tel" name="applicant_tel" type="tel" />
+
+      <label for="g-loc">Current location</label>
+      <input id="g-loc" name="applicant_loc" type="text" />
+
+      <label for="g-salary">Salary expectations</label>
+      <input id="g-salary" name="applicant_salary" type="number" />
+
+      <label for="g-notice">Notice period</label>
+      <input id="g-notice" name="applicant_notice" type="text" />
+
+      <label for="g-pronouns">Pronouns</label>
+      <select id="g-pronouns" name="applicant_pronouns">
+        <option value="">Choose</option>
+        <option value="she/her">she/her</option>
+        <option value="he/him">he/him</option>
+      </select>
+
+      <label for="g-auth">Are you authorized to work in the EU?</label>
+      <input id="g-auth" name="applicant_auth" type="text" />
+
+      <label for="g-other">Anything else we should know?</label>
+      <textarea id="g-other" name="applicant_other"></textarea>
+
+      <input type="checkbox" id="g-consent" name="applicant_consent" />
+      <label for="g-consent">I consent to the processing of my data</label>
+
+      <input type="submit" value="Apply" />
+    </form>
+  </body>
+</html>

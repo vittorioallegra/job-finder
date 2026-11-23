@@ -29,6 +29,8 @@ import { createApplicationRepository } from "./applications/repository";
 import { createApplicationExport } from "./applications/export";
 import { createDocumentRepository } from "./documents/repository";
 import { createDocumentService } from "./documents/service";
+import { createAutofillService } from "./autofill/service";
+import { openApplyWindow } from "./autofill/electron-window";
 import { documentFilePath } from "./documents/files";
 import { createPdfRenderer } from "./documents/pdf";
 import { openPdfWindow } from "./documents/pdf-window";
@@ -244,6 +246,14 @@ if (gotSingleInstanceLock) {
       },
       systemLocale: () => app.getLocale(),
     });
+    const autofill = createAutofillService({
+      applications: applicationRepository,
+      profile: profileRepository,
+      documentExists: (applicationId, kind) =>
+        existsSync(documentFilePath(documentsRoot, applicationId, kind)),
+      documentPath: (applicationId, kind) => documentFilePath(documentsRoot, applicationId, kind),
+      openWindow: openApplyWindow,
+    });
     const discovery = createDiscoveryService({
       engine: () => supervisor,
       settings: settingsRepository,
@@ -265,6 +275,7 @@ if (gotSingleInstanceLock) {
         applications: applicationRepository,
         applicationExport,
         documents,
+        autofill,
       },
       originOf(rendererUrl) ?? rendererUrl,
     );

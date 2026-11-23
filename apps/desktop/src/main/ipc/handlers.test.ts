@@ -155,6 +155,12 @@ function spyServices() {
       start: async () => ({ ok: false as const, code: "job-not-found" as const }),
       update: async () => ({ ok: false as const, code: "not-found" as const }),
     },
+    autofill: {
+      start: async (request: { applicationId: string }) => {
+        calls.push(`autofill.start:${request.applicationId}`);
+        return { ok: false as const, code: "invalid-status" as const };
+      },
+    },
     documents: {
       get: async (applicationId: string) => {
         calls.push(`documents.get:${applicationId}`);
@@ -280,6 +286,7 @@ describe("IPC sender and payload guard", () => {
         "applications:list",
         "applications:start",
         "applications:update",
+        "autofill:start",
         "companies:add",
         "companies:list",
         "discovery:search",

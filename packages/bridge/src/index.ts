@@ -1,4 +1,5 @@
 import type { AiTestResult } from "./ai";
+import type { AutofillStartRequest, AutofillStartResult } from "./autofill";
 import type {
   ApplicationBookmarkRequest,
   ApplicationCheckRequest,
@@ -57,6 +58,7 @@ export * from "./scoring";
 export * from "./jobs";
 export * from "./applications";
 export * from "./documents";
+export * from "./autofill";
 
 /** Shape of the API the preload script exposes as `window.jobFinder`. Values never include secrets. */
 export interface JobFinderBridge {
@@ -116,6 +118,13 @@ export interface JobFinderBridge {
     update(request: ApplicationUpdateRequest): Promise<ApplicationUpdateResult>;
     /** Asks for a file with a native dialog and writes every application to it as CSV. */
     exportCsv(): Promise<ApplicationExportResult>;
+  };
+  readonly autofill: {
+    /**
+     * Opens the application's form in a separate window, fills the fields the profile covers and
+     * highlights the rest. The app never submits: the user reviews and submits in that window.
+     */
+    start(request: AutofillStartRequest): Promise<AutofillStartResult>;
   };
   readonly documents: {
     /** The stored CV and cover letter of an application, each null until it is generated. */

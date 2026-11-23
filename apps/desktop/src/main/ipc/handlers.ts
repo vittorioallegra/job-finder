@@ -5,6 +5,7 @@ import {
   type DocumentGetRequest,
   type DocumentSaveRequest,
   type ApplicationBookmarkRequest,
+  type AutofillStartRequest,
   type ApplicationCheckRequest,
   type ApplicationDetailRequest,
   type ApplicationExportResult,
@@ -34,6 +35,7 @@ import type { ScoringService } from "../scoring/service";
 import type { SavedSearchRepository } from "../saved-searches/repository";
 import type { ApplicationRepository } from "../applications/repository";
 import type { DocumentService } from "../documents/service";
+import type { AutofillService } from "../autofill/service";
 import type { ProfileRepository } from "../profile/repository";
 import { originOf } from "../security/origin";
 import type { SecretStore } from "../secrets/store";
@@ -53,6 +55,7 @@ export interface IpcServices {
   applications: ApplicationRepository;
   applicationExport: { exportCsv(): Promise<ApplicationExportResult> };
   documents: DocumentService;
+  autofill: AutofillService;
 }
 
 /** The parts of an Electron invoke event that the sender check reads. */
@@ -160,6 +163,8 @@ export async function handleInvoke(
       return services.repository.latestRun();
     case "scores:start":
       return services.scoring.start(payload as ScoreStartRequest);
+    case "autofill:start":
+      return services.autofill.start(payload as AutofillStartRequest);
     case "documents:get":
       return services.documents.get((payload as DocumentGetRequest).applicationId);
     case "documents:generate":

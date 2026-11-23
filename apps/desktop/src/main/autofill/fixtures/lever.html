@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Apply to Acme (Lever fixture)</title>
+  </head>
+  <body>
+    <h2>Backend Engineer</h2>
+    <form action="/submitted" method="post" class="application-form">
+      <label class="application-label" for="name">Full name <span>*</span></label>
+      <input type="text" name="name" id="name" required />
+
+      <label class="application-label" for="email">Email <span>*</span></label>
+      <input type="email" name="email" id="email" required />
+
+      <label class="application-label" for="phone">Phone</label>
+      <input type="tel" name="phone" id="phone" />
+
+      <label class="application-label" for="org">Current company</label>
+      <input type="text" name="org" id="org" />
+
+      <label class="application-label" for="linkedin">LinkedIn URL</label>
+      <input type="url" name="urls[LinkedIn]" id="linkedin" />
+
+      <label class="application-label" for="github">GitHub URL</label>
+      <input type="url" name="urls[GitHub]" id="github" />
+
+      <label class="application-label" for="portfolio">Portfolio</label>
+      <input type="url" name="urls[Portfolio]" id="portfolio" />
+
+      <label class="application-label">Resume <span>*</span></label>
+      <input type="file" name="resume" id="resume" accept=".pdf,.doc,.docx" required />
+
+      <label class="application-label" for="comments">Additional information</label>
+      <textarea name="comments" id="comments"></textarea>
+
+      <input
+        type="text"
+        name="website"
+        autocomplete="off"
+        tabindex="-1"
+        style="position: absolute; left: -10000px"
+      />
+
+      <button type="submit">Submit application</button>
+    </form>
+  </body>
+</html>
