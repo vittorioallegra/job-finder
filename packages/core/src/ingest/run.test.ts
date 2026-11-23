@@ -1,5 +1,5 @@
-// protects=a company is closed only after every batch of its complete, successful scan is stored, a failed, cancelled or storage-broken scan closes nothing while the other companies still run, and the run log records each step in order and ends with the outcome;
-// fails_when=a posting is closed after a failed or partial scan, one broken board stops the run, a board without an ATS is requested, a cancelled run keeps scanning, a repeated posting is written twice, or the log is out of order or misses the outcome;
+// protects=a company is closed only after every batch of its complete, successful scan is stored, a failed, cancelled or storage-broken scan closes nothing while the other companies still run, a run limited to one company scans only that company, and the run log records each step in order and ends with the outcome;
+// fails_when=a posting is closed after a failed or partial scan, one broken board stops the run, a board without an ATS is requested, a cancelled run keeps scanning, a repeated posting is written twice, a company-limited run scans another company, or the log is out of order or misses the outcome;
 // no_claim=the HTTP requests, the ATS payloads and the SQL behind the store are not exercised here; the adapter tests and the desktop database tests cover them.
 import { describe, expect, it } from "vitest";
 import type { AtsAdapter, AtsId, BoardRef } from "../ats";
@@ -50,6 +50,7 @@ interface RunOptions {
   closeResult?: number;
   /** Called for each batch, with the company the batch belongs to. */
   onPersist?: (plan: BatchPlan, companyId: string) => void;
+  companyId?: string;
 }
 
 /** Runs the orchestration against an in-memory store and scripted boards. */
@@ -116,6 +117,7 @@ async function run(
     newId: () => `id-${++counter}`,
     adapterFor: () => adapter,
     batchSize: options.batchSize ?? 50,
+    companyId: options.companyId,
   });
   return { outcome, trace };
 }
@@ -230,6 +232,18 @@ describe("runIngestion", () => {
     expect(trace.events).toContainEqual(
       expect.objectContaining({ kind: "company-failed", companyId: "co-a", code: "no-board" }),
     );
+  });
+
+  it("scans only the company it is limited to, and leaves the others untouched", async () => {
+    const { outcome, trace } = await run(
+      [company("co-a", "acme"), company("co-b", "globex")],
+      { acme: { ok: true, jobs: [job("1")] }, globex: { ok: true, jobs: [job("2")] } },
+      { companyId: "co-b" },
+    );
+
+    expect(outcome).toBe("succeeded");
+    expect(trace.requested).toEqual(["globex"]);
+    expect(trace.closed).toEqual(["co-b"]);
   });
 
   it("closes every posting of a company whose complete scan finds none", async () => {

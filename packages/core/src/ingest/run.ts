@@ -49,6 +49,8 @@ export interface RunIngestionOptions {
   adapterFor?: (ats: AtsId) => AtsAdapter;
   /** Postings written per batch. */
   batchSize?: number;
+  /** Scans only this company (a retry from the Companies screen). Unset: every company. */
+  companyId?: string;
 }
 
 const DEFAULT_BATCH_SIZE = 50;
@@ -129,7 +131,9 @@ export async function runIngestion(options: RunIngestionOptions): Promise<Ingest
   let outcome: IngestRunOutcome;
   try {
     await record({ kind: "run-started" });
-    const companies = await store.listCompanies();
+    const companies = (await store.listCompanies()).filter(
+      (company) => options.companyId === undefined || company.id === options.companyId,
+    );
     outcome = "succeeded";
     for (const company of companies) {
       if (signal.aborted) {
