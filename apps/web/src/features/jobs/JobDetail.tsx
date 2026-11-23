@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   ApplicationStartResult,
@@ -8,7 +8,9 @@ import type {
   JobDetail as JobDetailRecord,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
+import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
 
 type DetailState =
   | { status: "loading" }
@@ -165,7 +167,7 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
         >
           {state.status === "ready" ? state.job.title : t("jobs.detail.heading")}
         </h3>
-        <Button variant="secondary" onClick={onClose}>
+        <Button variant="secondary" size="sm" onClick={onClose}>
           {t("jobs.detail.close")}
         </Button>
       </div>
@@ -180,6 +182,7 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
           <p className="text-sm text-app-fg">{t("jobs.detail.loadFailed")}</p>
           <Button
             variant="secondary"
+            size="sm"
             onClick={() => {
               setState({ status: "loading" });
               setAttempt((value) => value + 1);
@@ -195,40 +198,38 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
 
       {state.status === "ready" ? (
         <>
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm text-app-muted">
-              {state.job.companyName} ·{" "}
-              {state.job.locations.length > 0
-                ? state.job.locations.join(" / ")
-                : t("jobs.results.noLocation")}
-            </p>
-            {state.job.closedAt !== null ? (
-              <span className="rounded-full border border-app-border px-2 py-0.5 text-xs text-app-muted">
-                {t("jobs.detail.closed")}
-              </span>
-            ) : null}
-            <Button variant="secondary" onClick={() => void setDismissed(!state.job.dismissed)}>
-              {state.job.dismissed ? t("jobs.detail.restore") : t("jobs.detail.dismiss")}
-            </Button>
-            {state.job.applicationStatus === null ||
-            state.job.applicationStatus === "bookmarked" ? (
-              <Button
-                variant="secondary"
-                aria-pressed={state.job.applicationStatus === "bookmarked"}
-                onClick={() => void setBookmarked(state.job.applicationStatus === null)}
-              >
-                {state.job.applicationStatus === "bookmarked"
-                  ? t("jobs.detail.removeBookmark")
-                  : t("jobs.detail.bookmark")}
-              </Button>
-            ) : null}
-            {state.job.applicationStatus !== null ? (
-              <span className="rounded-full border border-app-border px-2 py-0.5 text-xs text-app-fg">
-                {t("jobs.results.applicationStatus", {
-                  status: t(`applications.status.${state.job.applicationStatus}`),
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-app-muted">
+                {state.job.companyName} ·{" "}
+                {state.job.locations.length > 0
+                  ? state.job.locations.join(" / ")
+                  : t("jobs.results.noLocation")}
+              </p>
+              {state.job.closedAt !== null ? (
+                <Badge tone="weak">{t("jobs.detail.closed")}</Badge>
+              ) : null}
+              {state.job.applicationStatus !== null ? (
+                <Badge tone="accent">
+                  {t("jobs.results.applicationStatus", {
+                    status: t(`applications.status.${state.job.applicationStatus}`),
+                  })}
+                </Badge>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge>{t(`jobs.results.workMode.${state.job.workMode}`)}</Badge>
+              <Badge>
+                {t(`jobs.filters.values.employment.${state.job.employmentType}`, {
+                  defaultValue: notStated,
                 })}
-              </span>
-            ) : null}
+              </Badge>
+              <Badge>
+                {t(`jobs.filters.values.seniority.${state.job.seniority}`, {
+                  defaultValue: notStated,
+                })}
+              </Badge>
+            </div>
           </div>
 
           <PreparePanel
@@ -237,36 +238,43 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
             onConfirm={confirmWarning}
             onCancel={() => setPrepare({ status: "idle" })}
             formatDate={formatDate}
+            actions={
+              <>
+                <Button variant="secondary" onClick={() => void setDismissed(!state.job.dismissed)}>
+                  {state.job.dismissed ? t("jobs.detail.restore") : t("jobs.detail.dismiss")}
+                </Button>
+                {state.job.applicationStatus === null ||
+                state.job.applicationStatus === "bookmarked" ? (
+                  <Button
+                    variant="secondary"
+                    aria-pressed={state.job.applicationStatus === "bookmarked"}
+                    onClick={() => void setBookmarked(state.job.applicationStatus === null)}
+                  >
+                    {state.job.applicationStatus === "bookmarked"
+                      ? t("jobs.detail.removeBookmark")
+                      : t("jobs.detail.bookmark")}
+                  </Button>
+                ) : null}
+              </>
+            }
           />
 
-          <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-            <dt className="text-app-muted">{t("jobs.detail.workMode")}</dt>
-            <dd className="text-app-fg">{t(`jobs.results.workMode.${state.job.workMode}`)}</dd>
-            <dt className="text-app-muted">{t("jobs.detail.employment")}</dt>
-            <dd className="text-app-fg">
-              {t(`jobs.filters.values.employment.${state.job.employmentType}`, {
-                defaultValue: notStated,
-              })}
-            </dd>
-            <dt className="text-app-muted">{t("jobs.detail.seniority")}</dt>
-            <dd className="text-app-fg">
-              {t(`jobs.filters.values.seniority.${state.job.seniority}`, {
-                defaultValue: notStated,
-              })}
-            </dd>
-            <dt className="text-app-muted">{t("jobs.detail.visa")}</dt>
-            <dd className="text-app-fg">{t(`jobs.filters.visa.${state.job.visaSponsorship}`)}</dd>
-            <dt className="text-app-muted">{t("jobs.detail.language")}</dt>
-            <dd className="text-app-fg">{state.job.language ?? notStated}</dd>
-            <dt className="text-app-muted">{t("jobs.detail.salary")}</dt>
-            <dd className="text-app-fg">{salaryText}</dd>
-          </dl>
+          <Card as="div" className="bg-app-sunken/40">
+            <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
+              <dt className="text-app-muted">{t("jobs.detail.visa")}</dt>
+              <dd className="text-app-fg">{t(`jobs.filters.visa.${state.job.visaSponsorship}`)}</dd>
+              <dt className="text-app-muted">{t("jobs.detail.language")}</dt>
+              <dd className="text-app-fg">{state.job.language ?? notStated}</dd>
+              <dt className="text-app-muted">{t("jobs.detail.salary")}</dt>
+              <dd className="text-app-fg">{salaryText}</dd>
+            </dl>
+          </Card>
 
           {state.job.score === null ? (
-            <p className="text-sm font-medium text-app-fg">{t("jobs.results.notScored")}</p>
+            <p className="text-sm font-medium text-app-muted">{t("jobs.results.notScored")}</p>
           ) : (
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium text-app-fg">
+            <div className="flex flex-col gap-1.5 rounded-2xl bg-app-accent-soft p-4">
+              <p className="text-sm font-semibold text-app-fg">
                 {t("jobs.results.affinity", { score: state.job.score })}
               </p>
               {state.job.explanation ? (
@@ -276,8 +284,10 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
           )}
 
           <div className="flex flex-col gap-2">
-            <h4 className="text-sm font-medium text-app-fg">{t("jobs.detail.description")}</h4>
-            <p className="whitespace-pre-line text-sm text-app-fg">
+            <h4 className="font-sans text-sm font-semibold text-app-fg">
+              {t("jobs.detail.description")}
+            </h4>
+            <p className="text-sm leading-relaxed whitespace-pre-line text-app-fg">
               {state.job.description === ""
                 ? t("jobs.detail.noDescription")
                 : state.job.description}
@@ -285,13 +295,18 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <h4 className="text-sm font-medium text-app-fg">{t("jobs.detail.sources")}</h4>
+            <h4 className="font-sans text-sm font-semibold text-app-fg">
+              {t("jobs.detail.sources")}
+            </h4>
             {state.job.sources.length === 0 ? (
               <p className="text-sm text-app-muted">{t("jobs.detail.noSources")}</p>
             ) : (
               <ul className="flex flex-col gap-2 text-sm">
                 {state.job.sources.map((source) => (
-                  <li key={`${source.source}-${source.url}`} className="flex flex-col gap-0.5">
+                  <li
+                    key={`${source.source}-${source.url}`}
+                    className="flex flex-col gap-0.5 rounded-xl border border-app-border bg-app-surface p-3"
+                  >
                     <span className="font-medium text-app-fg">
                       {source.source}
                       {source.closed ? ` · ${t("jobs.detail.sourceClosed")}` : ""}
@@ -319,13 +334,22 @@ interface PreparePanelProps {
   onConfirm: () => void;
   onCancel: () => void;
   formatDate: (epochMs: number) => string;
+  /** Secondary actions shown next to the prepare button. */
+  actions: ReactNode;
 }
 
 /**
  * Starts preparing the job. A duplicate warning shows the earlier applications and asks for one
  * confirmation (same company) or two (same job or fingerprint).
  */
-function PreparePanel({ prepare, onPrepare, onConfirm, onCancel, formatDate }: PreparePanelProps) {
+function PreparePanel({
+  prepare,
+  onPrepare,
+  onConfirm,
+  onCancel,
+  formatDate,
+  actions,
+}: PreparePanelProps) {
   const { t } = useTranslation();
   if (prepare.status === "warning") {
     const { duplicates, confirmed } = prepare;
@@ -335,51 +359,57 @@ function PreparePanel({ prepare, onPrepare, onConfirm, onCancel, formatDate }: P
         ? "jobs.detail.prepareCheck.sameJobWarning"
         : "jobs.detail.prepareCheck.sameCompanyWarning";
     return (
-      <div role="alert" className="flex flex-col gap-3 rounded-md border border-app-border p-4">
-        <p className="text-sm font-medium text-app-fg">{t(warning, { count: earlier.length })}</p>
-        <ul className="flex flex-col gap-1 text-sm text-app-muted">
-          {earlier.map((item: DuplicateApplication) => (
-            <li key={item.id}>
-              {t("jobs.detail.prepareCheck.previous", {
-                title: item.jobTitle,
-                company: item.companyName,
-                status: t(`applications.status.${item.status}`),
-                date: formatDate(item.statusChangedAt),
-              })}
-            </li>
-          ))}
-        </ul>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={onConfirm}>
-            {t(
-              confirmed === 0
-                ? "jobs.detail.prepareCheck.confirmOnce"
-                : "jobs.detail.prepareCheck.confirmAgain",
-            )}
-          </Button>
-          <Button variant="secondary" onClick={onCancel}>
-            {t("jobs.detail.prepareCheck.cancel")}
-          </Button>
+      <div className="flex flex-col gap-3">
+        <div role="alert" className="flex flex-col gap-3 rounded-2xl bg-app-fair-soft p-4">
+          <p className="text-sm font-semibold text-app-fg">
+            {t(warning, { count: earlier.length })}
+          </p>
+          <ul className="flex flex-col gap-1 text-sm text-app-muted">
+            {earlier.map((item: DuplicateApplication) => (
+              <li key={item.id}>
+                {t("jobs.detail.prepareCheck.previous", {
+                  title: item.jobTitle,
+                  company: item.companyName,
+                  status: t(`applications.status.${item.status}`),
+                  date: formatDate(item.statusChangedAt),
+                })}
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={onConfirm}>
+              {t(
+                confirmed === 0
+                  ? "jobs.detail.prepareCheck.confirmOnce"
+                  : "jobs.detail.prepareCheck.confirmAgain",
+              )}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={onCancel}>
+              {t("jobs.detail.prepareCheck.cancel")}
+            </Button>
+          </div>
         </div>
+        <div className="flex flex-wrap items-center gap-2">{actions}</div>
       </div>
     );
   }
   return (
     <div className="flex flex-col gap-2">
-      <div>
+      <div className="flex flex-wrap items-center gap-2">
         <Button onClick={onPrepare} disabled={prepare.status === "busy"}>
           {t("jobs.detail.prepare")}
         </Button>
+        {actions}
       </div>
       {prepare.status === "done" ? (
-        <p role="status" className="text-sm text-app-fg">
+        <p role="status" className="text-sm text-app-good">
           {t("jobs.detail.prepared", {
             status: t(`applications.status.${prepare.applicationStatus}`),
           })}
         </p>
       ) : null}
       {prepare.status === "failed" ? (
-        <p role="alert" className="text-sm text-app-fg">
+        <p role="alert" className="text-sm text-app-danger">
           {t("jobs.detail.prepareCheck.failed")}
         </p>
       ) : null}

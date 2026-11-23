@@ -63,7 +63,7 @@ export function JobFilters({
     key: keyof FilterDraft,
   ) => (
     <fieldset className="flex flex-col gap-2">
-      <legend className="text-sm font-medium text-app-fg">{legend}</legend>
+      <legend className="text-[13px] font-medium text-app-fg">{legend}</legend>
       <div className="flex flex-wrap gap-x-5 gap-y-2">
         {values.map((value) => (
           <CheckboxInput
@@ -81,22 +81,22 @@ export function JobFilters({
     <form
       aria-labelledby="jobs-filters-title"
       noValidate
-      className="flex flex-col gap-5 rounded-lg border border-app-border p-4"
+      className="flex flex-col gap-6"
       onSubmit={(event) => {
         event.preventDefault();
         onApply();
       }}
     >
-      <h3 id="jobs-filters-title" className="text-base font-medium text-app-fg">
+      <h3 id="jobs-filters-title" className="font-sans text-base font-semibold text-app-fg">
         {t("jobs.filters.heading")}
       </h3>
       {invalid ? (
-        <p role="alert" className="text-sm text-app-fg">
+        <p role="alert" className="text-sm text-app-danger">
           {t("jobs.filters.invalid")}
         </p>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <TextInput
           label={t("jobs.filters.keywords")}
           hint={t("jobs.filters.keywordsHint")}
@@ -157,31 +157,33 @@ export function JobFilters({
         />
       </div>
 
-      {checkboxes(
-        t("jobs.filters.workModes"),
-        WORK_MODES,
-        draft.workModes,
-        (value) => t(`jobs.results.workMode.${value}`),
-        "workModes",
-      )}
-      {checkboxes(
-        t("jobs.filters.employmentTypes"),
-        EMPLOYMENT_TYPES,
-        draft.employmentTypes,
-        (value) => t(`jobs.filters.values.employment.${value}`),
-        "employmentTypes",
-      )}
-      {checkboxes(
-        t("jobs.filters.seniorities"),
-        SENIORITIES,
-        draft.seniorities,
-        (value) => t(`jobs.filters.values.seniority.${value}`),
-        "seniorities",
-      )}
-      {checkboxes(t("jobs.filters.sources"), SOURCES, draft.sources, (value) => value, "sources")}
+      <div className="grid gap-x-6 gap-y-5 md:grid-cols-2">
+        {checkboxes(
+          t("jobs.filters.workModes"),
+          WORK_MODES,
+          draft.workModes,
+          (value) => t(`jobs.results.workMode.${value}`),
+          "workModes",
+        )}
+        {checkboxes(
+          t("jobs.filters.employmentTypes"),
+          EMPLOYMENT_TYPES,
+          draft.employmentTypes,
+          (value) => t(`jobs.filters.values.employment.${value}`),
+          "employmentTypes",
+        )}
+        {checkboxes(
+          t("jobs.filters.seniorities"),
+          SENIORITIES,
+          draft.seniorities,
+          (value) => t(`jobs.filters.values.seniority.${value}`),
+          "seniorities",
+        )}
+        {checkboxes(t("jobs.filters.sources"), SOURCES, draft.sources, (value) => value, "sources")}
+      </div>
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="text-sm font-medium text-app-fg">
+        <legend className="text-[13px] font-medium text-app-fg">
           {t("jobs.filters.salary.legend")}
         </legend>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -220,7 +222,7 @@ export function JobFilters({
       </fieldset>
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="text-sm font-medium text-app-fg">
+        <legend className="text-[13px] font-medium text-app-fg">
           {t("jobs.filters.companies.include")}
         </legend>
         {companies.length === 0 ? (
@@ -242,7 +244,7 @@ export function JobFilters({
       </fieldset>
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="text-sm font-medium text-app-fg">
+        <legend className="text-[13px] font-medium text-app-fg">
           {t("jobs.filters.companies.exclude")}
         </legend>
         {companies.length === 0 ? null : (
@@ -291,11 +293,11 @@ export function JobFilters({
         />
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <Button type="submit">{t("jobs.filters.apply")}</Button>
+      <div className="flex flex-wrap justify-end gap-2 border-t border-app-border pt-4">
         <Button type="button" variant="secondary" onClick={onReset}>
           {t("jobs.filters.reset")}
         </Button>
+        <Button type="submit">{t("jobs.filters.apply")}</Button>
       </div>
     </form>
   );
