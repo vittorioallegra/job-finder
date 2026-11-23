@@ -245,7 +245,6 @@
   },
   "onboarding": {
     "title": "Set up your profile",
-    "backHome": "Back to home",
     "steps": {
       "label": "Setup steps",
       "ai": "AI provider",

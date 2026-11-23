@@ -1,7 +1,8 @@
 import { useAiConsent } from "../../lib/useAiConsent";
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate } from "react-router";
+import { FileUp } from "lucide-react";
+import { useNavigate } from "react-router";
 import {
   CV_UPLOAD_MAX_BYTES,
   emptyProfile,
@@ -17,6 +18,8 @@ import {
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Button } from "../../components/ui/Button";
+import { Card, CardTitle } from "../../components/ui/Card";
+import { PageHeader } from "../../components/ui/PageHeader";
 import { CheckboxInput } from "../../components/ui/CheckboxInput";
 import { SelectInput, type SelectOption } from "../../components/ui/SelectInput";
 import { TextInput } from "../../components/ui/TextInput";
@@ -75,30 +78,47 @@ export function OnboardingScreen() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 p-8">
-      <nav>
-        <Link to="/" className="text-sm text-app-accent underline">
-          {t("onboarding.backHome")}
-        </Link>
-      </nav>
-      <h1 className="text-3xl font-semibold text-app-fg">{t("onboarding.title")}</h1>
+    <main className="mx-auto flex w-full max-w-2xl flex-col gap-8">
+      <PageHeader title={t("onboarding.title")} />
 
-      <ol aria-label={t("onboarding.steps.label")} className="flex flex-wrap gap-4 text-sm">
-        {STEPS.map((name, index) => (
-          <li
-            key={name}
-            aria-current={name === step ? "step" : undefined}
-            className={name === step ? "font-semibold text-app-accent" : "text-app-muted"}
-          >
-            {index + 1}. {t(`onboarding.steps.${name}`)}
-          </li>
-        ))}
+      <ol
+        aria-label={t("onboarding.steps.label")}
+        className="flex flex-wrap items-center gap-3 text-sm"
+      >
+        {STEPS.map((name, index) => {
+          const active = name === step;
+          const done = STEPS.indexOf(step) > index;
+          return (
+            <li
+              key={name}
+              aria-current={active ? "step" : undefined}
+              className={`flex items-center gap-2 ${active ? "font-semibold text-app-fg" : "text-app-muted"}`}
+            >
+              <span
+                aria-hidden="true"
+                className={`grid size-6 place-items-center rounded-full text-xs font-semibold ${
+                  active
+                    ? "bg-app-accent text-app-accent-fg"
+                    : done
+                      ? "bg-app-good-soft text-app-good"
+                      : "bg-app-sunken text-app-muted"
+                }`}
+              >
+                {index + 1}
+              </span>
+              {t(`onboarding.steps.${name}`)}
+              {index < STEPS.length - 1 ? (
+                <span aria-hidden="true" className="ml-1 h-px w-8 bg-app-border" />
+              ) : null}
+            </li>
+          );
+        })}
       </ol>
 
       {loadFailed ? (
         <div role="alert" className="flex flex-col items-start gap-3">
-          <p className="text-app-fg">{t("onboarding.loadFailed")}</p>
-          <Button variant="secondary" onClick={retry}>
+          <p className="text-app-danger">{t("onboarding.loadFailed")}</p>
+          <Button variant="secondary" size="sm" onClick={retry}>
             {t("onboarding.retry")}
           </Button>
         </div>
@@ -138,12 +158,12 @@ export function OnboardingScreen() {
 
       {settings !== null && step === "review" ? (
         <section aria-labelledby="onboarding-review" className="flex flex-col gap-4">
-          <h2 id="onboarding-review" className="text-lg font-medium text-app-fg">
+          <h2 id="onboarding-review" className="text-2xl font-semibold text-app-fg">
             {t("onboarding.review.title")}
           </h2>
           <p className="text-app-muted">{t("onboarding.review.intro")}</p>
           {warnings.some((warning) => warning.code === "context-exceeded") ? (
-            <p role="note" className="rounded-md border border-app-border p-3 text-sm text-app-fg">
+            <p role="note" className="rounded-xl bg-app-fair-soft p-3 text-sm text-app-fg">
               {t("onboarding.review.contextWarning")}
             </p>
           ) : null}
@@ -208,10 +228,8 @@ function AiStep({ bridge, settings, onSaved, onContinue }: AiStepProps) {
   }
 
   return (
-    <section aria-labelledby="onboarding-ai" className="flex flex-col gap-4">
-      <h2 id="onboarding-ai" className="text-lg font-medium text-app-fg">
-        {t("onboarding.ai.title")}
-      </h2>
+    <Card as="section" aria-labelledby="onboarding-ai" className="flex flex-col gap-4">
+      <CardTitle id="onboarding-ai">{t("onboarding.ai.title")}</CardTitle>
       <p className="text-app-muted">{t("onboarding.ai.intro")}</p>
       <form onSubmit={save} noValidate className="flex flex-col gap-4">
         <SelectInput
@@ -254,23 +272,26 @@ function AiStep({ bridge, settings, onSaved, onContinue }: AiStepProps) {
             onStatus={setSecrets}
           />
         ) : null}
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={message === "saving"}>
-            {message === "saving" ? t("onboarding.ai.saving") : t("onboarding.ai.save")}
-          </Button>
-          <p role="status" className="text-sm text-app-muted">
+        <div className="flex items-center justify-end gap-3">
+          <p
+            role="status"
+            className={`text-sm ${message === "error" ? "text-app-danger" : message === "saved" ? "text-app-good" : "text-app-muted"}`}
+          >
             {message === "saved" ? t("onboarding.ai.saved") : null}
             {message === "error" ? t("onboarding.ai.saveFailed") : null}
           </p>
+          <Button type="submit" variant="secondary" disabled={message === "saving"}>
+            {message === "saving" ? t("onboarding.ai.saving") : t("onboarding.ai.save")}
+          </Button>
         </div>
       </form>
       <AiConnectionTest bridge={bridge} />
-      <div>
+      <div className="flex justify-end border-t border-app-border pt-4">
         <Button onClick={onContinue} disabled={dirty || message === "saving"}>
           {t("onboarding.ai.continue")}
         </Button>
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -324,14 +345,18 @@ function CvStep({ bridge, settings, onImported, onManual }: CvStepProps) {
   }
 
   return (
-    <section aria-labelledby="onboarding-cv" className="flex flex-col gap-4">
-      <h2 id="onboarding-cv" className="text-lg font-medium text-app-fg">
-        {t("onboarding.cv.title")}
-      </h2>
+    <Card as="section" aria-labelledby="onboarding-cv" className="flex flex-col gap-5">
+      <CardTitle id="onboarding-cv">{t("onboarding.cv.title")}</CardTitle>
       <p className="text-app-muted">{t("onboarding.cv.intro")}</p>
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="onboarding-cv-file" className="text-sm font-medium text-app-fg">
+      <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-app-subtle bg-app-sunken/50 px-6 py-8 text-center">
+        <div className="grid size-12 place-items-center rounded-full bg-app-accent-soft text-app-accent">
+          <FileUp className="size-5" strokeWidth={1.8} aria-hidden="true" />
+        </div>
+        <label
+          htmlFor="onboarding-cv-file"
+          className="font-display text-lg font-semibold text-app-fg"
+        >
           {t("onboarding.cv.fileLabel")}
         </label>
         <input
@@ -339,7 +364,7 @@ function CvStep({ bridge, settings, onImported, onManual }: CvStepProps) {
           type="file"
           accept=".pdf,.docx,.txt,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           aria-describedby="onboarding-cv-file-hint"
-          className="text-sm text-app-fg"
+          className="max-w-full text-sm text-app-fg file:mr-3 file:cursor-pointer file:rounded-full file:border-0 file:bg-app-ink file:px-4 file:py-2 file:text-sm file:font-medium file:text-app-ink-fg"
           onChange={(event) => {
             setFile(event.target.files?.[0] ?? null);
             setState({ status: "idle" });
@@ -351,7 +376,7 @@ function CvStep({ bridge, settings, onImported, onManual }: CvStepProps) {
       </div>
 
       {cloud ? (
-        <div className="flex flex-col gap-3 rounded-lg border border-app-border p-4">
+        <div className="flex flex-col gap-3 rounded-2xl bg-app-fair-soft p-4">
           <p className="text-sm text-app-fg">
             {t("onboarding.cv.consentNote", { provider: providerName })}
           </p>
@@ -363,12 +388,12 @@ function CvStep({ bridge, settings, onImported, onManual }: CvStepProps) {
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <Button variant="ghost" onClick={onManual}>
+          {t("onboarding.cv.manual")}
+        </Button>
         <Button onClick={() => void runImport()} disabled={!canImport}>
           {state.status === "importing" ? t("onboarding.cv.importing") : t("onboarding.cv.import")}
-        </Button>
-        <Button variant="secondary" onClick={onManual}>
-          {t("onboarding.cv.manual")}
         </Button>
       </div>
 
@@ -379,7 +404,7 @@ function CvStep({ bridge, settings, onImported, onManual }: CvStepProps) {
       ) : null}
 
       {state.status === "failed" ? (
-        <p role="alert" className="text-sm text-app-fg">
+        <p role="alert" className="text-sm text-app-danger">
           {FILE_FAILURE_CODES.includes(state.code)
             ? t("onboarding.cv.failed", { reason: t(`onboarding.cv.reasons.${state.code}`) })
             : t("settings.ai.test.unavailable", {
@@ -387,6 +412,6 @@ function CvStep({ bridge, settings, onImported, onManual }: CvStepProps) {
               })}
         </p>
       ) : null}
-    </section>
+    </Card>
   );
 }

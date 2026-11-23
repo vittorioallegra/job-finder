@@ -245,7 +245,6 @@
   },
   "onboarding": {
     "title": "Configura il profilo",
-    "backHome": "Torna alla home",
     "steps": {
       "label": "Passaggi di configurazione",
       "ai": "Provider AI",
