@@ -22,7 +22,18 @@ export interface BoardRef {
 }
 
 export type AdapterFailureCode =
-  HttpErrorCode | "invalid-slug" | "invalid-response" | "too-many-pages";
+  | HttpErrorCode
+  | "invalid-slug"
+  | "invalid-response"
+  | "too-many-pages"
+  /** Generic careers pages: no AI provider is configured, or it failed. */
+  | "ai-unavailable"
+  /** The model reported that the listing continues (pagination, "load more"), so it is not complete. */
+  | "incomplete-listing"
+  /** The model found no postings on a generic careers page. Never treated as a complete empty scan. */
+  | "no-parseable-jobs"
+  /** The renderer could not load a JavaScript page. */
+  | "render-failed";
 
 export interface AdapterFailure {
   ok: false;

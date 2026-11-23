@@ -1,5 +1,5 @@
 import { getAdapter } from "../ats";
-import type { AtsAdapter, AtsId } from "../ats";
+import type { AdapterResult, AtsAdapter, AtsId } from "../ats";
 import type { HttpClient } from "../net";
 import type { NormalizedJob } from "../normalize";
 import { identityKey } from "../normalize";
@@ -12,12 +12,19 @@ import {
 } from "./plan";
 import type { IngestEvent, IngestRunOutcome } from "./events";
 
-/** A company whose careers board is scanned. Null `ats` or `slug`: no board to read. */
+/** A company whose careers board is scanned. Null `ats` or `slug`: no supported board, so its careers page is read instead. */
 export interface IngestCompany {
   id: string;
   name: string;
+  careersUrl: string;
   ats: AtsId | null;
   slug: string | null;
+}
+
+/** What a generic careers page scan needs to know about its company. */
+export interface CareersScanTarget {
+  name: string;
+  careersUrl: string;
 }
 
 /**
@@ -47,6 +54,11 @@ export interface RunIngestionOptions {
   now?: () => number;
   newId?: () => string;
   adapterFor?: (ats: AtsId) => AtsAdapter;
+  /**
+   * Reads a company's generic careers page. Omitted: companies without a supported board fail with
+   * `no-board`, as before. The scan follows the same rules as a board read: a failure returns no jobs.
+   */
+  scanCareers?: (target: CareersScanTarget) => Promise<AdapterResult>;
   /** Postings written per batch. */
   batchSize?: number;
   /** Scans only this company (a retry from the Companies screen). Unset: every company. */
@@ -85,16 +97,18 @@ export async function runIngestion(options: RunIngestionOptions): Promise<Ingest
   };
 
   async function scanCompany(company: IngestCompany): Promise<CompanyResult> {
-    if (company.ats === null || company.slug === null) {
-      return { kind: "failed", code: "no-board" };
-    }
-    let result;
+    let result: AdapterResult;
     try {
-      result = await adapterFor(company.ats).fetchJobs(
-        { ats: company.ats, slug: company.slug, companyName: company.name },
-        http,
-        { signal },
-      );
+      if (company.ats === null || company.slug === null) {
+        if (!options.scanCareers) return { kind: "failed", code: "no-board" };
+        result = await options.scanCareers({ name: company.name, careersUrl: company.careersUrl });
+      } else {
+        result = await adapterFor(company.ats).fetchJobs(
+          { ats: company.ats, slug: company.slug, companyName: company.name },
+          http,
+          { signal },
+        );
+      }
     } catch {
       return signal.aborted ? { kind: "cancelled" } : { kind: "failed", code: "unknown" };
     }

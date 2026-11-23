@@ -1,8 +1,8 @@
-// protects=a company is closed only after every batch of its complete, successful scan is stored, a failed, cancelled or storage-broken scan closes nothing while the other companies still run, a run limited to one company scans only that company, and the run log records each step in order and ends with the outcome;
-// fails_when=a posting is closed after a failed or partial scan, one broken board stops the run, a board without an ATS is requested, a cancelled run keeps scanning, a repeated posting is written twice, a company-limited run scans another company, or the log is out of order or misses the outcome;
+// protects=a company without a board is closed only after a complete careers page scan, and a company is closed only after every batch of its complete, successful scan is stored, a failed, cancelled or storage-broken scan closes nothing while the other companies still run, a run limited to one company scans only that company, and the run log records each step in order and ends with the outcome;
+// fails_when=a posting is closed after a failed or partial scan, a careers page failure closes postings, one broken board stops the run, a board without an ATS is requested, a cancelled run keeps scanning, a repeated posting is written twice, a company-limited run scans another company, or the log is out of order or misses the outcome;
 // no_claim=the HTTP requests, the ATS payloads and the SQL behind the store are not exercised here; the adapter tests and the desktop database tests cover them.
 import { describe, expect, it } from "vitest";
-import type { AtsAdapter, AtsId, BoardRef } from "../ats";
+import type { AdapterResult, AtsAdapter, AtsId, BoardRef } from "../ats";
 import type { HttpClient } from "../net";
 import type { NormalizedJob } from "../normalize";
 import type { IngestEvent } from "./events";
@@ -52,6 +52,7 @@ interface RunOptions {
   /** Called for each batch, with the company the batch belongs to. */
   onPersist?: (plan: BatchPlan, companyId: string) => void;
   companyId?: string;
+  scanCareers?: (target: { name: string; careersUrl: string }) => Promise<AdapterResult>;
 }
 
 /** Runs the orchestration against an in-memory store and scripted boards. */
@@ -119,12 +120,19 @@ async function run(
     adapterFor: () => adapter,
     batchSize: options.batchSize ?? 50,
     companyId: options.companyId,
+    scanCareers: options.scanCareers,
   });
   return { outcome, trace };
 }
 
 function company(id: string, slug: string, ats: AtsId | null = "greenhouse"): IngestCompany {
-  return { id, name: `Company ${slug}`, ats, slug: ats === null ? null : slug };
+  return {
+    id,
+    name: `Company ${slug}`,
+    careersUrl: `https://${slug}.example.test/careers`,
+    ats,
+    slug: ats === null ? null : slug,
+  };
 }
 
 describe("runIngestion", () => {
@@ -232,6 +240,51 @@ describe("runIngestion", () => {
     expect(trace.requested).toEqual([]);
     expect(trace.events).toContainEqual(
       expect.objectContaining({ kind: "company-failed", companyId: "co-a", code: "no-board" }),
+    );
+  });
+
+  it("reads a company without an ATS through its careers page, and closes it after a complete scan", async () => {
+    const careers = company("co-c", "generic", null);
+    const { outcome, trace } = await run(
+      [careers],
+      {},
+      {
+        scanCareers: async () => ({
+          ok: true,
+          jobs: [job("listing:1", { source: "careers-page" })],
+        }),
+      },
+    );
+
+    expect(outcome).toBe("succeeded");
+    expect(trace.persisted).toHaveLength(1);
+    expect(trace.closed).toEqual(["co-c"]);
+    expect(trace.events).toContainEqual(
+      expect.objectContaining({ kind: "company-scanned", companyId: "co-c", jobCount: 1 }),
+    );
+  });
+
+  it("closes nothing when a careers page scan fails, and records its code", async () => {
+    const { trace } = await run(
+      [company("co-c", "generic", null)],
+      {},
+      {
+        scanCareers: async () => ({
+          ok: false,
+          code: "no-parseable-jobs",
+          url: "https://generic.example.test/careers",
+        }),
+      },
+    );
+
+    expect(trace.persisted).toEqual([]);
+    expect(trace.closed).toEqual([]);
+    expect(trace.events).toContainEqual(
+      expect.objectContaining({
+        kind: "company-failed",
+        companyId: "co-c",
+        code: "no-parseable-jobs",
+      }),
     );
   });
 

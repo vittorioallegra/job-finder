@@ -13,6 +13,7 @@
     "./normalize": "./src/normalize/index.ts",
     "./profile": "./src/profile/schema.ts",
     "./ats": "./src/ats/index.ts",
+    "./careers": "./src/careers/index.ts",
     "./ingest": "./src/ingest/index.ts",
     "./ingest/events": "./src/ingest/events.ts",
     "./discovery": "./src/discovery/index.ts",
