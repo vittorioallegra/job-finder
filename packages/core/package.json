@@ -12,7 +12,9 @@
     "./net": "./src/net/index.ts",
     "./normalize": "./src/normalize/index.ts",
     "./profile": "./src/profile/schema.ts",
-    "./ats": "./src/ats/index.ts"
+    "./ats": "./src/ats/index.ts",
+    "./ingest": "./src/ingest/index.ts",
+    "./ingest/events": "./src/ingest/events.ts"
   },
   "scripts": {
     "typecheck": "node ../../node_modules/typescript7/bin/tsc --noEmit -p tsconfig.json"
