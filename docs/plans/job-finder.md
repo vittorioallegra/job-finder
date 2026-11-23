@@ -198,8 +198,9 @@ server, no Docker. Three processes:
   native notifications, hidden page loader, PDF rendering, apply window and autofill (CDP via
   `webContents.debugger`), IPC handlers.
 - **Engine** (`apps/desktop/src/engine`, Electron `utilityProcess`): discovery, ingestion,
-  AI calls, ranking, scheduler. Talks to main through a typed message port; asks main for
-  `renderPage` and DB writes. Keeps the UI responsive during long runs.
+  AI calls, ranking (the scheduler runs in main, see Decisions). Talks to main through a typed
+  message port; asks main for `renderPage` and DB writes. Keeps the UI responsive during long
+  runs.
 - **Renderer** (`apps/web`): React UI. Never goes online (CSP); reaches everything through
   `window.jobFinder` (preload) and repositories with in-memory fakes for tests.
 
@@ -266,7 +267,7 @@ bottleneck (decision deferred, not planned).
 
 ## Progress
 
-Phase: implementation
+Phase: verification
 Branch: main
 Base: 08b4fe9
 Spec: docs/specs/job-finder.md
@@ -293,7 +294,7 @@ Approved: yes (2026-11-23)
 - [x] 17. Autofill core and ATS adapters — `feat: open and autofill the application form from its detail screen`
 - [x] 18. Autofill AI fallback — `feat: fill unmapped form fields with the AI, marking drafts for review`
 - [x] 19. Scheduler, notifications, tray, updates — `feat: show engine and update notices and open new jobs from a notification`
-- [ ] 20. End-to-end and docs
+- [x] 20. End-to-end and docs — `docs: record step 20 decisions and tick the step`
 
 ### Verification
 - qa: pending
@@ -547,9 +548,22 @@ Approved: yes (2026-11-23)
 - Step 18 tests: the AI is a scripted double in service and adapter tests, and a scripted provider in core (`generate`-style fetch with replies in order). The desktop E2E runs with the AI off; no live model is called.
 - Step 18: not exercised: real models and their choice of keys, the quality and language of drafts, the highlight and the drafted-field outline on screen, the Settings link from the panel in the real app, the AI path inside the real Electron window (only the scripted window runs it), and E2E on Windows and Linux (run here on macOS only).
 
+- Step 20: the Architecture engine line said the engine runs the scheduler; step 19 moved it into main (`main/scheduler`), so the line now says the scheduler runs in main. Step 19's decision above records the reason.
+- Step 20 journey: the E2E drives the renderer bridge (`window.jobFinder`) step by step, not UI clicks. The screens are covered by the renderer unit tests; the journey covers the flow and the main-process results.
+- Step 20 AI replay: the engine calls the configured openai-compatible base URL, so the journey points it at its own loopback server, which answers `/v1/chat/completions` through `createReplayFetch` and `fixtureKey`. `packages/core/src/ai/fixtures/ai-openai-compatible.json` is hand-made (its `origin` field says so). The three entries are the connection test and the CV and cover-letter calls. Keys were computed from the request bodies the app sent in one scratch run; the answers were written by hand to pass `validateDocument`.
+- Step 20 fixtures: the search results page is the hand-written DuckDuckGo fixture from step 10; the board API JSON is written for the journey (one posting whose apply link points at the local form from step 17). Common Crawl's index answers 404 for the ATS domains (an empty sample, which the source accepts), and robots.txt answers 404 (allowed). Any other request fails the journey.
+- Step 20: the journey does not score jobs (`scores.start`), so no scoring AI call is replayed; the job list shows it unscored. Affinity scoring is covered by its own unit tests.
+- Step 20: the journey marks the application applied through `applications.update`, after the autofill window closes. The duplicate guard is checked with `check` and with `start` at confirmations 0 and 1; both are refused.
+- Step 20 README privacy list: built from a search of the code (the HTTP client, discovery sources, ATS endpoints, careers pages, the page loader and apply windows, the AI providers, the update check, and every `shell.openExternal`). The Chromium engine's own background traffic is named as not covered.
+- Step 20 canary: `packages/core/src/ats/canary.test.ts` reads the eight public demo boards from the recorded fixtures, only with `JOB_FINDER_LIVE_CANARY=1`. `.github/workflows/canary.yml` runs it on dispatch and weekly (Mondays), without secrets and not as a required check.
+- Step 20 smoke test: `docs/live-smoke-test.md` is a manual, fifteen-step pass with real services; it is not automated and not run in CI.
+- Step 20: `RELEASES_REPOSITORY` stays `null` as instructed; `docs/release.md` says it must be set before the first release.
+- Step 20: `CLAUDE.md` is 70 lines; it now names the journey's fixture server, the hand-made AI fixture and the canary command.
+- Step 20: not exercised: the E2E on Windows and Linux (macOS only); `pnpm test:e2e:packaged` (the packaged app); the live canary (not run; no live call was made in this step); the live smoke test; real model output quality; the scoring path in the E2E; the UI clicks of each screen in the journey.
+
 ### Open questions
 
 - Step 19: `RELEASES_REPOSITORY` in `packages/core/src/updates/release.ts` is null, because the repository has no git remote and no `owner/name` in its metadata. Set it to the GitHub repository (`owner/name`) before release; until then the update check makes no request.
 
 ### Next
-Step 20: End-to-end and docs (Electron E2E of the full journey against the fixture server and recorded AI: onboard, search, open job, prepare, autofill on a local fixture form, mark applied, duplicate guard; README with install, first launch, providers, Ollama setup and a privacy section listing every outbound connection, including the update check; a documented live smoke test; an optional scheduled CI canary; a final `CLAUDE.md` pass).
+Phase 4: run qa, then review, against docs/specs/job-finder.md (diff base 08b4fe9)
