@@ -26,13 +26,36 @@ export interface EngineSupervisorOptions {
   maxRestarts?: number;
 }
 
+/**
+ * `running` while an engine process exists, `restarting` between a crash and the next spawn,
+ * `failed` once the supervisor has given up restarting.
+ */
+export type EngineSupervisorState = "running" | "restarting" | "failed";
+
+/**
+ * Why a call could not reach the engine: it crashed while the call was in flight, the
+ * supervisor gave up restarting it, or the supervisor was stopped.
+ */
+export type EngineUnavailableReason = "crashed" | "gave_up" | "stopped";
+
+export class EngineUnavailableError extends Error {
+  readonly reason: EngineUnavailableReason;
+
+  constructor(reason: EngineUnavailableReason) {
+    super(`engine unavailable: ${reason}`);
+    this.name = "EngineUnavailableError";
+    this.reason = reason;
+  }
+}
+
 export interface EngineSupervisor {
   /** Resolves once the current engine answers a ping; waits through restarts. */
   ping(): Promise<void>;
+  readonly state: EngineSupervisorState;
   stop(): void;
 }
 
-interface PendingPing {
+interface Pending {
   resolve: () => void;
   reject: (error: Error) => void;
 }
@@ -40,22 +63,25 @@ interface PendingPing {
 interface Current {
   handle: EngineHandle;
   ready: boolean;
-  pendingPings: Map<number, PendingPing>;
+  pendingPings: Map<number, Pending>;
 }
 
 /**
  * Keeps one engine utility process alive. Serves its database requests, restarts it after a
- * crash with a logged reason, and reconciles runs it left `running`.
+ * crash with a logged reason, and reconciles runs it left `running`. Calls never hang: in-flight
+ * calls reject when the engine crashes, and calls made after the supervisor gave up or was
+ * stopped reject at once.
  */
 export function startEngineSupervisor(options: EngineSupervisorOptions): EngineSupervisor {
   const restartDelayMs = options.restartDelayMs ?? 1_000;
   const maxRestarts = options.maxRestarts ?? 5;
   let current: Current | null = null;
   let consecutiveCrashes = 0;
+  let phase: EngineSupervisorState = "running";
   let stopped = false;
   let restartTimer: ReturnType<typeof setTimeout> | undefined;
   let nextPingId = 1;
-  let readyWaiters: Array<() => void> = [];
+  let readyWaiters: Pending[] = [];
 
   function spawn(): void {
     if (stopped) {
@@ -64,6 +90,7 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
     const handle = options.launch();
     const state: Current = { handle, ready: false, pendingPings: new Map() };
     current = state;
+    phase = "running";
     handle.port.on("message", (data) => onMessage(state, data as EngineToMainMessage));
     handle.port.start();
     handle.onExit((code) => onExit(state, code));
@@ -73,7 +100,7 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       options.log("info", "engine ready");
       const waiters = readyWaiters;
       readyWaiters = [];
-      waiters.forEach((resolve) => resolve());
+      waiters.forEach((waiter) => waiter.resolve());
     });
   }
 
@@ -86,6 +113,19 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
     nextPingId += 1;
     state.pendingPings.set(id, { resolve, reject });
     state.handle.port.postMessage({ type: "ping", id });
+  }
+
+  function rejectPending(state: Current, reason: EngineUnavailableReason): void {
+    for (const pending of state.pendingPings.values()) {
+      pending.reject(new EngineUnavailableError(reason));
+    }
+    state.pendingPings.clear();
+  }
+
+  function rejectReadyWaiters(reason: EngineUnavailableReason): void {
+    const waiters = readyWaiters;
+    readyWaiters = [];
+    waiters.forEach((waiter) => waiter.reject(new EngineUnavailableError(reason)));
   }
 
   function onMessage(state: Current, message: EngineToMainMessage): void {
@@ -113,18 +153,21 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
     }
     current = null;
     state.handle.port.close();
-    for (const pending of state.pendingPings.values()) {
-      pending.reject(new Error(`engine exited with code ${code}`));
-    }
-    state.pendingPings.clear();
+    rejectPending(state, "crashed");
     if (stopped) {
       return;
     }
     consecutiveCrashes += 1;
+    phase = "restarting";
     void options.database.reconcileInterruptedRuns().then((count) => {
       options.log("error", `engine exited with code ${code}; ${count} run(s) marked interrupted`);
+      if (stopped) {
+        return;
+      }
       if (consecutiveCrashes > maxRestarts) {
+        phase = "failed";
         options.log("error", `engine crashed ${consecutiveCrashes} times in a row; not restarting`);
+        rejectReadyWaiters("gave_up");
         return;
       }
       const delay = restartDelayMs * 2 ** (consecutiveCrashes - 1);
@@ -137,19 +180,34 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
 
   return {
     async ping() {
-      while (!current?.ready) {
-        await new Promise<void>((resolve) => readyWaiters.push(resolve));
+      let target = current;
+      while (!target?.ready) {
+        if (stopped) {
+          throw new EngineUnavailableError("stopped");
+        }
+        if (phase === "failed") {
+          throw new EngineUnavailableError("gave_up");
+        }
+        await new Promise<void>((resolve, reject) => readyWaiters.push({ resolve, reject }));
+        target = current;
       }
-      const state = current;
-      await new Promise<void>((resolve, reject) => sendPing(state, resolve, reject));
+      const ready = target;
+      await new Promise<void>((resolve, reject) => sendPing(ready, resolve, reject));
+    },
+    get state() {
+      return phase;
     },
     stop() {
       stopped = true;
       clearTimeout(restartTimer);
-      const state = current;
+      rejectReadyWaiters("stopped");
+      const stoppedEngine = current;
       current = null;
-      state?.handle.stop();
-      state?.handle.port.close();
+      if (stoppedEngine) {
+        rejectPending(stoppedEngine, "stopped");
+        stoppedEngine.handle.stop();
+        stoppedEngine.handle.port.close();
+      }
     },
   };
 }

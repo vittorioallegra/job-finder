@@ -1,5 +1,5 @@
-// protects=the engine answers pings and database batches served by main, and after a crash the supervisor logs the exit, marks runs left running as interrupted and serves the restarted engine;
-// fails_when=a ping or a batch returns the wrong results, a run stays running after its engine crashed, the exit reason is not logged, or no restart happens;
+// protects=the engine answers pings and database batches served by main, and after a crash the supervisor logs the exit, marks runs left running as interrupted and serves the restarted engine; calls in flight at a crash, or made after the supervisor gave up or stopped, reject with EngineUnavailableError instead of hanging;
+// fails_when=a ping or a batch returns the wrong results, a run stays running after its engine crashed, the exit reason is not logged, no restart happens, or a call hangs instead of rejecting;
 // no_claim=utility-process spawning, the real MessageChannelMain wiring and the bundled engine entry are covered by the desktop E2E smoke, not here.
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -11,7 +11,12 @@ import { openAppDatabase, type AppDatabase } from "../db/database";
 import { executeDbCalls, reconcileInterruptedRuns } from "../db/operations";
 import type { PortLike } from "../../engine/port";
 import { createEngineRuntime, type EngineRuntime } from "../../engine/runtime";
-import { startEngineSupervisor, type EngineHandle, type EngineSupervisor } from "./supervisor";
+import {
+  EngineUnavailableError,
+  startEngineSupervisor,
+  type EngineHandle,
+  type EngineSupervisor,
+} from "./supervisor";
 
 function toPortLike(port: MessagePort): PortLike {
   return {
@@ -32,6 +37,8 @@ interface Harness {
   launches: EngineLaunch[];
   logs: string[];
   database: AppDatabase;
+  /** When true, each new engine dies before it can answer a ping. */
+  control: { deadOnArrival: boolean };
 }
 
 const repoMigrations = resolve(__dirname, "../../../drizzle");
@@ -46,6 +53,7 @@ async function startHarness(): Promise<Harness> {
   });
   const launches: EngineLaunch[] = [];
   const logs: string[] = [];
+  const control = { deadOnArrival: false };
   const launch = (): EngineHandle => {
     const { port1, port2 } = new MessageChannel();
     const runtime = createEngineRuntime(toPortLike(port2));
@@ -57,6 +65,11 @@ async function startHarness(): Promise<Harness> {
         exit.emit("exit", 1);
       },
     });
+    if (control.deadOnArrival) {
+      // Closing before any message is read means the ping is never answered.
+      runtime.close();
+      setImmediate(() => exit.emit("exit", 1));
+    }
     return {
       port: toPortLike(port1),
       onExit: (listener) => {
@@ -77,9 +90,27 @@ async function startHarness(): Promise<Harness> {
     restartDelayMs: 1,
     maxRestarts: 3,
   });
-  const harness = { supervisor, launches, logs, database };
+  const harness = { supervisor, launches, logs, database, control };
   harnesses.push(harness);
   return harness;
+}
+
+async function waitFor(check: () => boolean, timeoutMs = 2_000): Promise<void> {
+  const started = Date.now();
+  while (!check()) {
+    if (Date.now() - started > timeoutMs) {
+      throw new Error("condition not met in time");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1));
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`still pending after ${ms} ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 afterEach(() => {
@@ -128,5 +159,63 @@ describe("engine supervisor", () => {
         }),
       ],
     });
+  });
+
+  it("rejects a ping in flight when the engine crashes", async () => {
+    const { supervisor, launches } = await startHarness();
+    await supervisor.ping();
+
+    const inFlight = expect(supervisor.ping()).rejects.toBeInstanceOf(EngineUnavailableError);
+    launches[0]?.crash();
+    await inFlight;
+    await expect(supervisor.ping()).resolves.toBeUndefined();
+  });
+
+  it("rejects calls at once after giving up, and logs the give-up once", async () => {
+    const { supervisor, launches, logs, control } = await startHarness();
+    await supervisor.ping();
+
+    control.deadOnArrival = true;
+    launches[0]?.crash();
+    const queued = expect(supervisor.ping()).rejects.toMatchObject({ reason: "gave_up" });
+    await waitFor(() => supervisor.state === "failed");
+    await queued;
+
+    expect(launches).toHaveLength(4);
+    await expect(withTimeout(supervisor.ping(), 200)).rejects.toMatchObject({
+      name: "EngineUnavailableError",
+      reason: "gave_up",
+    });
+    expect(logs.filter((line) => line.startsWith("error: engine crashed"))).toEqual([
+      "error: engine crashed 4 times in a row; not restarting",
+    ]);
+  });
+
+  it("moves through running, restarting and running again, then failed after giving up", async () => {
+    const { supervisor, launches, control } = await startHarness();
+    expect(supervisor.state).toBe("running");
+    await supervisor.ping();
+    expect(supervisor.state).toBe("running");
+
+    launches[0]?.crash();
+    expect(supervisor.state).toBe("restarting");
+    await supervisor.ping();
+    expect(supervisor.state).toBe("running");
+
+    control.deadOnArrival = true;
+    launches[1]?.crash();
+    await waitFor(() => supervisor.state === "failed");
+    expect(launches).toHaveLength(5);
+  });
+
+  it("rejects calls waiting for a restart when the supervisor is stopped", async () => {
+    const { supervisor, launches } = await startHarness();
+    await supervisor.ping();
+
+    launches[0]?.crash();
+    const waiting = expect(supervisor.ping()).rejects.toMatchObject({ reason: "stopped" });
+    supervisor.stop();
+    await waiting;
+    await expect(withTimeout(supervisor.ping(), 200)).rejects.toMatchObject({ reason: "stopped" });
   });
 });
