@@ -317,6 +317,7 @@ Approved: yes (2026-11-23)
 - Update check against GitHub Releases: on by default, toggle in settings, listed in the README privacy section; spec constraints updated.
 - Duplicate guard: same job/fingerprint warns and needs two explicit confirmations to proceed; same company within 90 days warns with one confirmation; spec AC8 reworded.
 - Linux without keyring (`basic_text`): warn; store API keys only after explicit opt-in, otherwise session-only.
+- i18next pinned to 27.1.0 instead of 27.2.5 (published 2026-11-23) to respect pnpm's minimum release age; no release-age exclusions.
 
 ### Open questions
 

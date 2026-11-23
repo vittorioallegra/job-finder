@@ -11,7 +11,7 @@
     "typecheck": "node ../../node_modules/typescript7/bin/tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "i18next": "27.2.5",
+    "i18next": "27.1.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-i18next": "18.0.3",
