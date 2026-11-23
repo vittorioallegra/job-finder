@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// protects=the page scripts find the visible controls of each fixture form (honeypots and hidden text fields skipped, file controls kept), fill only the planned controls with native setters and input and change events, keep a value the user already typed, outline what is left, and never click, press a key or submit the form;
+// protects=the page scripts find the visible controls of each fixture form (honeypots and hidden text fields skipped, file controls kept), fill only the planned controls with native setters and input and change events, keep a value the user already typed, outline what is left and mark what the AI drafted apart from it, and never click, press a key or submit the form;
 // fails_when=a honeypot or a value already typed is filled, a control the plan leaves for the user is filled, a hidden upload control is dropped, a fill throws or misses a planned control, the form is submitted or a button clicked, or a script contains a click, a key press or a submit call;
 // no_claim=the fixtures are hand-written pages modeled on the public markup of Greenhouse, Lever and Ashby, not recorded from those services; jsdom has no layout, so geometry checks are covered by the Electron end-to-end test, not here;
 import { readFileSync } from "node:fs";
@@ -200,5 +200,24 @@ describe("page scripts never submit", () => {
     expect(sources).not.toMatch(
       /\.click\s*\(|\.submit\s*\(|requestSubmit|keydown|keypress|keyup|KeyboardEvent|MouseEvent|"Enter"/i,
     );
+  });
+});
+
+describe("page highlight of AI drafts", () => {
+  it("marks a drafted control apart from the controls left for the user", () => {
+    loadFixture("generic.html");
+    const fields = (0, eval)(discoverExpression("f0")) as FormField[];
+    const draft = fields.find((field) => field.name === "applicant_other");
+    const left = fields.find((field) => field.name === "applicant_auth");
+
+    const count = (0, eval)(
+      highlightExpression(left ? [left.id] : [], draft ? [draft.id] : []),
+    ) as number;
+
+    expect(count).toBe(1);
+    expect(document.querySelector("#g-other")?.hasAttribute("data-jf-drafted")).toBe(true);
+    expect(document.querySelector("#g-other")?.hasAttribute("data-jf-unfilled")).toBe(false);
+    expect(document.querySelector("#g-auth")?.hasAttribute("data-jf-unfilled")).toBe(true);
+    expect(document.querySelector("#g-auth")?.hasAttribute("data-jf-drafted")).toBe(false);
   });
 });

@@ -690,7 +690,9 @@
         "no-option": "nessuna scelta corrispondente",
         "not-exported": "il PDF non è ancora esportato",
         "unsupported": "la compilazione automatica non gestisce questo tipo di controllo",
-        "rejected": "il modulo non ha accettato il valore"
+        "rejected": "il modulo non ha accettato il valore",
+        "ai-no-answer": "l'AI non ha trovato una risposta nel profilo, quindi resta vuoto",
+        "ai-unverified": "la bozza dell'AI usava un numero che il profilo non ha, quindi resta vuoto"
       },
       "reviewNote": "Non viene inviato nulla. Invia il modulo dalla sua finestra quando è corretto.",
       "submitted": "Ho inviato la candidatura",
@@ -707,7 +709,29 @@
         "load-failed": "Il modulo della candidatura non si è caricato.",
         "debugger-failed": "Non è stato possibile controllare la finestra del modulo.",
         "autofill-failed": "La compilazione si è interrotta prima della fine.",
-        "unknown": "La compilazione si è interrotta prima della fine."
+        "unknown": "La compilazione si è interrotta prima della fine.",
+        "consent-required": "Prima acconsenti a inviare al fornitore i campi del modulo e il profilo."
+      },
+      "ai": {
+        "notConfigured": "AI non disponibile: nessun fornitore AI è impostato nelle Impostazioni. L'autocompilazione riempie comunque ciò che il profilo copre con le regole.",
+        "openSettings": "Apri Impostazioni",
+        "useAi": "Chiedi all'AI di compilare i campi che le regole lasciano",
+        "useAiHint": "L'AI associa solo i campi al profilo o scrive bozze per le risposte libere. Le bozze sono segnalate da controllare.",
+        "consentNote": "I campi del modulo e il tuo profilo vengono inviati a {{provider}}. Non si invia nulla finché non premi Apri modulo e compila.",
+        "consent": "Acconsento a inviare i campi del modulo e il mio profilo a {{provider}}.",
+        "used": "L'AI ha risposto. I suoi valori sono nel modulo; non si invia nulla.",
+        "drafted": "L'AI ha scritto queste risposte come bozza. Controllale prima di inviare: {{list}}.",
+        "unavailable": "AI non disponibile: {{reason}}. I campi che il profilo copre con le regole restano compilati.",
+        "reasons": {
+          "not-configured": "nessun fornitore AI è impostato nelle Impostazioni",
+          "invalid-key": "il fornitore ha rifiutato la chiave API",
+          "model-not-found": "il fornitore non conosce il modello impostato",
+          "rate-limited": "il fornitore sta limitando le richieste; riprova più tardi",
+          "unreachable": "il fornitore non è raggiungibile",
+          "invalid-output": "l'AI non ha restituito una risposta utilizzabile dal modulo",
+          "engine-unavailable": "il motore in background non è disponibile",
+          "unknown": "la chiamata all'AI non è riuscita"
+        }
       }
     }
   }

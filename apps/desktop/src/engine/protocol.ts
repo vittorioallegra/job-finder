@@ -14,6 +14,9 @@ import type { ScoringFields, Profile } from "@job-finder/core/profile";
 import type { DocumentJob } from "@job-finder/core/documents/prompt";
 import type { DocumentKind } from "@job-finder/core/documents/schema";
 import type { GenerateDocumentOutcome } from "@job-finder/core/documents/generate";
+import type { FormField } from "@job-finder/core/ats/autofill";
+import type { AutofillMapOutcome } from "@job-finder/core/ats/autofill/ai";
+import type { DocumentLanguage } from "@job-finder/core/documents/language";
 
 /**
  * Database operations the engine may request. Main owns the database and executes these in
@@ -85,6 +88,18 @@ export interface GenerateDocumentRequest {
 }
 
 /**
+ * One request to map the fields the rules left, with the AI. The engine gets the fields the rules
+ * could not map, the profile and the AI provider with its key; nothing is stored.
+ */
+export interface MapFormFieldsRequest {
+  fields: FormField[];
+  profile: Profile;
+  /** The language of the drafts: the posting's, or the UI's when the posting's is not supported. */
+  language: DocumentLanguage;
+  ai: IngestAiSettings;
+}
+
+/**
  * Messages sent by main to the engine over the message port. `ai-test` carries the API key from
  * main to the engine: the only path a secret value takes out of main, and it never reaches the
  * renderer.
@@ -104,6 +119,8 @@ export type MainToEngineMessage =
   | { type: "score-jobs"; id: number; request: ScoreJobsRequest }
   /** A tailored CV or cover letter with the AI; the answer is `generate-document-result`. */
   | { type: "generate-document"; id: number; request: GenerateDocumentRequest }
+  /** Maps the fields the rules left with the AI; the answer is `map-form-fields-result`. */
+  | { type: "map-form-fields"; id: number; request: MapFormFieldsRequest }
   /**
    * Web search for ATS boards. The engine makes the requests; main relays the criteria, the enabled
    * sources and, for keyed providers, their keys (the only path a search key takes out of main).
@@ -127,5 +144,6 @@ export type EngineToMainMessage =
   | { type: "discover-companies-result"; id: number; outcome: DiscoveryOutcome }
   | { type: "score-jobs-result"; id: number; outcome: ScoreJobsOutcome }
   | { type: "generate-document-result"; id: number; outcome: GenerateDocumentOutcome }
+  | { type: "map-form-fields-result"; id: number; outcome: AutofillMapOutcome }
   /** A run's progress and log entries. The final `run-finished` is sent after the run row is closed. */
   | { type: "ingest-progress"; event: IngestEvent };

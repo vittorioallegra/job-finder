@@ -1,5 +1,5 @@
-// protects=the form panel opens the form only for an application being prepared, shows what was filled and what the user must still fill, names each failure, and moves the application to applied only when the user confirms the submission;
-// fails_when=the form opens for an applied or bookmarked application, a refused start is reported as opened, the left-over fields are hidden, a failure shows no message, or "I submitted it" changes the status without the user pressing it or before the application is ready;
+// protects=the form panel opens the form only for an application being prepared, shows what was filled and what the user must still fill, names each failure, asks for consent before a cloud AI fallback runs, shows the AI unavailable state when no provider is set up, marks AI drafts for review, and moves the application to applied only when the user confirms the submission;
+// fails_when=the form opens for an applied or bookmarked application, a refused start is reported as opened, the left-over fields are hidden, a failure shows no message, the AI fallback starts for a cloud provider without consent, no AI-unavailable message appears when the AI cannot answer, a draft is not marked for review, or "I submitted it" changes the status without the user pressing it or before the application is ready;
 // no_claim=the form window, the page scripts and the real status machine are not run here; the desktop tests and the Electron end-to-end test cover them;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -12,6 +12,7 @@ import type {
 import { BridgeProvider } from "../../lib/bridge/BridgeContext";
 import { createMemoryBridge } from "../../lib/bridge/memory";
 import { i18n } from "../../lib/i18n";
+import { MemoryRouter } from "react-router";
 import { ApplicationForm } from "./ApplicationForm";
 
 function application(overrides: Partial<ApplicationDetailRecord> = {}): ApplicationDetailRecord {
@@ -40,18 +41,41 @@ function button(container: HTMLElement, text: string): HTMLButtonElement {
 }
 
 function bridgeWith(
-  start: () => Promise<AutofillStartResult>,
+  start: (request: { applicationId: string }) => Promise<AutofillStartResult>,
   update = vi.fn(async () => ({
     ok: true as const,
     application: application({ status: "applied" }),
   })),
+  ai: { provider: "anthropic" | "openai" | "openai-compatible"; model: string; baseUrl: string } = {
+    provider: "openai-compatible",
+    model: "local-model",
+    baseUrl: "http://localhost:11434/v1",
+  },
 ): JobFinderBridge {
   const base = createMemoryBridge({});
+  const settings = base.settings;
   return {
     ...base,
+    settings: {
+      ...settings,
+      get: async () => {
+        const current = await settings.get();
+        return { ...current, ai: { ...current.ai, ...ai } };
+      },
+    },
     autofill: { start: vi.fn(start) },
     applications: { ...base.applications, update },
   };
+}
+
+/** The checkbox whose label contains the text. */
+function checkbox(container: HTMLElement, text: string): HTMLInputElement {
+  const label = [...container.querySelectorAll("label")].find((node) =>
+    node.textContent?.includes(text),
+  );
+  const input = label?.querySelector("input");
+  if (!input) throw new Error(`no checkbox ${text}`);
+  return input;
 }
 
 describe("application form panel", () => {
@@ -73,9 +97,11 @@ describe("application form panel", () => {
   async function render(bridge: JobFinderBridge, record = application(), onChanged = vi.fn()) {
     await act(async () => {
       root.render(
-        <BridgeProvider bridge={bridge}>
-          <ApplicationForm application={record} onChanged={onChanged} />
-        </BridgeProvider>,
+        <MemoryRouter>
+          <BridgeProvider bridge={bridge}>
+            <ApplicationForm application={record} onChanged={onChanged} />
+          </BridgeProvider>
+        </MemoryRouter>,
       );
     });
   }
@@ -84,6 +110,8 @@ describe("application form panel", () => {
     const bridge = bridgeWith(async () => ({
       ok: true,
       provider: "greenhouse",
+      drafted: [],
+      ai: { state: "off" },
       filled: ["First Name", "Email"],
       unfilled: [{ label: "Describe a project", reason: "unmapped" }],
     }));
@@ -91,7 +119,11 @@ describe("application form panel", () => {
 
     await act(async () => button(container, "Open form and autofill").click());
 
-    expect(bridge.autofill.start).toHaveBeenCalledWith({ applicationId: "a1" });
+    expect(bridge.autofill.start).toHaveBeenCalledWith({
+      applicationId: "a1",
+      aiFallback: false,
+      consent: false,
+    });
     expect(container.textContent).toContain("Recognised as: Greenhouse.");
     expect(container.textContent).toContain("Filled: First Name, Email.");
     expect(container.textContent).toContain("Describe a project: no profile field matches it");
@@ -115,7 +147,14 @@ describe("application form panel", () => {
     }));
     const onChanged = vi.fn();
     const bridge = bridgeWith(
-      async () => ({ ok: true, provider: "generic", filled: [], unfilled: [] }),
+      async () => ({
+        ok: true,
+        provider: "generic",
+        filled: [],
+        drafted: [],
+        ai: { state: "off" },
+        unfilled: [],
+      }),
       update,
     );
     await render(bridge, application(), onChanged);
@@ -132,7 +171,14 @@ describe("application form panel", () => {
 
   it("does not offer to open the form for an application that is not being prepared", async () => {
     await render(
-      bridgeWith(async () => ({ ok: true, provider: "generic", filled: [], unfilled: [] })),
+      bridgeWith(async () => ({
+        ok: true,
+        provider: "generic",
+        filled: [],
+        drafted: [],
+        ai: { state: "off" },
+        unfilled: [],
+      })),
       application({ status: "applied" }),
     );
 
@@ -146,6 +192,8 @@ describe("application form panel", () => {
     const bridge = bridgeWith(async () => ({
       ok: true,
       provider: "lever",
+      drafted: [],
+      ai: { state: "off" },
       filled: ["Email"],
       unfilled: [],
     }));
@@ -157,5 +205,79 @@ describe("application form panel", () => {
     expect(container.textContent).toContain(
       "Mark the application ready before you confirm a submission.",
     );
+  });
+
+  it("shows the AI unavailable state with a settings link when no provider is set up", async () => {
+    const start = vi.fn(async () => ({
+      ok: true as const,
+      provider: "generic" as const,
+      filled: [],
+      drafted: [],
+      ai: { state: "off" as const },
+      unfilled: [],
+    }));
+    await render(
+      bridgeWith(start, undefined, { provider: "openai-compatible", model: "", baseUrl: "" }),
+    );
+
+    expect(container.textContent).toContain(
+      "AI unavailable: no AI provider is set up in Settings.",
+    );
+    expect(container.querySelector('a[href="/settings"]')).not.toBeNull();
+    expect(container.querySelectorAll("input[type='checkbox']")).toHaveLength(0);
+    expect(button(container, "Open form and autofill").disabled).toBe(false);
+  });
+
+  it("needs consent before a cloud AI fallback is sent, and sends it with consent", async () => {
+    const start = vi.fn(async () => ({
+      ok: true as const,
+      provider: "generic" as const,
+      filled: [],
+      drafted: [],
+      ai: { state: "off" as const },
+      unfilled: [],
+    }));
+    await render(
+      bridgeWith(start, undefined, { provider: "anthropic", model: "claude-test", baseUrl: "" }),
+    );
+
+    await act(async () => checkbox(container, "Ask the AI to fill").click());
+    expect(button(container, "Open form and autofill").disabled).toBe(true);
+
+    await act(async () => checkbox(container, "I agree to send the form's fields").click());
+    expect(button(container, "Open form and autofill").disabled).toBe(false);
+
+    await act(async () => button(container, "Open form and autofill").click());
+    expect(start).toHaveBeenCalledWith({ applicationId: "a1", aiFallback: true, consent: true });
+  });
+
+  it("marks the AI drafts for review and names an AI failure with its reason", async () => {
+    await render(
+      bridgeWith(async () => ({
+        ok: true,
+        provider: "generic",
+        filled: ["Anything else we should know?"],
+        drafted: ["Anything else we should know?"],
+        ai: { state: "used" },
+        unfilled: [],
+      })),
+    );
+    await act(async () => button(container, "Open form and autofill").click());
+    expect(container.textContent).toContain(
+      "The AI drafted these answers. Check them before you submit: Anything else we should know?.",
+    );
+
+    await render(
+      bridgeWith(async () => ({
+        ok: true,
+        provider: "generic",
+        filled: [],
+        drafted: [],
+        ai: { state: "unavailable", code: "invalid-key" },
+        unfilled: [],
+      })),
+    );
+    await act(async () => button(container, "Open form and autofill").click());
+    expect(container.textContent).toContain("AI unavailable: the provider rejected the API key.");
   });
 });

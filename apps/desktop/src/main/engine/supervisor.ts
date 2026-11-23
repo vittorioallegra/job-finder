@@ -1,6 +1,7 @@
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
 import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
 import type { GenerateDocumentOutcome } from "@job-finder/core/documents/generate";
+import type { AutofillMapOutcome } from "@job-finder/core/ats/autofill/ai";
 import type {
   DiscoveryCriteria,
   DiscoveryOutcome,
@@ -13,6 +14,7 @@ import type {
   DbResult,
   EngineToMainMessage,
   GenerateDocumentRequest,
+  MapFormFieldsRequest,
   IngestAiSettings,
   IngestStartCode,
   ScoreJobsOutcome,
@@ -119,6 +121,8 @@ export interface EngineSupervisor {
   scoreJobs(request: ScoreJobsRequest): Promise<ScoreJobsOutcome>;
   /** Generates a tailored CV or cover letter with the AI in the engine. */
   generateDocument(request: GenerateDocumentRequest): Promise<GenerateDocumentOutcome>;
+  /** Maps the fields the rules left with the AI. Rejects with `EngineUnavailableError` when the engine is gone. */
+  mapFormFields(request: MapFormFieldsRequest): Promise<AutofillMapOutcome>;
   /** Asks the engine to stop a run. Ignored when no engine is running. */
   cancelIngestion(runId: string): void;
   readonly state: EngineSupervisorState;
@@ -160,6 +164,11 @@ interface PendingDocument {
   reject: (error: Error) => void;
 }
 
+interface PendingFormMap {
+  resolve: (outcome: AutofillMapOutcome) => void;
+  reject: (error: Error) => void;
+}
+
 interface Current {
   handle: EngineHandle;
   ready: boolean;
@@ -170,6 +179,7 @@ interface Current {
   pendingDiscoveries: Map<number, PendingDiscovery>;
   pendingScorings: Map<number, PendingScoring>;
   pendingDocuments: Map<number, PendingDocument>;
+  pendingFormMaps: Map<number, PendingFormMap>;
 }
 
 /**
@@ -204,6 +214,7 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pendingDiscoveries: new Map(),
       pendingScorings: new Map(),
       pendingDocuments: new Map(),
+      pendingFormMaps: new Map(),
     };
     current = state;
     phase = "running";
@@ -256,6 +267,10 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pending.reject(new EngineUnavailableError(reason));
     }
     state.pendingDocuments.clear();
+    for (const pending of state.pendingFormMaps.values()) {
+      pending.reject(new EngineUnavailableError(reason));
+    }
+    state.pendingFormMaps.clear();
     for (const pending of state.pendingScorings.values()) {
       pending.reject(new EngineUnavailableError(reason));
     }
@@ -307,6 +322,12 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
     if (message.type === "generate-document-result") {
       const pending = state.pendingDocuments.get(message.id);
       state.pendingDocuments.delete(message.id);
+      pending?.resolve(message.outcome);
+      return;
+    }
+    if (message.type === "map-form-fields-result") {
+      const pending = state.pendingFormMaps.get(message.id);
+      state.pendingFormMaps.delete(message.id);
       pending?.resolve(message.outcome);
       return;
     }
@@ -450,6 +471,15 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       return new Promise<GenerateDocumentOutcome>((resolve, reject) => {
         ready.pendingDocuments.set(id, { resolve, reject });
         ready.handle.port.postMessage({ type: "generate-document", id, request });
+      });
+    },
+    async mapFormFields(request) {
+      const ready = current?.ready ? current : await waitUntilReady();
+      const id = nextRequestId;
+      nextRequestId += 1;
+      return new Promise<AutofillMapOutcome>((resolve, reject) => {
+        ready.pendingFormMaps.set(id, { resolve, reject });
+        ready.handle.port.postMessage({ type: "map-form-fields", id, request });
       });
     },
     cancelIngestion(runId) {

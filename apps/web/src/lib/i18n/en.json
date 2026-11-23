@@ -690,7 +690,9 @@
         "no-option": "no matching choice",
         "not-exported": "the PDF is not exported yet",
         "unsupported": "autofill does not fill this kind of control",
-        "rejected": "the form did not accept the value"
+        "rejected": "the form did not accept the value",
+        "ai-no-answer": "the AI found no answer in your profile, so it is left empty",
+        "ai-unverified": "the AI's draft used a number your profile does not have, so it is left empty"
       },
       "reviewNote": "Nothing is submitted. Submit the form in its window when it is right.",
       "submitted": "I submitted it",
@@ -707,7 +709,29 @@
         "load-failed": "The application form did not load.",
         "debugger-failed": "The form window could not be controlled.",
         "autofill-failed": "Autofill stopped before it finished.",
-        "unknown": "Autofill stopped before it finished."
+        "unknown": "Autofill stopped before it finished.",
+        "consent-required": "Agree to send the form's fields and your profile to the provider first."
+      },
+      "ai": {
+        "notConfigured": "AI unavailable: no AI provider is set up in Settings. Autofill still fills what your profile covers by its rules.",
+        "openSettings": "Open Settings",
+        "useAi": "Ask the AI to fill the fields the rules leave",
+        "useAiHint": "The AI only maps fields to your profile or drafts free-text answers. Drafts are marked for you to check.",
+        "consentNote": "The form's fields and your profile are sent to {{provider}}. Nothing is sent until you press Open form and autofill.",
+        "consent": "I agree to send the form's fields and my profile to {{provider}}.",
+        "used": "The AI answered. Its fills are in the form; nothing is submitted.",
+        "drafted": "The AI drafted these answers. Check them before you submit: {{list}}.",
+        "unavailable": "AI unavailable: {{reason}}. The fields your profile covers by its rules are still filled.",
+        "reasons": {
+          "not-configured": "no AI provider is set up in Settings",
+          "invalid-key": "the provider rejected the API key",
+          "model-not-found": "the provider does not know the configured model",
+          "rate-limited": "the provider is rate limiting requests; try again later",
+          "unreachable": "the provider could not be reached",
+          "invalid-output": "the AI did not return an answer the form can use",
+          "engine-unavailable": "the background engine is not available",
+          "unknown": "the AI call failed"
+        }
       }
     }
   }

@@ -1,15 +1,17 @@
 // @vitest-environment jsdom
-// protects=the autofill service opens an application's form only while it is being prepared, fills the Greenhouse, Lever and Ashby fixtures and uploads only the PDFs that exist, reports what it left for the user, keeps the window open, closes the previous window when a new run starts, and never clicks, presses a key or submits;
-// fails_when=a form opens for a job that is not being prepared or has no web apply link, a CV is uploaded without its PDF, a value is typed over, a field left for the user is reported as filled, the window stays open after a failed load, two form windows stay open, or a submit, click, key press or Input command reaches the page;
-// no_claim=the window is a scripted double over jsdom and the fixture pages are hand-written, not recorded from the ATS services; the real Chromium window, its debugger and the file dialog are exercised by the Electron end-to-end test only;
+// protects=the autofill service opens a form only while its application is being prepared, fills the ATS and generic fixtures, uploads only existing PDFs, reports what is left, sends only unmapped fields to the AI after consent, types only accepted AI answers, and never clicks, presses a key or submits;
+// fails_when=a form opens for a job that is not being prepared or has no web apply link, a CV is uploaded without its PDF, a value is typed over, a field left for the user is reported as filled, the window stays open after a failed load, two form windows stay open, a cloud AI runs without consent or before the window opens, a field the rules mapped reaches the AI, an invented number is typed, an AI draft is not marked, or a submit, click, key press or Input command reaches the page;
+// no_claim=the window is a scripted double over jsdom, the AI is a scripted double, and the fixture pages are hand-written, not recorded from the ATS services or a live model; the real Chromium window, its debugger and the file dialog are exercised by the Electron end-to-end test only;
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ApplicationDetail } from "@job-finder/bridge";
 import type { DocumentKind } from "@job-finder/core/documents/schema";
+import type { FormField } from "@job-finder/core/ats/autofill";
 import { emptyProfile, type Profile } from "@job-finder/core/profile";
 import type { DebuggerLike } from "./cdp";
 import { createAutofillService, type ApplyWindow } from "./service";
+import type { AiFill, AiFillOutcome, AiFillStatus } from "./ai-fill";
 
 const FIXTURES = join(__dirname, "fixtures");
 
@@ -148,6 +150,7 @@ function serviceWith(
     saved?: { profile: Profile } | null;
     exists?: Record<DocumentKind, boolean>;
     loadTimeoutMs?: number;
+    ai?: AiFill;
   } = {},
 ) {
   const opened: ReturnType<typeof scriptedWindow>[] = [];
@@ -167,6 +170,7 @@ function serviceWith(
       return next.win;
     },
     loadTimeoutMs: overrides.loadTimeoutMs,
+    ai: overrides.ai,
   });
   return { service, opened };
 }
@@ -314,5 +318,178 @@ describe("autofill service refusals", () => {
 
     expect(first.win.closed).toHaveBeenCalledTimes(1);
     expect(second.win.closed).not.toHaveBeenCalled();
+  });
+});
+
+/** A scripted AI double: it records what it was asked and answers with the given outcome. */
+function scriptedAi(
+  answer: (fields: FormField[]) => AiFillOutcome,
+  status: AiFillStatus = { state: "ready", cloud: false },
+) {
+  const asked: FormField[][] = [];
+  const ai: AiFill = {
+    status: async () => status,
+    map: async ({ fields }) => {
+      asked.push(fields);
+      return answer(fields);
+    },
+  };
+  return { ai, asked };
+}
+
+/** The generic fixture's free-text question, drafted the way a model might; the rest is left empty. */
+function genericAnswers(fields: FormField[]): AiFillOutcome {
+  return {
+    ok: true,
+    answers: fields.map((field) => {
+      if (field.label === "Anything else we should know?") {
+        return { id: field.id, draft: "I like the product." };
+      }
+      return { id: field.id };
+    }),
+  };
+}
+
+describe("autofill service with the AI fallback", () => {
+  it("is off unless asked for, and then sends only the fields the rules could not map", async () => {
+    const plain = scriptedWindow("generic.html");
+    const off = scriptedAi(genericAnswers);
+    const { service } = serviceWith([plain], {
+      application: detail({ applyUrl: "https://careers.acme.test/apply/7" }),
+      ai: off.ai,
+    });
+
+    const result = await service.start({ applicationId: "a1" });
+
+    expect(result).toMatchObject({ ok: true, ai: { state: "off" }, drafted: [] });
+    expect(off.asked).toHaveLength(0);
+  });
+
+  it("fills the AI's draft, marks it as drafted, and leaves what the AI cannot answer", async () => {
+    const window = scriptedWindow("generic.html");
+    const ai = scriptedAi(genericAnswers);
+    const { service } = serviceWith([window], {
+      application: detail({ applyUrl: "https://careers.acme.test/apply/7" }),
+      ai: ai.ai,
+    });
+
+    const result = await service.start({ applicationId: "a1", aiFallback: true });
+
+    expect(result).toMatchObject({
+      ok: true,
+      ai: { state: "used" },
+      drafted: ["Anything else we should know?"],
+    });
+    if (!result.ok) return;
+    expect(result.unfilled).toContainEqual({
+      label: "Are you authorized to work in the EU?",
+      reason: "ai-no-answer",
+    });
+    expect(result.filled).toContain("Anything else we should know?");
+    expect((document.querySelector("#g-loc") as HTMLInputElement).value).toBe("Milano");
+    expect((document.querySelector("#g-other") as HTMLTextAreaElement).value).toBe(
+      "I like the product.",
+    );
+    expect(document.querySelector("#g-other")?.hasAttribute("data-jf-drafted")).toBe(true);
+    expect(document.querySelector("#g-auth")?.hasAttribute("data-jf-unfilled")).toBe(true);
+    expect(window.commands.some((command) => command.method.startsWith("Input."))).toBe(false);
+  });
+
+  it("sends the AI only the fields the rules left, never the ones they mapped", async () => {
+    const ai = scriptedAi(genericAnswers);
+    const { service } = serviceWith([scriptedWindow("generic.html")], {
+      application: detail({ applyUrl: "https://careers.acme.test/apply/7" }),
+      ai: ai.ai,
+    });
+
+    await service.start({ applicationId: "a1", aiFallback: true });
+
+    const labels = ai.asked[0]?.map((field) => field.label) ?? [];
+    expect(labels).toEqual(
+      expect.arrayContaining([
+        "Are you authorized to work in the EU?",
+        "Anything else we should know?",
+      ]),
+    );
+    expect(labels).not.toContain("Your name");
+    expect(labels).not.toContain("E-mail");
+    expect(labels).not.toContain("I consent to the processing of my data");
+  });
+
+  it("refuses a cloud provider without consent before any window opens", async () => {
+    const window = scriptedWindow("generic.html");
+    const ai = scriptedAi(genericAnswers, { state: "ready", cloud: true });
+    const { service, opened } = serviceWith([window], {
+      application: detail({ applyUrl: "https://careers.acme.test/apply/7" }),
+      ai: ai.ai,
+    });
+
+    expect(await service.start({ applicationId: "a1", aiFallback: true })).toEqual({
+      ok: false,
+      code: "consent-required",
+    });
+    expect(opened).toHaveLength(0);
+    expect(ai.asked).toHaveLength(0);
+
+    const agreed = await service.start({ applicationId: "a1", aiFallback: true, consent: true });
+    expect(agreed).toMatchObject({ ok: true, ai: { state: "used" } });
+  });
+
+  it("reports the AI unavailable when no provider is set up, and still fills by the rules", async () => {
+    const ai = scriptedAi(genericAnswers, { state: "not-configured" });
+    const { service } = serviceWith([scriptedWindow("generic.html")], {
+      application: detail({ applyUrl: "https://careers.acme.test/apply/7" }),
+      ai: ai.ai,
+    });
+
+    const result = await service.start({ applicationId: "a1", aiFallback: true, consent: true });
+
+    expect(result).toMatchObject({
+      ok: true,
+      ai: { state: "unavailable", code: "not-configured" },
+      drafted: [],
+    });
+    expect(ai.asked).toHaveLength(0);
+    expect((document.querySelector("#g-name") as HTMLInputElement).value).toBe("Maria Rossi");
+  });
+
+  it("reports a provider failure as unavailable with its code", async () => {
+    const ai = scriptedAi(() => ({ ok: false, code: "invalid-key" }));
+    const { service } = serviceWith([scriptedWindow("generic.html")], {
+      application: detail({ applyUrl: "https://careers.acme.test/apply/7" }),
+      ai: ai.ai,
+    });
+
+    const result = await service.start({ applicationId: "a1", aiFallback: true });
+
+    expect(result).toMatchObject({ ok: true, ai: { state: "unavailable", code: "invalid-key" } });
+    expect(result.ok && result.unfilled).toContainEqual({
+      label: "Are you authorized to work in the EU?",
+      reason: "unmapped",
+    });
+  });
+
+  it("types no draft that invents a number the profile does not have", async () => {
+    const ai = scriptedAi((fields) => ({
+      ok: true,
+      answers: fields.map((field) =>
+        field.label === "Anything else we should know?"
+          ? { id: field.id, draft: "I led 12 projects." }
+          : { id: field.id },
+      ),
+    }));
+    const { service } = serviceWith([scriptedWindow("generic.html")], {
+      application: detail({ applyUrl: "https://careers.acme.test/apply/7" }),
+      ai: ai.ai,
+    });
+
+    const result = await service.start({ applicationId: "a1", aiFallback: true });
+
+    expect(result).toMatchObject({ ok: true, drafted: [] });
+    expect(result.ok && result.unfilled).toContainEqual({
+      label: "Anything else we should know?",
+      reason: "ai-unverified",
+    });
+    expect((document.querySelector("#g-other") as HTMLTextAreaElement).value).toBe("");
   });
 });

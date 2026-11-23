@@ -1,12 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 import type {
   ApplicationDetail as ApplicationDetailRecord,
   AutofillFailureCode,
   AutofillStartResult,
+  AiTestFailureCode,
 } from "@job-finder/bridge";
+import { isCloudAiEndpoint } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Button } from "../../components/ui/Button";
+import { CheckboxInput } from "../../components/ui/CheckboxInput";
 
 interface ApplicationFormProps {
   application: ApplicationDetailRecord;
@@ -14,10 +18,18 @@ interface ApplicationFormProps {
   onChanged: (application: ApplicationDetailRecord) => void;
 }
 
+/** The AI settings as the fallback needs them: whether a provider is set up, and whether it is a cloud one. */
+interface AiState {
+  configured: boolean;
+  cloud: boolean;
+  provider: string;
+}
+
 /**
  * Opens the application's form in its own window and fills it from the profile. The form window is
  * the user's to review and submit; this panel only confirms "I submitted it", which moves the
- * application to applied. Closing the window without confirming leaves it ready.
+ * application to applied. Closing the window without confirming leaves it ready. The AI fallback
+ * maps the fields the rules leave; it runs only when asked, and after consent for a cloud provider.
  */
 export function ApplicationForm({ application, onChanged }: ApplicationFormProps) {
   const { t } = useTranslation();
@@ -26,8 +38,31 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
   const [result, setResult] = useState<AutofillStartResult | null>(null);
   const [submitFailed, setSubmitFailed] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [ai, setAi] = useState<AiState | null>(null);
+  const [aiFallback, setAiFallback] = useState(false);
+  const [consent, setConsent] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void bridge.settings.get().then((settings) => {
+      if (!active) return;
+      const { ai: aiSettings } = settings;
+      setAi({
+        configured:
+          aiSettings.model.trim() !== "" &&
+          (aiSettings.provider !== "openai-compatible" || aiSettings.baseUrl.trim() !== ""),
+        cloud: isCloudAiEndpoint(aiSettings),
+        provider: t(`settings.ai.providers.${aiSettings.provider}`),
+      });
+    });
+    return () => {
+      active = false;
+    };
+  }, [bridge, t]);
 
   const available = application.status === "preparing" || application.status === "ready";
+  const needsConsent = aiFallback && ai !== null && ai.cloud && ai.configured;
+  const openDisabled = busy !== null || (needsConsent && !consent);
 
   async function open() {
     setBusy("open");
@@ -35,7 +70,13 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
     setSubmitted(false);
     setSubmitFailed(false);
     try {
-      setResult(await bridge.autofill.start({ applicationId: application.id }));
+      setResult(
+        await bridge.autofill.start({
+          applicationId: application.id,
+          aiFallback,
+          consent,
+        }),
+      );
     } catch {
       setResult({ ok: false, code: "autofill-failed" });
     } finally {
@@ -70,6 +111,12 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
     });
   }
 
+  function aiReasonText(code: AiTestFailureCode): string {
+    return t(`applications.form.ai.reasons.${code}`, {
+      defaultValue: t("applications.form.ai.reasons.unknown"),
+    });
+  }
+
   return (
     <section
       aria-labelledby="application-form-title"
@@ -83,10 +130,48 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
       {!available ? (
         <p className="text-sm text-app-muted">{t("applications.form.inactive")}</p>
       ) : (
-        <div>
-          <Button variant="secondary" disabled={busy !== null} onClick={() => void open()}>
-            {busy === "open" ? t("applications.form.opening") : t("applications.form.open")}
-          </Button>
+        <div className="flex flex-col gap-3">
+          {ai !== null && !ai.configured ? (
+            <div className="flex flex-col items-start gap-2">
+              <p role="status" className="text-sm text-app-fg">
+                {t("applications.form.ai.notConfigured")}
+              </p>
+              <Link to="/settings" className="text-sm text-app-accent underline">
+                {t("applications.form.ai.openSettings")}
+              </Link>
+            </div>
+          ) : null}
+          {ai !== null && ai.configured ? (
+            <div className="flex flex-col gap-2">
+              <CheckboxInput
+                label={t("applications.form.ai.useAi")}
+                hint={t("applications.form.ai.useAiHint")}
+                checked={aiFallback}
+                onChange={(event) => setAiFallback(event.target.checked)}
+              />
+              {aiFallback && ai.cloud ? (
+                <>
+                  <p className="text-sm text-app-muted">
+                    {t("applications.form.ai.consentNote", { provider: ai.provider })}
+                  </p>
+                  <CheckboxInput
+                    label={t("applications.form.ai.consent", { provider: ai.provider })}
+                    checked={consent}
+                    onChange={(event) => setConsent(event.target.checked)}
+                  />
+                </>
+              ) : null}
+            </div>
+          ) : null}
+          <div>
+            <Button
+              variant="secondary"
+              disabled={openDisabled || ai === null}
+              onClick={() => void open()}
+            >
+              {busy === "open" ? t("applications.form.opening") : t("applications.form.open")}
+            </Button>
+          </div>
         </div>
       )}
 
@@ -106,6 +191,14 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
               provider: t(`applications.form.providers.${result.provider}`),
             })}
           </p>
+          {result.ai.state === "unavailable" ? (
+            <p role="alert" className="text-sm text-app-fg">
+              {t("applications.form.ai.unavailable", { reason: aiReasonText(result.ai.code) })}
+            </p>
+          ) : null}
+          {result.ai.state === "used" ? (
+            <p className="text-sm text-app-muted">{t("applications.form.ai.used")}</p>
+          ) : null}
           {result.filled.length === 0 && result.unfilled.length === 0 ? (
             <p className="text-sm text-app-muted">{t("applications.form.noFields")}</p>
           ) : (
@@ -115,6 +208,11 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
                   ? t("applications.form.nothingFilled")
                   : t("applications.form.filled", { list: result.filled.join(", ") })}
               </p>
+              {result.drafted.length > 0 ? (
+                <p role="status" className="text-sm text-app-fg">
+                  {t("applications.form.ai.drafted", { list: result.drafted.join(", ") })}
+                </p>
+              ) : null}
               {result.unfilled.length > 0 ? (
                 <div className="flex flex-col gap-1">
                   <h5 className="text-sm font-medium text-app-fg">

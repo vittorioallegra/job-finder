@@ -1,16 +1,27 @@
 import type {
   ApplicationDetail,
+  AutofillAiState,
   AutofillFailureCode,
   AutofillStartRequest,
   AutofillStartResult,
   AutofillUnfilled,
 } from "@job-finder/bridge";
 import { detectAts, type AtsId } from "@job-finder/core/ats";
-import { planAutofill, type FillAction, type FormField } from "@job-finder/core/ats/autofill";
+import {
+  MAX_AI_FIELDS,
+  planAiAnswers,
+  planAutofill,
+  type AiFillPlan,
+  type AutofillSources,
+  type FillAction,
+  type FormField,
+  type UnfilledReason,
+} from "@job-finder/core/ats/autofill";
 import type { DocumentKind } from "@job-finder/core/documents/schema";
 import type { Profile } from "@job-finder/core/profile";
 import type { CdpSession, DebuggerLike, FrameContext } from "./cdp";
 import { openCdpSession } from "./cdp";
+import type { AiFill, AiFillStatus } from "./ai-fill";
 import {
   discoverExpression,
   fillExpression,
@@ -38,6 +49,11 @@ export interface AutofillServiceOptions {
   openWindow(): ApplyWindow;
   /** How long the form may take to load. */
   loadTimeoutMs?: number;
+  /**
+   * The AI fallback. Omitted, a request for the fallback reports the AI as not configured; the
+   * rules-based fill runs either way.
+   */
+  ai?: AiFill;
 }
 
 export interface AutofillService {
@@ -153,14 +169,15 @@ export function createAutofillService(options: AutofillServiceOptions): Autofill
 
   async function start(request: AutofillStartRequest): Promise<AutofillStartResult> {
     try {
-      return await run(request.applicationId);
+      return await run(request);
     } catch (error) {
       if (error instanceof AutofillFailure) return { ok: false, code: error.code };
       return { ok: false, code: "autofill-failed" };
     }
   }
 
-  async function run(applicationId: string): Promise<AutofillStartResult> {
+  async function run(request: AutofillStartRequest): Promise<AutofillStartResult> {
+    const applicationId = request.applicationId;
     const detail = await options.applications.detail(applicationId);
     if (detail === null) throw new AutofillFailure("not-found");
     if (!PREPARING_STATUSES.has(detail.status)) throw new AutofillFailure("invalid-status");
@@ -168,6 +185,14 @@ export function createAutofillService(options: AutofillServiceOptions): Autofill
     if (url === undefined) throw new AutofillFailure("invalid-url");
     const saved = await options.profile.get();
     if (saved === null) throw new AutofillFailure("no-profile");
+
+    // The profile and the form fields go to a cloud provider only with consent, checked before a window opens.
+    const wantsAi = request.aiFallback === true;
+    const aiStatus: AiFillStatus =
+      wantsAi && options.ai !== undefined ? await options.ai.status() : { state: "not-configured" };
+    if (wantsAi && aiStatus.state === "ready" && aiStatus.cloud && request.consent !== true) {
+      throw new AutofillFailure("consent-required");
+    }
 
     current?.close();
     const window = options.openWindow();
@@ -193,44 +218,100 @@ export function createAutofillService(options: AutofillServiceOptions): Autofill
       });
       const { fields, contextOf } = await discoverFields(session, contexts);
       const provider: AtsId | "generic" = detectAts({ url: window.currentUrl() })?.ats ?? "generic";
-      const plan = planAutofill(
-        fields,
-        {
-          profile: saved.profile,
-          documents: {
-            cv: options.documentExists(applicationId, "cv"),
-            "cover-letter": options.documentExists(applicationId, "cover-letter"),
-          },
+      const sources: AutofillSources = {
+        profile: saved.profile,
+        documents: {
+          cv: options.documentExists(applicationId, "cv"),
+          "cover-letter": options.documentExists(applicationId, "cover-letter"),
         },
-        provider,
-      );
+      };
+      const plan = planAutofill(fields, sources, provider);
+      const docPath = (kind: DocumentKind) => options.documentPath(applicationId, kind);
       const { taken, refused } = await applyActions(
         session,
         contexts,
         contextOf,
         plan.actions,
-        (kind) => options.documentPath(applicationId, kind),
+        docPath,
       );
 
-      const labelOf = new Map(fields.map((field) => [field.id, field.label || field.name]));
-      const unfilled: AutofillUnfilled[] = plan.unfilled.map((item) => ({
-        label: item.label,
-        reason: item.reason,
-      }));
-      for (const id of refused) {
-        unfilled.push({ label: labelOf.get(id) ?? "", reason: "rejected" });
+      // The AI maps only the fields the rules could not map. Its fills go through the same actions.
+      let ai: AutofillAiState = { state: "off" };
+      let aiPlan: AiFillPlan | null = null;
+      if (wantsAi) {
+        if (options.ai === undefined || aiStatus.state === "not-configured") {
+          ai = { state: "unavailable", code: "not-configured" };
+        } else {
+          const byId = new Map(fields.map((field) => [field.id, field]));
+          const candidates = plan.unfilled
+            .filter((item) => item.reason === "unmapped")
+            .slice(0, MAX_AI_FIELDS)
+            .flatMap((item) => {
+              const field = byId.get(item.id);
+              return field === undefined ? [] : [field];
+            });
+          const outcome =
+            candidates.length === 0
+              ? { ok: true as const, answers: [] }
+              : await options.ai.map({
+                  applicationId,
+                  profile: saved.profile,
+                  fields: candidates,
+                });
+          if (!outcome.ok) {
+            ai = { state: "unavailable", code: outcome.code };
+          } else {
+            aiPlan = planAiAnswers(candidates, outcome.answers, sources);
+            const applied = await applyActions(
+              session,
+              contexts,
+              contextOf,
+              aiPlan.actions,
+              docPath,
+            );
+            applied.taken.forEach((id) => taken.add(id));
+            applied.refused.forEach((id) => refused.add(id));
+            ai = { state: "used" };
+          }
+        }
       }
-      const highlightIds = [...plan.unfilled.map((item) => item.id), ...refused];
+
+      const labelOf = new Map(fields.map((field) => [field.id, field.label || field.name]));
+      // Every field left over, once, in the page's order; the AI's reason replaces the rule's.
+      const leftOver = new Map<string, { label: string; reason: UnfilledReason }>();
+      // Map keeps the first insertion order, so a later reason replaces the earlier one in place.
+      const leave = (id: string, label: string, reason: UnfilledReason) => {
+        if (taken.has(id)) return;
+        leftOver.set(id, { label, reason });
+      };
+      for (const item of plan.unfilled) leave(item.id, item.label, item.reason);
+      for (const item of aiPlan?.unfilled ?? []) leave(item.id, item.label, item.reason);
+      for (const id of refused) leave(id, labelOf.get(id) ?? "", "rejected");
+
+      const drafted = (aiPlan?.drafted ?? []).filter((id) => taken.has(id));
+      const highlightIds = [...leftOver.keys()];
       for (const context of contexts) {
         await session
-          .evaluate(context.id, highlightExpression(highlightIds))
+          .evaluate(context.id, highlightExpression(highlightIds, drafted))
           .catch(() => undefined);
       }
 
-      const filled = plan.actions
+      const labelOfFill = (action: FillAction) => labelOf.get(action.id) ?? "";
+      const filled = [...plan.actions, ...(aiPlan?.actions ?? [])]
         .filter((action) => taken.has(action.id))
-        .map((action) => labelOf.get(action.id) ?? "");
-      return { ok: true, provider, filled, unfilled };
+        .map(labelOfFill);
+      const unfilled: AutofillUnfilled[] = [...leftOver.values()].map(({ label, reason }) => ({
+        label,
+        reason,
+      }));
+      return {
+        ok: true,
+        provider,
+        filled,
+        drafted: drafted.map((id) => labelOf.get(id) ?? ""),
+        unfilled,
+        ai,
+      };
     } catch (error) {
       window.close();
       if (error instanceof AutofillFailure) throw error;

@@ -58,10 +58,19 @@ export type FillAction =
  * Why a field is left for the user. `unmapped`: no profile value matches the field; `no-value`: the
  * profile has the value empty; `no-option`: a choice list has no matching option; `not-exported`: the
  * document has no PDF yet; `unsupported`: a control type autofill never fills (checkboxes, radios,
- * custom widgets); `rejected`: the page refused the value when it was set.
+ * custom widgets); `rejected`: the page refused the value when it was set. `ai-no-answer`: the AI
+ * found no profile value or draft for the field, so it stays empty; `ai-unverified`: the AI's draft
+ * has a number or length the profile does not support, so it is not typed.
  */
 export type UnfilledReason =
-  "unmapped" | "no-value" | "no-option" | "not-exported" | "unsupported" | "rejected";
+  | "unmapped"
+  | "no-value"
+  | "no-option"
+  | "not-exported"
+  | "unsupported"
+  | "rejected"
+  | "ai-no-answer"
+  | "ai-unverified";
 
 export interface UnfilledField {
   id: string;

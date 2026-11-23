@@ -3,6 +3,7 @@ import { discoverCompanies } from "@job-finder/core/discovery";
 import { createHttpClient } from "@job-finder/core/net";
 import { createIngestController } from "./ingest";
 import { generateDocument } from "@job-finder/core/documents/generate";
+import { mapFormFields } from "@job-finder/core/ats/autofill/ai";
 import { createScoringRunner } from "./scoring";
 import { fromElectronPort } from "./port";
 import { createEngineRuntime } from "./runtime";
@@ -15,6 +16,9 @@ const CV_IMPORT_TIMEOUT_MS = 120_000;
 
 /** A tailored document is one or two AI calls on a long profile; the renderer shows a loading state meanwhile. */
 const DOCUMENT_TIMEOUT_MS = 180_000;
+
+/** Mapping a form is one AI call on the form's fields and the profile; the apply window waits meanwhile. */
+const AUTOFILL_AI_TIMEOUT_MS = 120_000;
 
 /** A discovery run makes one request per query, one second apart; it returns what it found by the deadline. */
 const DISCOVERY_TIMEOUT_MS = 120_000;
@@ -53,6 +57,17 @@ if (parentPort) {
               contextSize: request.ai.contextSize,
             },
             { abortSignal: AbortSignal.timeout(DOCUMENT_TIMEOUT_MS) },
+          ),
+        mapFormFields: (request) =>
+          mapFormFields(
+            {
+              fields: request.fields,
+              profile: request.profile,
+              language: request.language,
+              config: request.ai.config,
+              contextSize: request.ai.contextSize,
+            },
+            { abortSignal: AbortSignal.timeout(AUTOFILL_AI_TIMEOUT_MS) },
           ),
         importCv: async (request) => {
           // Loaded on first use: the CV readers pull in PDF and DOCX parsers the app does not need until a CV is imported.

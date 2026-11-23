@@ -208,7 +208,7 @@ const FILL = `function (actions) {
 }`;
 
 /** Outlines the given controls and focuses the first one, so the user sees what is left. */
-const HIGHLIGHT = `function (ids) {
+const HIGHLIGHT = `function (ids, drafted) {
   function deep(root, id) {
     var el = root.querySelector('[data-jf-id="' + id + '"]');
     if (el) return el;
@@ -232,6 +232,13 @@ const HIGHLIGHT = `function (ids) {
     if (first === null) first = el;
     count++;
   }
+  for (var j = 0; j < drafted.length; j++) {
+    var draft = deep(document, drafted[j]);
+    if (!draft) continue;
+    draft.style.outline = "3px dashed #2563eb";
+    draft.style.outlineOffset = "2px";
+    draft.setAttribute("data-jf-drafted", "");
+  }
   if (first !== null && typeof first.focus === "function") first.focus();
   return count;
 }`;
@@ -248,9 +255,15 @@ export function fillExpression(
   return `(${FILL})(${JSON.stringify(actions)})`;
 }
 
-/** The expression that highlights the given unfilled controls and returns how many it found. */
-export function highlightExpression(ids: readonly string[]): string {
-  return `(${HIGHLIGHT})(${JSON.stringify(ids)})`;
+/**
+ * The expression that highlights the given unfilled controls and returns how many it found. Controls
+ * the AI drafted get a dashed outline and a `data-jf-drafted` marker, so the user checks them.
+ */
+export function highlightExpression(
+  ids: readonly string[],
+  drafted: readonly string[] = [],
+): string {
+  return `(${HIGHLIGHT})(${JSON.stringify(ids)}, ${JSON.stringify(drafted)})`;
 }
 
 /** The expression that returns the control with the given id (for a CDP file upload). */

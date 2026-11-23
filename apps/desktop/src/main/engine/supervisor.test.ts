@@ -105,6 +105,7 @@ async function startHarness(): Promise<Harness> {
     const runtime = createEngineRuntime(toPortLike(port2), {
       net: fakeNet(),
       generateDocument: async () => ({ ok: false as const, code: "unknown" as const }),
+      mapFormFields: async () => ({ ok: false as const, code: "unknown" as const }),
       createScoring: () => ({
         score: async (request) => {
           control.scorings.push({ jobIds: request.jobIds, apiKey: request.ai.config.apiKey });

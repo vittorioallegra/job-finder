@@ -7,12 +7,14 @@ import type {
 } from "@job-finder/core/discovery/types";
 import { guardPageRender, type HttpClient, type PageRenderResult } from "@job-finder/core/net";
 import type { GenerateDocumentOutcome } from "@job-finder/core/documents/generate";
+import type { AutofillMapOutcome } from "@job-finder/core/ats/autofill/ai";
 import type {
   DbCall,
   DbResult,
   EngineToMainMessage,
   GenerateDocumentRequest,
   MainToEngineMessage,
+  MapFormFieldsRequest,
   ScoreJobsOutcome,
 } from "./protocol";
 import type { PortLike } from "./port";
@@ -55,6 +57,8 @@ export interface EngineServices {
   createScoring(db: (calls: DbCall[]) => Promise<DbResult[]>): ScoringRunner;
   /** Generates a tailored CV or cover letter with the AI; the answer is checked before it returns. */
   generateDocument(request: GenerateDocumentRequest): Promise<GenerateDocumentOutcome>;
+  /** Maps the fields the rules left with the AI; the answer is checked against the form by main. */
+  mapFormFields(request: MapFormFieldsRequest): Promise<AutofillMapOutcome>;
 }
 
 /**
@@ -139,6 +143,14 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
         .generateDocument(request)
         .catch((): GenerateDocumentOutcome => ({ ok: false, code: "unknown" }))
         .then((outcome) => post(port, { type: "generate-document-result", id, outcome }));
+      return;
+    }
+    if (message.type === "map-form-fields") {
+      const { id, request } = message;
+      void services
+        .mapFormFields(request)
+        .catch((): AutofillMapOutcome => ({ ok: false, code: "unknown" }))
+        .then((outcome) => post(port, { type: "map-form-fields-result", id, outcome }));
       return;
     }
     if (message.type === "ingest-cancel") {

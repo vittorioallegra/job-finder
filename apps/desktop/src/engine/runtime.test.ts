@@ -1,4 +1,4 @@
-// protects=the engine renders pages through main only after the URL is resolved and allowed by robots.txt, and matches main's answer to its request id; the engine answers an AI connection test and a document request with the service's result (a failed document request reports only its code), reports an unexpected service failure as unknown without its message, relays ingestion start and cancel to its controller and answers the start under its request id, and keeps answering pings;
+// protects=the engine renders pages through main only after the URL is resolved and allowed by robots.txt, and matches main's answer to its request id; the engine answers an AI connection test, a document request and a form mapping with the service's result (a failed document request reports only its code), reports an unexpected service failure as unknown without its message, relays ingestion start and cancel to its controller and answers the start under its request id, and keeps answering pings;
 // fails_when=a test request gets no reply, a thrown error text is passed back to main, or the reply is sent to a different request id;
 // no_claim=the real provider call and the utility process transport are not exercised here; the supervisor test covers the round trip through main.
 import { describe, expect, it } from "vitest";
@@ -25,6 +25,7 @@ const noIngest = () => ({ start: () => "accepted" as const, cancel: () => {} });
 
 /** A document generator that answers nothing; the document tests replace it. */
 const noDocuments = async () => ({ ok: false as const, code: "unknown" as const });
+const noMapping = async () => ({ ok: false as const, code: "unknown" as const });
 
 /** A scoring runner that answers nothing; the scoring tests replace it. */
 const noScoring = () => ({
@@ -68,6 +69,7 @@ describe("engine runtime", () => {
     const services: EngineServices = {
       createIngest: noIngest,
       createScoring: noScoring,
+      mapFormFields: noMapping,
       generateDocument: noDocuments,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: true, model: "claude-test" }),
@@ -84,11 +86,43 @@ describe("engine runtime", () => {
     ]);
   });
 
+  it("answers a form mapping with the service result under the same request id", async () => {
+    const port = fakePort();
+    const services: EngineServices = {
+      createIngest: noIngest,
+      createScoring: noScoring,
+      mapFormFields: async () => ({ ok: true, answers: [] }),
+      generateDocument: noDocuments,
+      net: fakeNet(),
+      testAiConnection: async () => ({ ok: true, model: "claude-test" }),
+      importCv: async () => ({ ok: false, code: "unknown" }),
+      discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
+    };
+    createEngineRuntime(port, services);
+
+    port.deliver({
+      type: "map-form-fields",
+      id: 9,
+      request: {
+        fields: [],
+        profile: emptyProfile(),
+        language: "en",
+        ai: { config, contextSize: 8192 },
+      },
+    });
+    await settle();
+
+    expect(port.sent).toEqual([
+      { type: "map-form-fields-result", id: 9, outcome: { ok: true, answers: [] } },
+    ]);
+  });
+
   it("reports an unexpected service failure as unknown, without the error text", async () => {
     const port = fakePort();
     const services: EngineServices = {
       createIngest: noIngest,
       createScoring: noScoring,
+      mapFormFields: noMapping,
       generateDocument: noDocuments,
       net: fakeNet(),
       testAiConnection: async () => {
@@ -112,6 +146,7 @@ describe("engine runtime", () => {
     const services: EngineServices = {
       createIngest: noIngest,
       createScoring: noScoring,
+      mapFormFields: noMapping,
       generateDocument: noDocuments,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
@@ -141,6 +176,7 @@ describe("engine runtime", () => {
     const services: EngineServices = {
       createIngest: noIngest,
       createScoring: noScoring,
+      mapFormFields: noMapping,
       generateDocument: async (request) => {
         seen.push(`${request.kind}:${request.language}:${request.ai.config.apiKey}`);
         return { ok: false, code: "invalid-key" };
@@ -176,6 +212,7 @@ describe("engine runtime", () => {
     const services: EngineServices = {
       createIngest: noIngest,
       createScoring: noScoring,
+      mapFormFields: noMapping,
       generateDocument: async () => {
         throw new Error("secret detail from the provider");
       },
@@ -209,6 +246,7 @@ describe("engine runtime", () => {
     const services: EngineServices = {
       createIngest: noIngest,
       createScoring: noScoring,
+      mapFormFields: noMapping,
       generateDocument: noDocuments,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
@@ -236,6 +274,7 @@ describe("engine runtime", () => {
     createEngineRuntime(port, {
       createIngest: noIngest,
       createScoring: noScoring,
+      mapFormFields: noMapping,
       generateDocument: noDocuments,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
@@ -254,6 +293,7 @@ describe("engine runtime", () => {
         net,
         createIngest: noIngest,
         createScoring: noScoring,
+        mapFormFields: noMapping,
         generateDocument: noDocuments,
         testAiConnection: async () => ({ ok: false, code: "unknown" }),
         importCv: async () => ({ ok: false, code: "unknown" }),
@@ -341,6 +381,7 @@ describe("engine runtime", () => {
       importCv: async () => ({ ok: false, code: "unknown" }),
       discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
       createScoring: noScoring,
+      mapFormFields: noMapping,
       generateDocument: noDocuments,
       createIngest: () => ({
         start: (runId, companyId) => {
@@ -367,6 +408,7 @@ describe("engine runtime", () => {
       importCv: async () => ({ ok: false, code: "unknown" }),
       discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
       createScoring: noScoring,
+      mapFormFields: noMapping,
       generateDocument: noDocuments,
       createIngest: (api) => ({
         start: (_runId, _companyId, ai) => {
@@ -401,6 +443,7 @@ describe("engine runtime", () => {
       importCv: async () => ({ ok: false, code: "unknown" }),
       createIngest: noIngest,
       createScoring: noScoring,
+      mapFormFields: noMapping,
       generateDocument: noDocuments,
       discoverCompanies: async (criteria, config) => {
         asked.push({ criteria, config });
@@ -435,6 +478,7 @@ describe("engine runtime", () => {
       importCv: async () => ({ ok: false, code: "unknown" }),
       createIngest: noIngest,
       createScoring: noScoring,
+      mapFormFields: noMapping,
       generateDocument: noDocuments,
       discoverCompanies: async () => {
         throw new Error("secret detail");
@@ -464,6 +508,7 @@ describe("engine runtime", () => {
       importCv: async () => ({ ok: false, code: "unknown" }),
       discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
       createScoring: noScoring,
+      mapFormFields: noMapping,
       generateDocument: noDocuments,
       createIngest: () => ({
         start: (runId) => {
