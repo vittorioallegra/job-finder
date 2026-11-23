@@ -310,6 +310,7 @@ Approved: yes (2026-11-23)
   - Autofill typed a wrong first or last name for names of more than two parts (Maria De Luca got the last name Luca) — `fix: leave first and last name to the user when the full name has more than two parts`
   - Autofill skipped a select showing a placeholder option with a value, and a planned fill that no frame took vanished without being highlighted or listed — `fix: fill placeholder selects and report every planned fill that was not taken`
   - A page change handler calling form.submit() or requestSubmit() could submit the application while autofill set the fields — `fix: cancel scripted form submits from the page until the user interacts, so autofill can never submit`
+  - The autofill AI call re-read the settings after the consent check, so a provider switched to a cloud service while the form loaded got the profile without consent — `fix: re-check cloud consent when the autofill AI call is made`
 
 ### Decisions
 - Single-user, local-only app; published as open source on GitHub, each user runs it on their own machine.

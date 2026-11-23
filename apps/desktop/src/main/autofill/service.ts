@@ -263,6 +263,7 @@ export function createAutofillService(options: AutofillServiceOptions): Autofill
                   applicationId,
                   profile: saved.profile,
                   fields: candidates,
+                  consent: request.consent === true,
                 });
           if (!outcome.ok) {
             ai = { state: "unavailable", code: outcome.code };

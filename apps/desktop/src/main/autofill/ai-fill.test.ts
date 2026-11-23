@@ -78,7 +78,12 @@ describe("createAutofillAi", () => {
       language: async (applicationId) => (applicationId === "a1" ? "it" : "en"),
     });
 
-    const outcome = await ai.map({ applicationId: "a1", profile: emptyProfile(), fields: [] });
+    const outcome = await ai.map({
+      applicationId: "a1",
+      profile: emptyProfile(),
+      fields: [],
+      consent: false,
+    });
 
     expect(outcome).toEqual({ ok: true, answers: [] });
     const request = engine.mapFormFields.mock.calls[0]?.[0];
@@ -88,6 +93,22 @@ describe("createAutofillAi", () => {
       model: "local-model",
       apiKey: "sk-saved-key",
     });
+  });
+
+  it("sends nothing to a cloud provider the user has not agreed to, even if the settings changed after the check", async () => {
+    // protects=the profile and form fields reach a cloud provider only with consent, checked again when the call is made; fails_when=settings switched to a cloud provider after the consent check still get the profile; no_claim=the consent prompt;
+    const engine = { mapFormFields: vi.fn(async () => ({ ok: true as const, answers: [] })) };
+    const ai = createAutofillAi({
+      settings: settingsWith({ provider: "anthropic", model: "claude-test", baseUrl: "" }),
+      secrets,
+      engine,
+      language: async () => "en",
+    });
+
+    const input = { applicationId: "a1", profile: emptyProfile(), fields: [] };
+    expect(await ai.map({ ...input, consent: false })).toMatchObject({ ok: false });
+    expect(engine.mapFormFields).not.toHaveBeenCalled();
+    expect(await ai.map({ ...input, consent: true })).toMatchObject({ ok: true });
   });
 
   it("reports an engine that cannot answer as engine-unavailable, and any other throw as unknown", async () => {
@@ -112,7 +133,7 @@ describe("createAutofillAi", () => {
       language: async () => "en",
     });
 
-    const input = { applicationId: "a1", profile: emptyProfile(), fields: [] };
+    const input = { applicationId: "a1", profile: emptyProfile(), fields: [], consent: false };
     expect(await unavailable.map(input)).toEqual({ ok: false, code: "engine-unavailable" });
     expect(await broken.map(input)).toEqual({ ok: false, code: "unknown" });
   });

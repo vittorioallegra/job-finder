@@ -38,6 +38,8 @@ export interface AiFill {
     applicationId: string;
     profile: Profile;
     fields: FormField[];
+    /** Whether the user agreed to a cloud provider for this run. */
+    consent: boolean;
   }): Promise<AiFillOutcome>;
 }
 
@@ -56,8 +58,13 @@ export function createAutofillAi(options: AiFillOptions): AiFill {
         : { state: "not-configured" };
     },
 
-    async map({ applicationId, profile, fields }) {
+    async map({ applicationId, profile, fields, consent }) {
+      // The settings are read again here, after the page has loaded: the provider may have changed
+      // since the consent was checked, and a cloud provider never gets the profile without it.
       const { ai } = await options.settings.get();
+      if (isCloudAiEndpoint(ai) && !consent) {
+        return { ok: false, code: "not-configured" };
+      }
       const apiKey = await options.secrets.read("ai.apiKey");
       const language = await options.language(applicationId);
       try {
