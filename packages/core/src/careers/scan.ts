@@ -145,10 +145,22 @@ function listPostings(
 ): ListedPosting[] {
   const linkUrls = new Set(page.links.map((link) => link.url));
   const careersHost = new URL(company.careersUrl).hostname;
+  // A link identifies a posting only when it is the posting's own: not the careers page itself and
+  // not shared with another posting (anchors on one page, one shared "apply" page).
+  const useCount = new Map<string, number>();
+  for (const posting of listing.postings) {
+    const listed = resolveListed(posting.url, company.careersUrl);
+    if (listed !== undefined) useCount.set(listed, (useCount.get(listed) ?? 0) + 1);
+  }
   return listing.postings.map((posting) => {
     const location = posting.location?.trim() || undefined;
     const listed = resolveListed(posting.url, company.careersUrl);
-    if (listed !== undefined && linkUrls.has(listed)) {
+    if (
+      listed !== undefined &&
+      linkUrls.has(listed) &&
+      listed !== resolveListed(company.careersUrl, company.careersUrl) &&
+      useCount.get(listed) === 1
+    ) {
       return {
         title: posting.title,
         location,
@@ -158,7 +170,9 @@ function listPostings(
       };
     }
     const digest = createHash("sha256")
-      .update(`${posting.title}\n${location ?? ""}`)
+      .update(
+        `${company.careersUrl}\n${posting.title}\n${location ?? ""}\n${posting.url?.trim() ?? ""}`,
+      )
       .digest("hex")
       .slice(0, 32);
     return {

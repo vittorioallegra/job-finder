@@ -276,6 +276,30 @@ describe("scanCareersPage", () => {
     expect(requests.some((url) => url.includes("evil.example.net"))).toBe(false);
   });
 
+  it("gives postings that share one link, or sit on anchors of the careers page, separate identities scoped to the company", async () => {
+    // protects=each listed posting keeps its own identity even when the postings share a link, and identities differ between companies; fails_when=two postings collapse into one identity (the other gets closed) or two companies produce the same identity for the same title and location; no_claim=the model's reading of the page;
+    const answer = listing(true, [
+      { title: "Backend Engineer", location: "Berlin", url: "#backend" },
+      { title: "Designer", location: "Berlin", url: "#designer" },
+      { title: "Analyst", location: "Berlin", url: "/careers/apply" },
+      { title: "Writer", location: "Berlin", url: "/careers/apply" },
+    ]);
+    const page = `<html><body><p>${"Open roles at Acme. ".repeat(20)}</p><a href="/careers/apply">Apply</a></body></html>`;
+    const idsFor = async (careersUrl: string) => {
+      const { http } = scriptedWeb({ [careersUrl]: { body: page } });
+      const { ai } = scriptedAi([answer]);
+      const result = await scanCareersPage({ name: "Acme", careersUrl }, { http, ai });
+      expect(result.ok).toBe(true);
+      return result.ok ? result.jobs.map((job) => job.sourceJobId) : [];
+    };
+
+    const first = await idsFor(CAREERS);
+    const other = await idsFor("https://careers.other.example.test/jobs");
+
+    expect(new Set(first).size).toBe(4);
+    expect(first.some((id) => other.includes(id))).toBe(false);
+  });
+
   it("fails with render-failed when the renderer cannot load a page that has no readable text", async () => {
     const { http } = scriptedWeb({ [CAREERS]: { body: fixture("spa-shell.html") } });
     const { ai } = scriptedAi([]);
