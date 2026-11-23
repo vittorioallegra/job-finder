@@ -24,5 +24,25 @@ export interface DiscoveryCandidate {
  */
 export type DiscoveryFailureCode = "search-blocked" | "search-failed";
 
+/**
+ * `searchBlocked` is set when a keyless search source was refused but other sources still produced
+ * boards, so the screen can say that keyless search is not working.
+ */
 export type DiscoveryOutcome =
-  { ok: true; candidates: DiscoveryCandidate[] } | { ok: false; code: DiscoveryFailureCode };
+  | { ok: true; candidates: DiscoveryCandidate[]; searchBlocked?: true }
+  | { ok: false; code: DiscoveryFailureCode };
+
+/** Keyed search providers. A provider runs only with its toggle on and a key saved. */
+export const KEYED_PROVIDERS = ["brave", "tavily", "serper"] as const;
+export type KeyedProvider = (typeof KEYED_PROVIDERS)[number];
+
+export interface KeyedSearchConfig {
+  provider: KeyedProvider;
+  apiKey: string;
+}
+
+/** Which search sources run for a discovery: DuckDuckGo when its toggle is on, plus each keyed provider. */
+export interface SearchSourceConfig {
+  duckduckgo: boolean;
+  keyed: KeyedSearchConfig[];
+}

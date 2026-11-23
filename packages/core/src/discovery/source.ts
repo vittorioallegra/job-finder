@@ -1,6 +1,6 @@
 import type { HttpClient, HttpErrorCode } from "../net";
 
-export type SearchFailureCode = "blocked" | HttpErrorCode;
+export type SearchFailureCode = "blocked" | "invalid-response" | HttpErrorCode;
 
 export type SearchResult = { ok: true; urls: string[] } | { ok: false; code: SearchFailureCode };
 
@@ -16,4 +16,13 @@ export interface SearchOptions {
 export interface SearchSource {
   readonly id: string;
   search(query: string, options: SearchOptions): Promise<SearchResult>;
+}
+
+/**
+ * A keyless list of result URLs that does not depend on the query, such as an index of crawled
+ * pages. Discovery reads it once per run and keeps the boards in it.
+ */
+export interface BoardSource {
+  readonly id: string;
+  urls(options: SearchOptions): Promise<SearchResult>;
 }
