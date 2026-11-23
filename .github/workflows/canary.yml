@@ -1,0 +1,32 @@
+name: ATS canary
+
+# Optional live check: reads one public demo board per ATS provider over the internet. It needs
+# no secrets, is not triggered by pushes or pull requests, and is not a required check, so a
+# failure here never blocks another workflow. Run it by hand (Actions, ATS canary, Run workflow)
+# or let the weekly schedule run it.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    name: Read live ATS boards
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      # pnpm version comes from the packageManager field in package.json.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Read the public boards
+        env:
+          JOB_FINDER_LIVE_CANARY: "1"
+        run: pnpm exec vitest run --project core --reporter=dot packages/core/src/ats/canary.test.ts
