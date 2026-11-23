@@ -14,6 +14,7 @@ function fakeNet(overrides: Partial<HttpClient> = {}): HttpClient {
     resolve: (url) => url,
     isAllowed: async () => true,
     get: async (url) => ({ ok: false, code: "network", url }),
+    post: async (url) => ({ ok: false, code: "network", url }),
     ...overrides,
   };
 }

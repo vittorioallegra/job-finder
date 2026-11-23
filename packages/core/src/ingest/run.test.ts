@@ -13,6 +13,7 @@ const http: HttpClient = {
   resolve: (url) => url,
   isAllowed: async () => true,
   get: async (url) => ({ ok: false, code: "network", url }),
+  post: async (url) => ({ ok: false, code: "network", url }),
 };
 
 function job(sourceJobId: string, overrides: Partial<NormalizedJob> = {}): NormalizedJob {

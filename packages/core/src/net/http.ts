@@ -42,6 +42,20 @@ export type HttpResult =
 
 export interface HttpRequestOptions {
   signal?: AbortSignal;
+  /** Extra headers, merged over the client's own (user agent, accept). Requests with headers are not cached. */
+  headers?: Record<string, string>;
+}
+
+export interface HttpPostOptions extends HttpRequestOptions {
+  /** Sent as the request body as typed. Posts are never cached. */
+  body: string;
+}
+
+/** What one request sends. Built by `get` and `post`; the queue, retries and robots apply to both. */
+interface RequestSpec {
+  method: "GET" | "POST";
+  headers: Record<string, string>;
+  body?: string;
 }
 
 export interface HttpClientOptions {
@@ -78,6 +92,8 @@ export interface HttpClient {
    */
   isAllowed(url: string): Promise<boolean>;
   get(url: string, options?: HttpRequestOptions): Promise<HttpResult>;
+  /** A POST with a body, through the same queue, robots check and retries as `get`. Never cached. */
+  post(url: string, options: HttpPostOptions): Promise<HttpResult>;
 }
 
 type RobotsRules = (url: string) => boolean;
@@ -230,7 +246,11 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
   }
 
   /** One request to the resolved URL, without retries. Never throws. */
-  async function attemptOnce(target: string, signal: AbortSignal | undefined): Promise<RawAttempt> {
+  async function attemptOnce(
+    target: string,
+    signal: AbortSignal | undefined,
+    spec: RequestSpec,
+  ): Promise<RawAttempt> {
     if (signal?.aborted) {
       return { kind: "failed", code: "aborted" };
     }
@@ -248,7 +268,9 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
     let response: Response;
     try {
       response = await fetchImpl(target, {
-        headers: { "user-agent": JOB_FINDER_USER_AGENT, accept: ACCEPT },
+        method: spec.method,
+        headers: { "user-agent": JOB_FINDER_USER_AGENT, accept: ACCEPT, ...spec.headers },
+        body: spec.body,
         redirect: "follow",
         signal: requestSignal,
       });
@@ -339,53 +361,72 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
       return robotsAllow(target);
     },
     async get(url, requestOptions = {}): Promise<HttpResult> {
-      const target = resolveRequestUrl(url, options.fixtureBaseUrl);
-      if (target === undefined) {
-        return { ok: false, code: "invalid-url", url };
-      }
+      const headers = requestOptions.headers ?? {};
+      const cacheable = Object.keys(headers).length === 0;
+      return send(url, { method: "GET", headers }, requestOptions.signal, cacheable);
+    },
+    async post(url, postOptions): Promise<HttpResult> {
+      const { body, headers = {}, signal } = postOptions;
+      return send(url, { method: "POST", headers, body }, signal, false);
+    },
+  };
+
+  async function send(
+    url: string,
+    spec: RequestSpec,
+    signal: AbortSignal | undefined,
+    cacheable: boolean,
+  ): Promise<HttpResult> {
+    const target = resolveRequestUrl(url, options.fixtureBaseUrl);
+    if (target === undefined) {
+      return { ok: false, code: "invalid-url", url };
+    }
+    if (cacheable) {
       const cached = cacheGet(target);
       if (cached) {
         return { ok: true, url: target, cached: true, ...cached };
       }
-      if (!(await robotsAllow(target))) {
-        return { ok: false, code: "blocked-by-robots", url: target };
+    }
+    if (!(await robotsAllow(target))) {
+      return { ok: false, code: "blocked-by-robots", url: target };
+    }
+    const queue = queueFor(new URL(target).host);
+    for (let attempt = 1; ; attempt += 1) {
+      if (signal?.aborted) {
+        return { ok: false, code: "aborted", url: target };
       }
-      const queue = queueFor(new URL(target).host);
-      for (let attempt = 1; ; attempt += 1) {
-        if (requestOptions.signal?.aborted) {
-          return { ok: false, code: "aborted", url: target };
-        }
-        const attempted = (): Promise<RawAttempt> => attemptOnce(target, requestOptions.signal);
-        const raw: RawAttempt = await queue.add(attempted);
-        if (raw.kind === "failed") {
-          if (raw.code === "network" && attempt < maxAttempts) {
-            await sleep(backoffMs(attempt));
-            continue;
-          }
-          return { ok: false, code: raw.code, url: target };
-        }
-
-        // A redirect may leave the origin robots.txt was read for: check the final URL too.
-        if (raw.finalUrl !== target && !(await robotsAllow(raw.finalUrl))) {
-          return { ok: false, code: "blocked-by-robots", url: raw.finalUrl };
-        }
-
-        const retryable = raw.status === 429 || raw.status >= 500;
-        if (retryable && attempt < maxAttempts) {
-          await sleep(retryDelayMs(raw.retryAfter, attempt));
+      const attempted = (): Promise<RawAttempt> => attemptOnce(target, signal, spec);
+      const raw: RawAttempt = await queue.add(attempted);
+      if (raw.kind === "failed") {
+        if (raw.code === "network" && attempt < maxAttempts) {
+          await sleep(backoffMs(attempt));
           continue;
         }
-        if (raw.status < 200 || raw.status > 299) {
-          return { ok: false, code: "http-status", url: target, status: raw.status };
-        }
-        if (raw.body === undefined) {
-          return { ok: false, code: "too-large", url: target, status: raw.status };
-        }
-        const value = { status: raw.status, contentType: raw.contentType, body: raw.body };
-        cachePut(target, value);
-        return { ok: true, url: target, cached: false, ...value };
+        return { ok: false, code: raw.code, url: target };
       }
-    },
-  };
+
+      // A redirect may leave the origin robots.txt was read for: check the final URL too.
+      if (raw.finalUrl !== target && !(await robotsAllow(raw.finalUrl))) {
+        return { ok: false, code: "blocked-by-robots", url: raw.finalUrl };
+      }
+
+      const retryable = raw.status === 429 || raw.status >= 500;
+      if (retryable && attempt < maxAttempts) {
+        await sleep(retryDelayMs(raw.retryAfter, attempt));
+        continue;
+      }
+      if (raw.status < 200 || raw.status > 299) {
+        return { ok: false, code: "http-status", url: target, status: raw.status };
+      }
+      if (raw.body === undefined) {
+        return { ok: false, code: "too-large", url: target, status: raw.status };
+      }
+      const value = { status: raw.status, contentType: raw.contentType, body: raw.body };
+      if (cacheable) {
+        cachePut(target, value);
+      }
+      return { ok: true, url: target, cached: false, ...value };
+    }
+  }
   return client;
 }

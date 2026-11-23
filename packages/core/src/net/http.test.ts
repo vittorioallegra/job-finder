@@ -1,4 +1,4 @@
-// protects=the HTTP client sends the generic user agent, honours robots.txt (cached per origin, failures blocking), spaces requests per host, retries 429 and 5xx with backoff and Retry-After, caches 2xx responses for the TTL, rewrites origins to the fixture base URL, and never fetches non-http URLs or cancelled requests;
+// protects=the HTTP client sends POST bodies and extra headers without caching them, sends the generic user agent, honours robots.txt (cached per origin, failures blocking), spaces requests per host, retries 429 and 5xx with backoff and Retry-After, caches 2xx responses for the TTL, rewrites origins to the fixture base URL, and never fetches non-http URLs or cancelled requests;
 // fails_when=a page is fetched despite a robots disallow, robots.txt is read once per request, a host gets two requests within the interval, a 404 is retried, a body over the limit is returned, or a fixture-rewritten request reaches the real host;
 // no_claim=real network behaviour of job sites, DNS and TLS, and the rate of the production 1 req/s default under real timers are not exercised; the fixture server test covers the real fetch path on loopback only.
 import { createServer, type Server } from "node:http";
@@ -55,6 +55,48 @@ const recordSleep = async (ms: number): Promise<void> => {
 
 afterEach(() => {
   sleeps.length = 0;
+});
+
+describe("http client POST and request headers", () => {
+  it("sends the body and the extra headers, and never caches a POST", async () => {
+    const seen: { method?: string; body?: string; header?: string | null }[] = [];
+    const fetchFake = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (new URL(String(input)).pathname === "/robots.txt") return new Response("", { status: 404 });
+      seen.push({
+        method: init?.method,
+        body: typeof init?.body === "string" ? init.body : undefined,
+        header: new Headers(init?.headers).get("x-test-key"),
+      });
+      return new Response('{"ok":true}', { status: 200, headers: { "content-type": "application/json" } });
+    }) as typeof fetch;
+    const client = createHttpClient({ fetch: fetchFake, intervalMs: 0, sleep: async () => {} });
+    const url = "https://search.example.test/api";
+
+    const first = await client.post(url, { body: '{"q":"x"}', headers: { "x-test-key": "k1" } });
+    const second = await client.post(url, { body: '{"q":"x"}', headers: { "x-test-key": "k1" } });
+
+    expect(first.ok && second.ok).toBe(true);
+    expect(seen).toEqual([
+      { method: "POST", body: '{"q":"x"}', header: "k1" },
+      { method: "POST", body: '{"q":"x"}', header: "k1" },
+    ]);
+  });
+
+  it("sends a GET with headers without serving it from the cache", async () => {
+    let calls = 0;
+    const fetchFake = (async (input: RequestInfo | URL) => {
+      if (new URL(String(input)).pathname === "/robots.txt") return new Response("", { status: 404 });
+      calls += 1;
+      return new Response("[]", { status: 200, headers: { "content-type": "application/json" } });
+    }) as typeof fetch;
+    const client = createHttpClient({ fetch: fetchFake, intervalMs: 0, sleep: async () => {} });
+    const url = "https://search.example.test/keyed";
+
+    await client.get(url, { headers: { "x-test-key": "k1" } });
+    await client.get(url, { headers: { "x-test-key": "k1" } });
+
+    expect(calls).toBe(2);
+  });
 });
 
 describe("http client", () => {
