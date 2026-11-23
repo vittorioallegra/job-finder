@@ -20,3 +20,18 @@ export const runs = sqliteTable("runs", {
   finishedAt: integer("finished_at"),
   message: text("message"),
 });
+
+/** The single user profile (row id 1). `data` is the JSON of the validated profile; `version` points at the scoring version. */
+export const profile = sqliteTable("profile", {
+  id: integer("id").primaryKey(),
+  data: text("data").notNull(),
+  version: integer("version").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+/** One row per scoring-relevant profile change. `snapshot` is the scoring JSON of that version. */
+export const profileVersions = sqliteTable("profile_versions", {
+  version: integer("version").primaryKey(),
+  snapshot: text("snapshot").notNull(),
+  createdAt: integer("created_at").notNull(),
+});

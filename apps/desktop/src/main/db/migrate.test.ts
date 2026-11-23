@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
+import { readMigrationFiles } from "drizzle-orm/migrator";
 import { drizzleOverSqlite } from "./sqlite-proxy";
 import { migrateDatabase } from "./migrate";
 
@@ -122,7 +123,8 @@ describe("drizzle migrator with pre-migration backup", () => {
     ).rejects.toThrow();
     expect(tableNames(raw)).not.toContain("probe");
     const recorded = raw.prepare("SELECT count(*) AS count FROM __drizzle_migrations").get();
-    expect(recorded).toEqual({ count: 1 });
+    const realMigrations = readMigrationFiles({ migrationsFolder: repoMigrations }).length;
+    expect(recorded).toEqual({ count: realMigrations });
     raw.close();
   });
 });
