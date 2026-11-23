@@ -13,6 +13,13 @@ export default defineConfig({
       },
       {
         test: {
+          name: "bridge",
+          environment: "node",
+          include: ["packages/bridge/src/**/*.test.ts"],
+        },
+      },
+      {
+        test: {
           name: "web",
           environment: "jsdom",
           include: ["apps/web/src/**/*.test.{ts,tsx}"],

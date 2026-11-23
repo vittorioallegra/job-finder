@@ -223,9 +223,6 @@ importers:
 
   apps/desktop:
     dependencies:
-      '@job-finder/bridge':
-        specifier: workspace:*
-        version: link:../../packages/bridge
       drizzle-orm:
         specifier: 0.45.4
         version: 0.45.4
@@ -233,6 +230,9 @@ importers:
       '@electron/fuses':
         specifier: ^2.1.3
         version: 2.1.3
+      '@job-finder/bridge':
+        specifier: workspace:*
+        version: link:../../packages/bridge
       '@job-finder/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -263,6 +263,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@job-finder/bridge':
+        specifier: workspace:*
+        version: link:../../packages/bridge
       i18next:
         specifier: 27.1.0
         version: 27.1.0(typescript@6.0.3)
@@ -298,7 +301,11 @@ importers:
         specifier: 8.3.8
         version: 8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)
 
-  packages/bridge: {}
+  packages/bridge:
+    dependencies:
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
 
   packages/core:
     dependencies:
