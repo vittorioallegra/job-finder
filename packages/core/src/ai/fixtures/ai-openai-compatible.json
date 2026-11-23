@@ -1,0 +1,28 @@
+{
+  "provider": "openai-compatible",
+  "model": "fixture-replay-model",
+  "origin": "hand-made: written by hand for the desktop E2E journey, not recorded from a live model. Answers are fixed JSON chosen to pass the document and profile checks.",
+  "entries": [
+    {
+      "key": "a3fed75f80824e17d4def4b9458150ecae0838dd38f91de901591cd849722105",
+      "method": "POST",
+      "path": "/v1/chat/completions",
+      "status": 200,
+      "body": "{\"id\":\"chatcmpl-hand-made\",\"object\":\"chat.completion\",\"created\":1767225600,\"model\":\"fixture-replay-model\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"ok\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":100,\"completion_tokens\":50,\"total_tokens\":150}}"
+    },
+    {
+      "key": "e7433f3846cf1f1056610cb3aeb58afcb009467248b5de0dfd33b87b72bfe029",
+      "method": "POST",
+      "path": "/v1/chat/completions",
+      "status": 200,
+      "body": "{\"id\":\"chatcmpl-hand-made\",\"object\":\"chat.completion\",\"created\":1767225600,\"model\":\"fixture-replay-model\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"summary\\\":\\\"Backend engineer who builds payment services in TypeScript.\\\",\\\"experience\\\":[{\\\"source\\\":0,\\\"company\\\":\\\"Northwind\\\",\\\"title\\\":\\\"Backend Engineer\\\",\\\"location\\\":\\\"Milano\\\",\\\"startDate\\\":\\\"2021\\\",\\\"endDate\\\":\\\"Present\\\",\\\"bullets\\\":[{\\\"source\\\":0,\\\"text\\\":\\\"Reduced checkout latency by 35 percent\\\"}]}],\\\"education\\\":[{\\\"source\\\":0,\\\"institution\\\":\\\"Politecnico di Milano\\\",\\\"degree\\\":\\\"BSc\\\",\\\"field\\\":\\\"Computer Engineering\\\",\\\"startDate\\\":\\\"2014\\\",\\\"endDate\\\":\\\"2017\\\"}],\\\"skills\\\":[{\\\"source\\\":0,\\\"name\\\":\\\"TypeScript\\\"},{\\\"source\\\":1,\\\"name\\\":\\\"PostgreSQL\\\"}]}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":100,\"completion_tokens\":50,\"total_tokens\":150}}"
+    },
+    {
+      "key": "b31e4135e02dc79537eb49c89976135ec575a87244f96fe104942cb9b4092ab3",
+      "method": "POST",
+      "path": "/v1/chat/completions",
+      "status": 200,
+      "body": "{\"id\":\"chatcmpl-hand-made\",\"object\":\"chat.completion\",\"created\":1767225600,\"model\":\"fixture-replay-model\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"paragraphs\\\":[\\\"Dear Acme hiring team, I am a backend engineer who builds payment services in TypeScript, and I would like to join your Software Engineer role in Milano.\\\",\\\"At Northwind I reduced checkout latency, and I work with PostgreSQL every day. I would welcome the chance to build the payments platform with your team.\\\"]}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":100,\"completion_tokens\":50,\"total_tokens\":150}}"
+    }
+  ]
+}
