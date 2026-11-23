@@ -308,6 +308,7 @@ Approved: yes (2026-11-23)
   - The HTTP client fetched a redirect target before checking its robots.txt, and could be redirected to loopback or private-network addresses — `fix: check robots and block private addresses on every redirect hop before fetching it`
   - A cancelled or crashed scheduled scan did not move the schedule, so it was restarted every minute — `fix: count cancelled and interrupted scans as an attempt so the scheduler does not restart them every minute`
   - Autofill typed a wrong first or last name for names of more than two parts (Maria De Luca got the last name Luca) — `fix: leave first and last name to the user when the full name has more than two parts`
+  - Autofill skipped a select showing a placeholder option with a value, and a planned fill that no frame took vanished without being highlighted or listed — `fix: fill placeholder selects and report every planned fill that was not taken`
 
 ### Decisions
 - Single-user, local-only app; published as open source on GitHub, each user runs it on their own machine.

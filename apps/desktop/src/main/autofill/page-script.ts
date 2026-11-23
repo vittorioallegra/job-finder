@@ -202,7 +202,12 @@ const FILL = `function (actions) {
       results.push({ id: action.id, ok: false, reason: "disabled" });
       continue;
     }
-    if (el.value !== "" && !(el.tagName === "SELECT" && el.selectedIndex === 0 && el.value === "")) {
+    // A select showing its placeholder ("Please select", value "-1") is empty, as discovery sees it.
+    var placeholder =
+      el.tagName === "SELECT" &&
+      (el.value === "" ||
+        (el.selectedIndex === 0 && /select|choose|please|seleziona|scegli|--/i.test(el.options[0].text)));
+    if (el.value !== "" && !placeholder) {
       results.push({ id: action.id, ok: false, reason: "has-value" });
       continue;
     }

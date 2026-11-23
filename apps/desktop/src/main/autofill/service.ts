@@ -141,6 +141,12 @@ async function applyActions(
     }
   }
 
+  // A planned fill that no frame took and none refused (the control vanished, or already held a
+  // value) must not disappear: it is reported and highlighted like any refused field.
+  for (const action of textActions) {
+    if (!taken.has(action.id)) refused.add(action.id);
+  }
+
   for (const action of actions) {
     if (action.kind !== "file") continue;
     const contextId = contextOf.get(action.id);

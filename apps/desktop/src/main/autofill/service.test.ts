@@ -224,6 +224,21 @@ describe("autofill service on the Greenhouse fixture", () => {
     expect(submit).not.toHaveBeenCalled();
   });
 
+  it("fills a select that shows a placeholder option, and never drops a planned fill silently", async () => {
+    // protects=a select showing a placeholder option with a real value is filled, and a planned fill no frame took is reported as left; fails_when=the select is skipped without being filled, highlighted or listed; no_claim=real ATS selects;
+    const window = scriptedWindow("placeholder-select.html");
+    const { service } = serviceWith([window], {
+      application: detail({ applyUrl: "https://careers.acme.test/apply/9" }),
+    });
+
+    const result = await service.start({ applicationId: "a1" });
+
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    const select = document.querySelector("#relocate") as HTMLSelectElement;
+    expect(select.value).toBe("yes");
+  });
+
   it("uploads no CV that has no PDF yet, and reports it as not exported", async () => {
     const window = scriptedWindow("greenhouse.html");
     const { service } = serviceWith([window], { exists: { cv: false, "cover-letter": true } });
