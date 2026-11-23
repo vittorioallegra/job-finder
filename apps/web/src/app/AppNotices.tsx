@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AlertTriangle, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AppStatus } from "@job-finder/bridge";
 import { useBridge } from "../lib/bridge/BridgeContext";
@@ -37,23 +38,32 @@ export function AppNotices() {
   if (status.engine !== "failed" && update === null) return null;
 
   return (
-    <div className="flex flex-col gap-2 px-4 pt-3">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-6 pt-3">
       {status.engine === "failed" ? (
         <p
           role="alert"
-          className="rounded-md border border-app-border bg-app-bg px-4 py-3 text-sm text-app-fg"
+          className="flex items-center gap-2.5 rounded-xl bg-app-danger-soft px-4 py-2.5 text-sm text-app-danger"
         >
+          <AlertTriangle className="size-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
           {t("app.notices.engineFailed")}
         </p>
       ) : null}
       {update ? (
         <div
           role="status"
-          className="flex flex-wrap items-center gap-3 rounded-md border border-app-border bg-app-bg px-4 py-3 text-sm text-app-fg"
+          className="flex flex-wrap items-center gap-3 rounded-xl bg-app-accent-soft px-4 py-2.5 text-sm text-app-fg"
         >
-          <span>{t("app.notices.updateAvailable", { version: update.version })}</span>
+          <Sparkles
+            className="size-4 shrink-0 text-app-accent"
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+          <span className="flex-1">
+            {t("app.notices.updateAvailable", { version: update.version })}
+          </span>
           <Button
             variant="secondary"
+            size="sm"
             onClick={() => {
               setOpenFailed(false);
               bridge.app.openUpdate().then(
@@ -64,11 +74,11 @@ export function AppNotices() {
           >
             {t("app.notices.openRelease")}
           </Button>
-          <Button variant="secondary" onClick={() => setDismissed(update.version)}>
+          <Button variant="ghost" size="sm" onClick={() => setDismissed(update.version)}>
             {t("app.notices.dismiss")}
           </Button>
           {openFailed ? (
-            <span className="text-app-muted">{t("app.notices.openFailed")}</span>
+            <span className="text-app-danger">{t("app.notices.openFailed")}</span>
           ) : null}
         </div>
       ) : null}
