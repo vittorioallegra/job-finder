@@ -1,4 +1,4 @@
-// protects=the engine answers pings and database batches served by main, a page render it asks for is loaded by main and answered under the same request id, an ingestion run started through it reports its progress and answer under the same request id, and after a crash the supervisor logs the exit, reports the engine as lost, marks runs left running as interrupted and serves the restarted engine; calls in flight at a crash, or made after the supervisor gave up or stopped, reject with EngineUnavailableError instead of hanging;
+// protects=the engine answers pings and database batches served by main, page renders and ingestion and scoring requests are answered under their request ids, and after a crash the supervisor logs the exit,
 // fails_when=a ping or a batch returns the wrong results, a page render gets no answer or another request's answer, an ingestion answer or progress is lost or sent to another run, a run stays running after its engine crashed, the exit reason is not logged, the owner is not told about a crash, no restart happens (including when reconciling runs fails), or a call hangs instead of rejecting;
 // no_claim=utility-process spawning, the real MessageChannelMain wiring and the bundled engine entry are covered by the desktop E2E smoke, not here.
 import { mkdtempSync } from "node:fs";
@@ -13,6 +13,7 @@ import type { AiProviderConfig } from "@job-finder/core/ai";
 import type { CvImportRequest } from "@job-finder/core/cv";
 import type { IngestEvent } from "@job-finder/core/ingest/events";
 import type { HttpClient } from "@job-finder/core/net";
+import { emptyProfile, scoringFields } from "@job-finder/core/profile";
 import type { PortLike } from "../../engine/port";
 import { createEngineRuntime, type EngineRuntime } from "../../engine/runtime";
 import {
@@ -68,6 +69,7 @@ interface Harness {
     ingestEvents: IngestEvent[];
     engineLosses: number;
     discoveries: string[];
+    scorings: Array<{ jobIds: string[]; apiKey: string | null }>;
   };
 }
 
@@ -96,11 +98,18 @@ async function startHarness(): Promise<Harness> {
     ingestEvents: [],
     engineLosses: 0,
     discoveries: [],
+    scorings: [],
   };
   const launch = (): EngineHandle => {
     const { port1, port2 } = new MessageChannel();
     const runtime = createEngineRuntime(toPortLike(port2), {
       net: fakeNet(),
+      createScoring: () => ({
+        score: async (request) => {
+          control.scorings.push({ jobIds: request.jobIds, apiKey: request.ai.config.apiKey });
+          return { ok: true, scored: request.jobIds.length, cached: 0, failed: 0, skipped: 0 };
+        },
+      }),
       testAiConnection: (config) => {
         control.aiConfigs.push(config);
         if (control.aiHangs) {
@@ -415,6 +424,28 @@ describe("engine supervisor", () => {
       ),
     ).resolves.toEqual({ ok: true, candidates: [] });
     expect(control.discoveries).toEqual(["data,ml"]);
+  });
+
+  it("scores jobs in the engine, hands it the key only there, and answers under its request id", async () => {
+    const { supervisor, control } = await startHarness();
+
+    const outcome = await supervisor.scoreJobs({
+      profile: scoringFields(emptyProfile()),
+      profileVersion: 2,
+      jobIds: ["j1", "j2"],
+      ai: {
+        config: {
+          provider: "openai-compatible",
+          model: "local-model",
+          baseUrl: "http://localhost:11434/v1",
+          apiKey: "sk-test-key",
+        },
+        contextSize: 8192,
+      },
+    });
+
+    expect(outcome).toEqual({ ok: true, scored: 2, cached: 0, failed: 0, skipped: 0 });
+    expect(control.scorings).toEqual([{ jobIds: ["j1", "j2"], apiKey: "sk-test-key" }]);
   });
 
   it("reports the engine's answer when a run is already active", async () => {

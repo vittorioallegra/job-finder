@@ -3,6 +3,7 @@ import type { AppSettings, AppSettingsPatch } from "./settings";
 import type { SecretName, SecretsStatus } from "./secrets";
 import type { CvImportRequest, CvImportResult, Profile, ProfileRecord } from "./profile";
 import type { DiscoverySearchRequest, DiscoverySearchResult } from "./discovery";
+import type { ScoreStartRequest, ScoreStartResult } from "./scoring";
 import type {
   CompanyAddRequest,
   CompanyAddResult,
@@ -20,6 +21,7 @@ export * from "./settings";
 export * from "./secrets";
 export * from "./ipc";
 export * from "./profile";
+export * from "./scoring";
 
 /** Shape of the API the preload script exposes as `window.jobFinder`. Values never include secrets. */
 export interface JobFinderBridge {
@@ -53,6 +55,13 @@ export interface JobFinderBridge {
   readonly jobs: {
     /** Open jobs, newest first. */
     list(): Promise<JobListItem[]>;
+  };
+  readonly scores: {
+    /**
+     * Scores the open jobs with the AI, on the current profile version. Runs in the engine and
+     * resolves when the run ends; the key never reaches the renderer.
+     */
+    start(input: ScoreStartRequest): Promise<ScoreStartResult>;
   };
   readonly discovery: {
     /** Searches the web for ATS boards matching the criteria. Found boards are not added until the user adds them. */

@@ -20,6 +20,8 @@ import {
 } from "./ingest";
 import type { DiscoverySearchResult } from "./discovery";
 import { DiscoverySearchRequestSchema } from "./discovery";
+import type { ScoreStartResult } from "./scoring";
+import { ScoreStartRequestSchema } from "./scoring";
 
 /**
  * Request payload per channel. Main validates every incoming payload with these schemas before
@@ -42,6 +44,7 @@ export const IPC_REQUEST_SCHEMAS = {
   "ingest:cancel": IngestCancelRequestSchema,
   "ingest:latest": z.undefined(),
   "discovery:search": DiscoverySearchRequestSchema,
+  "scores:start": ScoreStartRequestSchema,
 } as const;
 
 export type IpcChannel = keyof typeof IPC_REQUEST_SCHEMAS;
@@ -65,6 +68,7 @@ export interface IpcResponses {
   "ingest:cancel": void;
   "ingest:latest": LatestRun | null;
   "discovery:search": DiscoverySearchResult;
+  "scores:start": ScoreStartResult;
 }
 
 export type IpcResponse<C extends IpcChannel> = IpcResponses[C];

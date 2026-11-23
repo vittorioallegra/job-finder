@@ -2,6 +2,7 @@ import { testAiConnection } from "@job-finder/core/ai";
 import { discoverCompanies } from "@job-finder/core/discovery";
 import { createHttpClient } from "@job-finder/core/net";
 import { createIngestController } from "./ingest";
+import { createScoringRunner } from "./scoring";
 import { fromElectronPort } from "./port";
 import { createEngineRuntime } from "./runtime";
 
@@ -28,6 +29,7 @@ if (parentPort) {
       createEngineRuntime(fromElectronPort(port), {
         net,
         createIngest: (api) => createIngestController({ ...api, http: net }),
+        createScoring: (db) => createScoringRunner(db),
         testAiConnection: (config) =>
           testAiConnection(config, { abortSignal: AbortSignal.timeout(AI_TEST_TIMEOUT_MS) }),
         discoverCompanies: (criteria, config) =>

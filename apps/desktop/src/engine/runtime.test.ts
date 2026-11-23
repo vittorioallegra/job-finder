@@ -22,6 +22,11 @@ function fakeNet(overrides: Partial<HttpClient> = {}): HttpClient {
 /** An ingestion controller that answers nothing; the ingestion tests replace it. */
 const noIngest = () => ({ start: () => "accepted" as const, cancel: () => {} });
 
+/** A scoring runner that answers nothing; the scoring tests replace it. */
+const noScoring = () => ({
+  score: async () => ({ ok: false as const, code: "store-failed" as const }),
+});
+
 interface FakePort extends PortLike {
   deliver(message: unknown): void;
   sent: unknown[];
@@ -58,6 +63,7 @@ describe("engine runtime", () => {
     const port = fakePort();
     const services: EngineServices = {
       createIngest: noIngest,
+      createScoring: noScoring,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: true, model: "claude-test" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
@@ -77,6 +83,7 @@ describe("engine runtime", () => {
     const port = fakePort();
     const services: EngineServices = {
       createIngest: noIngest,
+      createScoring: noScoring,
       net: fakeNet(),
       testAiConnection: async () => {
         throw new Error(`boom with ${config.apiKey}`);
@@ -98,6 +105,7 @@ describe("engine runtime", () => {
     const port = fakePort();
     const services: EngineServices = {
       createIngest: noIngest,
+      createScoring: noScoring,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async (request) => {
@@ -124,6 +132,7 @@ describe("engine runtime", () => {
     const port = fakePort();
     const services: EngineServices = {
       createIngest: noIngest,
+      createScoring: noScoring,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => {
@@ -149,6 +158,7 @@ describe("engine runtime", () => {
     const port = fakePort();
     createEngineRuntime(port, {
       createIngest: noIngest,
+      createScoring: noScoring,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
@@ -165,6 +175,7 @@ describe("engine runtime", () => {
       return {
         net,
         createIngest: noIngest,
+        createScoring: noScoring,
         testAiConnection: async () => ({ ok: false, code: "unknown" }),
         importCv: async () => ({ ok: false, code: "unknown" }),
         discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
@@ -250,6 +261,7 @@ describe("engine runtime", () => {
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
       discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
+      createScoring: noScoring,
       createIngest: () => ({
         start: (runId, companyId) => {
           started.push([runId, companyId]);
@@ -274,6 +286,7 @@ describe("engine runtime", () => {
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
       discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
+      createScoring: noScoring,
       createIngest: (api) => ({
         start: (_runId, _companyId, ai) => {
           received = { ai, rendersPages: typeof api.renderPage === "function" };
@@ -306,6 +319,7 @@ describe("engine runtime", () => {
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
       createIngest: noIngest,
+      createScoring: noScoring,
       discoverCompanies: async (criteria, config) => {
         asked.push({ criteria, config });
         return { ok: false, code: "search-blocked" };
@@ -338,6 +352,7 @@ describe("engine runtime", () => {
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
       createIngest: noIngest,
+      createScoring: noScoring,
       discoverCompanies: async () => {
         throw new Error("secret detail");
       },
@@ -365,6 +380,7 @@ describe("engine runtime", () => {
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
       discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
+      createScoring: noScoring,
       createIngest: () => ({
         start: (runId) => {
           started.push(runId);

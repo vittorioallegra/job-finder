@@ -1,11 +1,11 @@
-// protects=a company is stored with its supported board or as a generic careers page, one board or careers URL is stored once, the job list shows only open jobs, the latest run comes back with its log in order, and each company shows its most recent scan;
-// fails_when=a board or careers URL already stored is stored again, a supported careers URL is stored without its board, a closed job is listed, the run log is returned out of order or without its kinds, or a company shows an older scan than its latest;
+// protects=a company is stored with its supported board or as a generic careers page, one board or careers URL is stored once, the job list shows only open jobs ordered by affinity for the current profile version with unscored jobs last, the latest run comes back with its log in order, and each company shows its most recent scan;
+// fails_when=a board or careers URL already stored is stored again, a supported careers URL is stored without its board, a closed job is listed, a score of an older profile version orders a job, the run log is returned out of order or without its kinds, or a company shows an older scan than its latest;
 // no_claim=the careers URL is checked by its shape only, without a request, so a board that does not exist is still stored; the database schema is covered by the migration tests.
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { companies, runs } from "@job-finder/core";
+import { companies, jobs, jobScores, profile, runs } from "@job-finder/core";
 import type { IngestEvent } from "@job-finder/core/ingest/events";
 import { openAppDatabase, type AppDatabase } from "../db/database";
 import { appendRunEvent } from "../db/ingest-operations";
@@ -183,5 +183,58 @@ describe("ingest repository", () => {
     });
     expect(latest?.events).toEqual(events);
     database.close();
+  });
+
+  it("lists open jobs by affinity for the current profile version, unscored jobs last and newest first", async () => {
+    const database = await openDatabase();
+    await database.db.insert(companies).values({
+      id: "c1",
+      name: "Acme",
+      careersUrl: "https://x.test/careers",
+      ats: null,
+      slug: null,
+      createdAt: 1,
+    });
+    await database.db.insert(profile).values({ id: 1, data: "{}", version: 2, updatedAt: 1 });
+    const job = (id: string, firstSeenAt: number) => ({
+      id,
+      companyId: "c1",
+      fingerprint: `fp-${id}`,
+      title: `Engineer ${id}`,
+      description: "Build things.",
+      url: `https://x.test/${id}`,
+      applyUrl: `https://x.test/${id}/apply`,
+      locations: "[]",
+      workMode: "unknown",
+      employmentType: "unknown",
+      seniority: "unknown",
+      visaSponsorship: "unknown",
+      firstSeenAt,
+      lastSeenAt: firstSeenAt,
+    });
+    await database.db
+      .insert(jobs)
+      .values([job("low", 1), job("high", 2), job("none", 9), job("stale", 8)]);
+    const stored = (jobId: string, profileVersion: number, value: number) => ({
+      jobId,
+      profileVersion,
+      jobHash: "jh",
+      profileHash: "ph",
+      model: "local-test",
+      promptVersion: 1,
+      score: value,
+      explanation: "Fit.",
+      createdAt: 1,
+    });
+    await database.db
+      .insert(jobScores)
+      .values([stored("low", 2, 40), stored("high", 2, 90), stored("stale", 1, 99)]);
+
+    const list = await createIngestRepository(database.db).listJobs();
+
+    expect(list.map((item) => item.id)).toEqual(["high", "low", "none", "stale"]);
+    expect(list[0]).toMatchObject({ score: 90, explanation: "Fit." });
+    expect(list[2]).toMatchObject({ score: null, explanation: null });
+    expect(list[3]).toMatchObject({ score: null, explanation: null });
   });
 });

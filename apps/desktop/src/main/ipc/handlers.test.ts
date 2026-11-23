@@ -123,6 +123,7 @@ function spyServices() {
     repository,
     ingestion,
     discovery,
+    scoring: { start: async () => ({ ok: false as const, code: "no-profile" as const }) },
   };
   return { services, calls };
 }
@@ -224,6 +225,7 @@ describe("IPC sender and payload guard", () => {
         "profile:get",
         "profile:import-cv",
         "profile:save",
+        "scores:start",
         "secrets:clear",
         "secrets:set",
         "secrets:status",

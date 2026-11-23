@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { openAppDatabase, resolveMigrationsFolder, type AppDatabase } from "./db/database";
 import { executeDbCalls, reconcileInterruptedRuns } from "./db/operations";
+import { openJobIds } from "./db/scoring-operations";
 import { registerIpcHandlers } from "./ipc/handlers";
 import { createAiConnectionService } from "./ai/connection";
 import { createCvImportService } from "./profile/cv-import";
@@ -11,6 +12,7 @@ import { createIngestRepository } from "./ingest/repository";
 import { createIngestionService } from "./ingest/service";
 import { createDiscoveryService } from "./discovery/service";
 import { createProfileRepository } from "./profile/repository";
+import { createScoringService } from "./scoring/service";
 import { createUtilityProcessLauncher } from "./engine/launcher";
 import { engineEnvironment } from "./engine/fixture-env";
 import { createPageLoader } from "./page-loader/loader";
@@ -182,6 +184,13 @@ if (gotSingleInstanceLock) {
       secrets: secretStore,
       engine: supervisor,
     });
+    const scoring = createScoringService({
+      engine: supervisor,
+      profile: profileRepository,
+      settings: settingsRepository,
+      secrets: secretStore,
+      openJobIds: (limit) => openJobIds(database.db, limit),
+    });
     const discovery = createDiscoveryService({
       engine: () => supervisor,
       settings: settingsRepository,
@@ -198,6 +207,7 @@ if (gotSingleInstanceLock) {
         repository: ingestRepository,
         ingestion,
         discovery,
+        scoring,
       },
       originOf(rendererUrl) ?? rendererUrl,
     );

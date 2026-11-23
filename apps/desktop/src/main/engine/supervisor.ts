@@ -13,6 +13,8 @@ import type {
   EngineToMainMessage,
   IngestAiSettings,
   IngestStartCode,
+  ScoreJobsOutcome,
+  ScoreJobsRequest,
 } from "../../engine/protocol";
 import type { PortLike } from "../../engine/port";
 
@@ -108,6 +110,11 @@ export interface EngineSupervisor {
     criteria: DiscoveryCriteria,
     config: SearchSourceConfig,
   ): Promise<DiscoveryOutcome>;
+  /**
+   * Scores jobs with the AI in the engine. The request carries the key and the profile's ranking
+   * fields; neither is logged. Rejects with EngineUnavailableError when the engine is gone.
+   */
+  scoreJobs(request: ScoreJobsRequest): Promise<ScoreJobsOutcome>;
   /** Asks the engine to stop a run. Ignored when no engine is running. */
   cancelIngestion(runId: string): void;
   readonly state: EngineSupervisorState;
@@ -139,6 +146,11 @@ interface PendingDiscovery {
   reject: (error: Error) => void;
 }
 
+interface PendingScoring {
+  resolve: (outcome: ScoreJobsOutcome) => void;
+  reject: (error: Error) => void;
+}
+
 interface Current {
   handle: EngineHandle;
   ready: boolean;
@@ -147,6 +159,7 @@ interface Current {
   pendingCvImports: Map<number, PendingCvImport>;
   pendingIngestStarts: Map<number, PendingIngestStart>;
   pendingDiscoveries: Map<number, PendingDiscovery>;
+  pendingScorings: Map<number, PendingScoring>;
 }
 
 /**
@@ -179,6 +192,7 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pendingCvImports: new Map(),
       pendingIngestStarts: new Map(),
       pendingDiscoveries: new Map(),
+      pendingScorings: new Map(),
     };
     current = state;
     phase = "running";
@@ -227,6 +241,10 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pending.reject(new EngineUnavailableError(reason));
     }
     state.pendingDiscoveries.clear();
+    for (const pending of state.pendingScorings.values()) {
+      pending.reject(new EngineUnavailableError(reason));
+    }
+    state.pendingScorings.clear();
   }
 
   function rejectReadyWaiters(reason: EngineUnavailableReason): void {
@@ -268,6 +286,12 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
     if (message.type === "discover-companies-result") {
       const pending = state.pendingDiscoveries.get(message.id);
       state.pendingDiscoveries.delete(message.id);
+      pending?.resolve(message.outcome);
+      return;
+    }
+    if (message.type === "score-jobs-result") {
+      const pending = state.pendingScorings.get(message.id);
+      state.pendingScorings.delete(message.id);
       pending?.resolve(message.outcome);
       return;
     }
@@ -387,6 +411,15 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       return new Promise<DiscoveryOutcome>((resolve, reject) => {
         ready.pendingDiscoveries.set(id, { resolve, reject });
         ready.handle.port.postMessage({ type: "discover-companies", id, criteria, config });
+      });
+    },
+    async scoreJobs(request) {
+      const ready = current?.ready ? current : await waitUntilReady();
+      const id = nextRequestId;
+      nextRequestId += 1;
+      return new Promise<ScoreJobsOutcome>((resolve, reject) => {
+        ready.pendingScorings.set(id, { resolve, reject });
+        ready.handle.port.postMessage({ type: "score-jobs", id, request });
       });
     },
     cancelIngestion(runId) {

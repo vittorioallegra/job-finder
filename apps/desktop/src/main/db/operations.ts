@@ -9,6 +9,7 @@ import {
   lookupExisting,
   persistPlan,
 } from "./ingest-operations";
+import { loadScoringJobs, lookupScores, persistScores } from "./scoring-operations";
 
 export type AppDb = SqliteRemoteDatabase;
 
@@ -58,6 +59,13 @@ async function executeCall(db: AppDb, call: DbCall, now: number): Promise<unknow
       return closeMissingSources(db, call.companyId, call.runId, call.at);
     case "run-events.append":
       await appendRunEvent(db, call.event);
+      return null;
+    case "scores.jobs":
+      return loadScoringJobs(db, call.jobIds);
+    case "scores.lookup":
+      return lookupScores(db, call.profileVersion, call.jobIds);
+    case "scores.persist":
+      await persistScores(db, call.rows);
       return null;
   }
 }

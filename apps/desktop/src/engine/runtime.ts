@@ -6,9 +6,16 @@ import type {
   SearchSourceConfig,
 } from "@job-finder/core/discovery/types";
 import { guardPageRender, type HttpClient, type PageRenderResult } from "@job-finder/core/net";
-import type { DbCall, DbResult, EngineToMainMessage, MainToEngineMessage } from "./protocol";
+import type {
+  DbCall,
+  DbResult,
+  EngineToMainMessage,
+  MainToEngineMessage,
+  ScoreJobsOutcome,
+} from "./protocol";
 import type { PortLike } from "./port";
 import type { IngestController } from "./ingest";
+import type { ScoringRunner } from "./scoring";
 
 export interface EngineRuntime {
   /** Sends one batch of database calls to main and resolves with one result per call, in order. */
@@ -42,6 +49,8 @@ export interface EngineServices {
   net: HttpClient;
   /** Builds the ingestion controller over the runtime's database and message channel. */
   createIngest(api: IngestApi): IngestController;
+  /** Builds the affinity scoring runner over the runtime's database calls. */
+  createScoring(db: (calls: DbCall[]) => Promise<DbResult[]>): ScoringRunner;
 }
 
 /**
@@ -75,6 +84,7 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
     send: (message) => post(port, message),
     renderPage: renderGuarded,
   });
+  const scoring = services.createScoring(db);
 
   port.on("message", (data) => {
     const message = data as MainToEngineMessage;
@@ -109,6 +119,14 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
         .discoverCompanies(criteria, config)
         .catch((): DiscoveryOutcome => ({ ok: false, code: "search-failed" }))
         .then((outcome) => post(port, { type: "discover-companies-result", id, outcome }));
+      return;
+    }
+    if (message.type === "score-jobs") {
+      const { id, request } = message;
+      void scoring
+        .score(request)
+        .catch((): ScoreJobsOutcome => ({ ok: false, code: "store-failed" }))
+        .then((outcome) => post(port, { type: "score-jobs-result", id, outcome }));
       return;
     }
     if (message.type === "ingest-cancel") {

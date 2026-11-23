@@ -30,6 +30,8 @@ const posting: JobListItem = {
   url: "https://boards.greenhouse.io/acme/jobs/1",
   applyUrl: "https://boards.greenhouse.io/acme/jobs/1",
   firstSeenAt: 1,
+  score: null,
+  explanation: null,
 };
 
 function button(container: HTMLElement, text: string): HTMLButtonElement {

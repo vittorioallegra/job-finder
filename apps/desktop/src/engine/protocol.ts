@@ -9,6 +9,8 @@ import type {
 import type { BatchPlan, LookupRequest } from "@job-finder/core/ingest";
 import type { IngestEvent } from "@job-finder/core/ingest/events";
 import type { PageRenderResult } from "@job-finder/core/net";
+import type { ScoreOutcome, StoredScore } from "@job-finder/core/ranking";
+import type { ScoringFields } from "@job-finder/core/profile";
 
 /**
  * Database operations the engine may request. Main owns the database and executes these in
@@ -26,7 +28,12 @@ export type DbCall =
   | { name: "ingest.persist"; plan: BatchPlan }
   /** Closes the postings of one company that its complete scan did not see; returns how many. */
   | { name: "ingest.close-missing"; companyId: string; runId: string; at: number }
-  | { name: "run-events.append"; event: IngestEvent };
+  | { name: "run-events.append"; event: IngestEvent }
+  /** The scoring inputs of the jobs, in the order of `jobIds`; ids no longer open or stored are left out. */
+  | { name: "scores.jobs"; jobIds: string[] }
+  /** The stored scores of these jobs for one profile version. */
+  | { name: "scores.lookup"; profileVersion: number; jobIds: string[] }
+  | { name: "scores.persist"; rows: StoredScore[] };
 
 export type DbResult = { ok: true; value: unknown } | { ok: false; error: string };
 
@@ -44,6 +51,21 @@ export interface IngestAiSettings {
 }
 
 /**
+ * One scoring request. The engine gets only the ranking fields of the profile and the AI provider
+ * with its key; the key is used for the run and never stored.
+ */
+export interface ScoreJobsRequest {
+  profile: ScoringFields;
+  profileVersion: number;
+  /** Jobs in scoring order: visible and top jobs first. */
+  jobIds: string[];
+  ai: IngestAiSettings;
+}
+
+/** A scoring outcome. `store-failed`: a database call of the run failed. */
+export type ScoreJobsOutcome = ScoreOutcome | { ok: false; code: "store-failed" };
+
+/**
  * Messages sent by main to the engine over the message port. `ai-test` carries the API key from
  * main to the engine: the only path a secret value takes out of main, and it never reaches the
  * renderer.
@@ -59,6 +81,8 @@ export type MainToEngineMessage =
   /** `companyId` limits the run to one company (a retry); omitted: every company. */
   | { type: "ingest-start"; id: number; runId: string; companyId?: string; ai?: IngestAiSettings }
   | { type: "ingest-cancel"; runId: string }
+  /** Affinity scoring of open jobs with the AI; the answer is `score-jobs-result`. */
+  | { type: "score-jobs"; id: number; request: ScoreJobsRequest }
   /**
    * Web search for ATS boards. The engine makes the requests; main relays the criteria, the enabled
    * sources and, for keyed providers, their keys (the only path a search key takes out of main).
@@ -80,5 +104,6 @@ export type EngineToMainMessage =
   | { type: "page-render"; id: number; url: string }
   | { type: "ingest-start-result"; id: number; code: IngestStartCode }
   | { type: "discover-companies-result"; id: number; outcome: DiscoveryOutcome }
+  | { type: "score-jobs-result"; id: number; outcome: ScoreJobsOutcome }
   /** A run's progress and log entries. The final `run-finished` is sent after the run row is closed. */
   | { type: "ingest-progress"; event: IngestEvent };

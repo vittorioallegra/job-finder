@@ -78,6 +78,10 @@ export interface JobListItem {
   applyUrl: string;
   /** Epoch milliseconds. */
   firstSeenAt: number;
+  /** The affinity score 0-100 for the current profile version, or null when the job is not scored. */
+  score: number | null;
+  /** The model's explanation of the score, or null when the job is not scored. */
+  explanation: string | null;
 }
 
 export interface RunSummary {

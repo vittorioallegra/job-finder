@@ -18,6 +18,7 @@ import {
   type ProfileRecord,
   type SecretName,
   type SecretStorageInfo,
+  type ScoreStartResult,
   type SecretsStatus,
 } from "@job-finder/bridge";
 
@@ -36,6 +37,8 @@ export interface MemoryBridgeOptions {
   latestRun?: LatestRun | null;
   /** Answer to "start a run". Defaults to engine unavailable, since there is no engine here. */
   ingestStart?: IngestStartResult;
+  /** Outcome of a scoring run. Defaults to engine unavailable, since there is no engine here. */
+  scoring?: ScoreStartResult;
   /** Answer to a discovery search. Defaults to engine unavailable, since there is no engine here. */
   discovery?: DiscoverySearchResult;
 }
@@ -117,6 +120,10 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
     },
     jobs: {
       list: async () => structuredClone(jobs),
+    },
+    scores: {
+      start: async () =>
+        structuredClone(options.scoring ?? { ok: false, code: "engine-unavailable" }),
     },
     discovery: {
       search: async () =>

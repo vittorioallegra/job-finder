@@ -1,5 +1,5 @@
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
-import { companies, jobs, runEvents, runs } from "@job-finder/core";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { companies, jobScores, jobs, profile, runEvents, runs } from "@job-finder/core";
 import { detectAts } from "@job-finder/core/ats";
 import { INGEST_RUN_KIND, type IngestEvent } from "@job-finder/core/ingest/events";
 import type {
@@ -20,7 +20,10 @@ export interface IngestRepository {
   listCompanies(): Promise<CompanyRecord[]>;
   /** Detects the ATS board from the careers URL (no network) and stores the company. */
   addCompany(input: AddCompanyInput, now?: number, newId?: () => string): Promise<CompanyAddResult>;
-  /** Open jobs, newest first. */
+  /**
+   * Open jobs, highest affinity first; jobs without a score for the current profile version come
+   * last, newest first.
+   */
   listJobs(limit?: number): Promise<JobListItem[]>;
   /** The latest ingestion run with its log, or null when none has run. */
   latestRun(): Promise<LatestRun | null>;
@@ -123,6 +126,8 @@ export function createIngestRepository(db: AppDb): IngestRepository {
     },
 
     async listJobs(limit = 200) {
+      // Scores of the current profile version only: a new version starts unscored until the next run.
+      const currentVersion = sql`(select ${profile.version} from ${profile} where ${profile.id} = 1)`;
       const rows = await db
         .select({
           id: jobs.id,
@@ -133,11 +138,17 @@ export function createIngestRepository(db: AppDb): IngestRepository {
           url: jobs.url,
           applyUrl: jobs.applyUrl,
           firstSeenAt: jobs.firstSeenAt,
+          score: jobScores.score,
+          explanation: jobScores.explanation,
         })
         .from(jobs)
         .innerJoin(companies, eq(jobs.companyId, companies.id))
+        .leftJoin(
+          jobScores,
+          and(eq(jobScores.jobId, jobs.id), eq(jobScores.profileVersion, currentVersion)),
+        )
         .where(isNull(jobs.closedAt))
-        .orderBy(desc(jobs.firstSeenAt), asc(jobs.title))
+        .orderBy(sql`${jobScores.score} desc nulls last`, desc(jobs.firstSeenAt), asc(jobs.title))
         .limit(limit);
       return rows.map((row) => ({ ...row, locations: parseLocations(row.locations) }));
     },

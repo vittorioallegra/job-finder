@@ -6,6 +6,7 @@ import {
   type DiscoverySearchRequest,
   type IngestStartRequest,
   type IpcChannel,
+  type ScoreStartRequest,
   type SecretName,
 } from "@job-finder/bridge";
 import type { Profile } from "@job-finder/core/profile";
@@ -14,6 +15,7 @@ import type { IngestRepository } from "../ingest/repository";
 import type { IngestionService } from "../ingest/service";
 import type { CvImportService } from "../profile/cv-import";
 import type { DiscoveryService } from "../discovery/service";
+import type { ScoringService } from "../scoring/service";
 import type { ProfileRepository } from "../profile/repository";
 import { originOf } from "../security/origin";
 import type { SecretStore } from "../secrets/store";
@@ -28,6 +30,7 @@ export interface IpcServices {
   repository: IngestRepository;
   ingestion: IngestionService;
   discovery: DiscoveryService;
+  scoring: ScoringService;
 }
 
 /** The parts of an Electron invoke event that the sender check reads. */
@@ -108,6 +111,8 @@ export async function handleInvoke(
       return undefined;
     case "ingest:latest":
       return services.repository.latestRun();
+    case "scores:start":
+      return services.scoring.start(payload as ScoreStartRequest);
   }
 }
 
