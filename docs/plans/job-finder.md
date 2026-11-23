@@ -278,7 +278,7 @@ Approved: yes (2026-11-23)
 - [x] 2. Engine walking skeleton and persistence foundation — `feat: start engine and migrations from main, reconcile runs on startup`
 - [x] 3. CI and release pipeline — `ci: build, smoke-test and draft-release the desktop installers from v* tags`
 - [x] 4. Bridge, settings and secrets — `feat: add settings screen over the typed bridge`
-- [ ] 5. AI layer
+- [x] 5. AI layer — `feat: test the AI connection from the settings screen through the engine`
 - [ ] 6. Onboarding and profile
 - [ ] 7. Fetch infrastructure and page loader
 - [ ] 8. Normalization and ATS adapters
@@ -340,7 +340,20 @@ Approved: yes (2026-11-23)
 - Step 4: UI kit starts with native-control components (`Button`, `TextInput`, `SelectInput`, `CheckboxInput`); Radix is deferred until a dialog or menu needs it.
 - Step 4: a plain browser (`pnpm dev`) uses an in-memory bridge, so the settings screen works without Electron. The `bridge` Vitest project was added.
 
+- Step 5: AI SDK pinned to the newest 7.0 patch past the release-age gate: `ai` 7.0.179, `@ai-sdk/anthropic` 4.0.107, `@ai-sdk/openai` 4.0.122, `@ai-sdk/openai-compatible` 3.0.94, plus `zod` 4.6.7 in `packages/core` (all exact, no age exclusions). The `ai` package ships agent skills that pnpm lists as awaiting approval; they were not approved.
+- Step 5: no build script was blocked; no `allowBuilds` change.
+- Step 5: `ai` 7 deprecates `generateObject`, so structured output uses `generateText` with `Output.object`. OpenAI uses Chat Completions (`provider.chat`), the same wire format as OpenAI-compatible servers.
+- Step 5: capability table `AI_CAPABILITIES`: anthropic and openai use native structured output; openai-compatible (Ollama, LM Studio) uses the JSON-mode fallback (text answer, code fence stripped, zod-validated). `generateStructured` retries once with the model's rejected output and the validation issue, then throws `AiError("invalid-output")`.
+- Step 5: token check is a character heuristic (about four characters per token) plus a 1024-token output reserve. Exceeding the context size returns a `context-exceeded` warning; no screen shows it yet (step 6 and step 13 consume it).
+- Step 5: record/replay is a fetch seam, not a model mock: `createReplayFetch` and `createRecordingFetch` in `packages/core/src/ai/replay.ts`, passed as the `fetch` option of `createAiModel`. Requests are keyed by method, path and body hash; the host is ignored so recordings replay against any base URL. Recordings strip the key from response bodies. Automated tests use hand-written scripted fetch doubles, labelled as such, because no live key was available here.
+- Step 5: `pnpm fixtures:record` runs `packages/core/src/ai/record-fixtures.test.ts`, skipped unless `JOB_FINDER_RECORD_AI=1`, and writes `packages/core/src/ai/fixtures/ai-<provider>.json`. No recording is committed yet; the live run is manual (documented in CLAUDE.md). HTTP fixtures come with the fetch layer in step 7.
+- Step 5: "test connection" runs in the engine. Main reads the saved AI settings and the key (`SecretStore.read`), sends them as an `ai-test` message, and receives only `{ ok, model }` or a failure code. The key never reaches the renderer; `ai:test-connection` takes no payload. The engine call has a 20 s timeout; a crashed or unavailable engine reports `engine-unavailable`.
+- Step 5: the settings screen tests the saved settings, not the unsaved draft, and shows loading, connected (with the model) or "AI unavailable" with the reason. The in-memory bridge reports `engine-unavailable` by default.
+- Step 5: the core AI module is imported through the subpath `@job-finder/core/ai`, so the provider SDKs stay out of the core barrel used by main's settings code.
+- Step 5: the supervisor sends requests to a ready engine in the same tick, so a crash right after a call still finds the request pending.
+- Step 5: not exercised: real provider calls and a real Ollama server (no keys or local model in this run), the AI test button in the packaged app, and quality of structured output on real models.
+
 ### Open questions
 
 ### Next
-Step 5: AI layer (`packages/core/src/ai/`: provider factory over Vercel AI SDK 7, record/replay provider, "AI unavailable" state).
+Step 6: Onboarding and profile (onboarding order AI provider with test connection, then CV upload, then profile review; text extraction with `unpdf` and `mammoth`; AI extraction into the profile zod schema; tables `profile` and `profile_versions`, each in its own migration).
