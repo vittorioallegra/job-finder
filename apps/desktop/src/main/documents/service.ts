@@ -1,0 +1,193 @@
+import {
+  isCloudAiEndpoint,
+  type ApplicationDocuments,
+  type DocumentExportRequest,
+  type DocumentExportResult,
+  type DocumentGenerateRequest,
+  type DocumentGenerateResult,
+  type DocumentSaveRequest,
+  type DocumentSaveResult,
+} from "@job-finder/bridge";
+import { renderDocumentHtml, type DocumentLabels } from "@job-finder/core/documents/render";
+import { validateDocument } from "@job-finder/core/documents/schema";
+import type { GenerateDocumentRequest } from "../../engine/protocol";
+import type { GenerateDocumentOutcome } from "@job-finder/core/documents/generate";
+import type { ExplanationLanguage } from "@job-finder/core/ranking";
+import { createTranslator, type MainLanguage } from "../i18n";
+import { EngineUnavailableError } from "../engine/supervisor";
+import type { ProfileRepository } from "../profile/repository";
+import type { SecretStore } from "../secrets/store";
+import type { SettingsRepository } from "../settings/repository";
+import { explanationLanguage } from "../scoring/service";
+import type { DocumentRepository } from "./repository";
+
+/** The engine side of document generation, as seen from main. */
+export interface DocumentEngine {
+  generateDocument(request: GenerateDocumentRequest): Promise<GenerateDocumentOutcome>;
+}
+
+export interface DocumentService {
+  /** The stored CV and cover letter of an application. */
+  get(applicationId: string): Promise<ApplicationDocuments>;
+  /** Generates a document with the AI and stores it, replacing the draft of that kind. */
+  generate(request: DocumentGenerateRequest): Promise<DocumentGenerateResult>;
+  /** Stores the user's edits after the profile checks. */
+  save(request: DocumentSaveRequest): Promise<DocumentSaveResult>;
+  /** Renders the stored document to a PDF in the application's folder. */
+  exportPdf(request: DocumentExportRequest): Promise<DocumentExportResult>;
+  /** Shows the exported PDF in the file manager. False when there is none. */
+  reveal(request: DocumentExportRequest): Promise<boolean>;
+}
+
+export interface DocumentServiceOptions {
+  repository: DocumentRepository;
+  profile: Pick<ProfileRepository, "get">;
+  settings: Pick<SettingsRepository, "get">;
+  secrets: Pick<SecretStore, "read">;
+  engine: DocumentEngine;
+  /** Renders one HTML document to PDF bytes (a hidden window in the app). */
+  renderPdf(html: string): Promise<Uint8Array>;
+  /** Writes an exported PDF to the application's folder. */
+  writePdf(
+    applicationId: string,
+    kind: DocumentExportRequest["kind"],
+    bytes: Uint8Array,
+  ): Promise<void>;
+  /** Where the PDF of a document is stored, for reveal. */
+  pdfPath(applicationId: string, kind: DocumentExportRequest["kind"]): string;
+  /** Opens the file manager at a path. */
+  revealPath(path: string): void;
+  /** The OS locale, used when the UI language setting is "system". */
+  systemLocale(): string;
+  now?: () => number;
+}
+
+/** Labels of the rendered documents in one language: the main i18n keys under `documents.labels`. */
+export function documentLabels(language: MainLanguage): DocumentLabels {
+  const t = createTranslator(language);
+  return {
+    cvTitle: t("documents.labels.cvTitle"),
+    coverLetterTitle: t("documents.labels.coverLetterTitle"),
+    summary: t("documents.labels.summary"),
+    experience: t("documents.labels.experience"),
+    education: t("documents.labels.education"),
+    skills: t("documents.labels.skills"),
+    greeting: t("documents.labels.greeting"),
+  };
+}
+
+/**
+ * Main-process side of the documents. Generation checks the profile and the consent for a cloud
+ * provider (the profile and the posting leave the machine), reads the AI settings and the key, and
+ * hands the call to the engine; the answer is stored here. Saved edits and exports are checked
+ * against the profile before they are stored or rendered.
+ */
+export function createDocumentService(options: DocumentServiceOptions): DocumentService {
+  const now = options.now ?? (() => Date.now());
+  const repository = options.repository;
+
+  async function languageOf(): Promise<ExplanationLanguage> {
+    const { ui } = await options.settings.get();
+    return explanationLanguage(ui.language, options.systemLocale());
+  }
+
+  return {
+    async get(applicationId) {
+      return repository.forApplication(applicationId);
+    },
+
+    async generate(request) {
+      const job = await repository.jobOf(request.applicationId);
+      if (job === null) return { ok: false, code: "not-found" };
+      const saved = await options.profile.get();
+      if (saved === null) return { ok: false, code: "no-profile" };
+      const { ai } = await options.settings.get();
+      if (isCloudAiEndpoint(ai) && !request.consent) {
+        return { ok: false, code: "consent-required" };
+      }
+      const language = await languageOf();
+      const apiKey = await options.secrets.read("ai.apiKey");
+      let outcome: GenerateDocumentOutcome;
+      try {
+        outcome = await options.engine.generateDocument({
+          kind: request.kind,
+          profile: saved.profile,
+          job,
+          language,
+          ai: {
+            config: {
+              provider: ai.provider,
+              model: ai.model,
+              baseUrl: ai.baseUrl,
+              apiKey,
+            },
+            contextSize: ai.contextSize,
+          },
+        });
+      } catch (error) {
+        if (error instanceof EngineUnavailableError) {
+          return { ok: false, code: "engine-unavailable" };
+        }
+        return { ok: false, code: "unknown" };
+      }
+      if (!outcome.ok) {
+        return { ok: false, code: outcome.code };
+      }
+      const document = await repository.save(
+        request.applicationId,
+        request.kind,
+        outcome.content,
+        now(),
+      );
+      return { ok: true, document };
+    },
+
+    async save(request) {
+      const existing = await repository.find(request.applicationId, request.content.kind);
+      if (existing === null) return { ok: false, code: "not-found" };
+      const saved = await options.profile.get();
+      if (saved === null) return { ok: false, code: "no-profile" };
+      const issues = validateDocument(request.content, saved.profile);
+      if (issues.length > 0) {
+        return { ok: false, code: "validation-failed", issues };
+      }
+      const document = await repository.save(
+        request.applicationId,
+        request.content.kind,
+        request.content,
+        now(),
+      );
+      return { ok: true, document };
+    },
+
+    async exportPdf(request) {
+      const stored = await repository.find(request.applicationId, request.kind);
+      if (stored === null) return { ok: false, code: "not-found" };
+      const saved = await options.profile.get();
+      if (saved === null) return { ok: false, code: "no-profile" };
+      const language = await languageOf();
+      const html = renderDocumentHtml(
+        stored.content,
+        saved.profile.contact,
+        documentLabels(language),
+        language,
+      );
+      try {
+        const bytes = await options.renderPdf(html);
+        await options.writePdf(request.applicationId, request.kind, bytes);
+        const document = await repository.markExported(request.applicationId, request.kind, now());
+        if (document === null) return { ok: false, code: "not-found" };
+        return { ok: true, document };
+      } catch {
+        return { ok: false, code: "export-failed" };
+      }
+    },
+
+    async reveal(request) {
+      const stored = await repository.find(request.applicationId, request.kind);
+      if (stored === null || stored.exportedAt === null) return false;
+      options.revealPath(options.pdfPath(request.applicationId, request.kind));
+      return true;
+    },
+  };
+}

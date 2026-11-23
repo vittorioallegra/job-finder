@@ -12,5 +12,16 @@
       "dialogTitle": "Export applications",
       "filterName": "CSV files"
     }
+  },
+  "documents": {
+    "labels": {
+      "cvTitle": "CV",
+      "coverLetterTitle": "Cover letter",
+      "summary": "Summary",
+      "experience": "Experience",
+      "education": "Education",
+      "skills": "Skills",
+      "greeting": "Dear hiring team,"
+    }
   }
 }

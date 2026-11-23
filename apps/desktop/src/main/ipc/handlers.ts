@@ -1,5 +1,9 @@
 import {
   IPC_REQUEST_SCHEMAS,
+  type DocumentExportRequest,
+  type DocumentGenerateRequest,
+  type DocumentGetRequest,
+  type DocumentSaveRequest,
   type ApplicationBookmarkRequest,
   type ApplicationCheckRequest,
   type ApplicationDetailRequest,
@@ -29,6 +33,7 @@ import type { DiscoveryService } from "../discovery/service";
 import type { ScoringService } from "../scoring/service";
 import type { SavedSearchRepository } from "../saved-searches/repository";
 import type { ApplicationRepository } from "../applications/repository";
+import type { DocumentService } from "../documents/service";
 import type { ProfileRepository } from "../profile/repository";
 import { originOf } from "../security/origin";
 import type { SecretStore } from "../secrets/store";
@@ -47,6 +52,7 @@ export interface IpcServices {
   savedSearches: SavedSearchRepository;
   applications: ApplicationRepository;
   applicationExport: { exportCsv(): Promise<ApplicationExportResult> };
+  documents: DocumentService;
 }
 
 /** The parts of an Electron invoke event that the sender check reads. */
@@ -154,6 +160,16 @@ export async function handleInvoke(
       return services.repository.latestRun();
     case "scores:start":
       return services.scoring.start(payload as ScoreStartRequest);
+    case "documents:get":
+      return services.documents.get((payload as DocumentGetRequest).applicationId);
+    case "documents:generate":
+      return services.documents.generate(payload as DocumentGenerateRequest);
+    case "documents:save":
+      return services.documents.save(payload as DocumentSaveRequest);
+    case "documents:export":
+      return services.documents.exportPdf(payload as DocumentExportRequest);
+    case "documents:reveal":
+      return services.documents.reveal(payload as DocumentExportRequest);
   }
 }
 

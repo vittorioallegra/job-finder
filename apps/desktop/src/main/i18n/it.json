@@ -12,5 +12,16 @@
       "dialogTitle": "Esporta candidature",
       "filterName": "File CSV"
     }
+  },
+  "documents": {
+    "labels": {
+      "cvTitle": "CV",
+      "coverLetterTitle": "Lettera di presentazione",
+      "summary": "Profilo",
+      "experience": "Esperienza",
+      "education": "Istruzione",
+      "skills": "Competenze",
+      "greeting": "Gentile responsabile delle assunzioni,"
+    }
   }
 }

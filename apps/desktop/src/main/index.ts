@@ -1,8 +1,18 @@
-import { app, BrowserWindow, dialog, ipcMain, safeStorage, net, protocol, session } from "electron";
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  safeStorage,
+  net,
+  protocol,
+  session,
+  shell,
+} from "electron";
 import { existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { openAppDatabase, resolveMigrationsFolder, type AppDatabase } from "./db/database";
 import { executeDbCalls, reconcileInterruptedRuns } from "./db/operations";
 import { scoringCandidateIds } from "./db/scoring-operations";
@@ -17,6 +27,11 @@ import { createScoringService } from "./scoring/service";
 import { createSavedSearchRepository } from "./saved-searches/repository";
 import { createApplicationRepository } from "./applications/repository";
 import { createApplicationExport } from "./applications/export";
+import { createDocumentRepository } from "./documents/repository";
+import { createDocumentService } from "./documents/service";
+import { documentFilePath } from "./documents/files";
+import { createPdfRenderer } from "./documents/pdf";
+import { openPdfWindow } from "./documents/pdf-window";
 import { createUtilityProcessLauncher } from "./engine/launcher";
 import { engineEnvironment } from "./engine/fixture-env";
 import { createPageLoader } from "./page-loader/loader";
@@ -210,6 +225,25 @@ if (gotSingleInstanceLock) {
       },
       writeFile: (path, content) => writeFile(path, content, "utf8"),
     });
+    const documentsRoot = join(userData, "applications");
+    const documents = createDocumentService({
+      repository: createDocumentRepository(database.db),
+      profile: profileRepository,
+      settings: settingsRepository,
+      secrets: secretStore,
+      engine: supervisor,
+      renderPdf: createPdfRenderer({ openWindow: openPdfWindow }),
+      writePdf: async (applicationId, kind, bytes) => {
+        const path = documentFilePath(documentsRoot, applicationId, kind);
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, bytes);
+      },
+      pdfPath: (applicationId, kind) => documentFilePath(documentsRoot, applicationId, kind),
+      revealPath: (path) => {
+        shell.showItemInFolder(path);
+      },
+      systemLocale: () => app.getLocale(),
+    });
     const discovery = createDiscoveryService({
       engine: () => supervisor,
       settings: settingsRepository,
@@ -230,6 +264,7 @@ if (gotSingleInstanceLock) {
         savedSearches: createSavedSearchRepository(database.db),
         applications: applicationRepository,
         applicationExport,
+        documents,
       },
       originOf(rendererUrl) ?? rendererUrl,
     );

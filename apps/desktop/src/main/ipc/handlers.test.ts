@@ -155,6 +155,22 @@ function spyServices() {
       start: async () => ({ ok: false as const, code: "job-not-found" as const }),
       update: async () => ({ ok: false as const, code: "not-found" as const }),
     },
+    documents: {
+      get: async (applicationId: string) => {
+        calls.push(`documents.get:${applicationId}`);
+        return { applicationId, cv: null, coverLetter: null };
+      },
+      generate: async (request: { kind: string }) => {
+        calls.push(`documents.generate:${request.kind}`);
+        return { ok: false as const, code: "unknown" as const };
+      },
+      save: async () => ({ ok: false as const, code: "not-found" as const }),
+      exportPdf: async (request: { kind: string }) => {
+        calls.push(`documents.export:${request.kind}`);
+        return { ok: false as const, code: "not-found" as const };
+      },
+      reveal: async () => false,
+    },
     applicationExport: {
       exportCsv: async () => {
         calls.push("applicationExport.exportCsv");
@@ -262,6 +278,11 @@ describe("IPC sender and payload guard", () => {
         "companies:add",
         "companies:list",
         "discovery:search",
+        "documents:export",
+        "documents:generate",
+        "documents:get",
+        "documents:reveal",
+        "documents:save",
         "ingest:cancel",
         "ingest:latest",
         "ingest:start",
@@ -282,6 +303,30 @@ describe("IPC sender and payload guard", () => {
         "settings:update",
       ].sort(),
     );
+  });
+
+  it("routes the document channels to the document service with their ids and kinds", async () => {
+    const { services, calls } = spyServices();
+    await handleInvoke("documents:get", services, topFrame(), { applicationId: "a1" }, APP_ORIGIN);
+    await handleInvoke(
+      "documents:generate",
+      services,
+      topFrame(),
+      { applicationId: "a1", kind: "cv", consent: false },
+      APP_ORIGIN,
+    );
+    await handleInvoke(
+      "documents:export",
+      services,
+      topFrame(),
+      { applicationId: "a1", kind: "cover-letter" },
+      APP_ORIGIN,
+    );
+    expect(calls.slice(-3)).toEqual([
+      "documents.get:a1",
+      "documents.generate:cv",
+      "documents.export:cover-letter",
+    ]);
   });
 
   it("routes the ingestion channels to their services, and passes a cancel's run id on", async () => {
