@@ -652,7 +652,19 @@
         "skill-name": "una competenza non è nel tuo profilo",
         "numbers-not-in-source": "un numero di un punto non è nel punto di partenza",
         "numbers-not-in-profile": "un numero non è nel tuo profilo"
-      }
+      },
+      "language": {
+        "label": "Lingua del documento",
+        "options": {
+          "en": "English",
+          "it": "Italiano"
+        },
+        "hint": {
+          "posting": "Predefinita: {{language}}, la lingua dell'annuncio.",
+          "ui": "Predefinita: {{language}}, la lingua dell'app. La lingua dell'annuncio non è nota o non è supportata."
+        }
+      },
+      "writtenIn": "Scritto in {{language}}."
     }
   }
 }

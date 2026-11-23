@@ -1,5 +1,5 @@
-// protects=generateDocument returns a document only after it passes the profile checks, retries once with the rules a first answer broke, reports an answer that still breaks them as invalid-output, and maps provider failures to their codes;
-// fails_when=an answer with an invented employer or a new number is returned, the retry omits the broken rules, a second broken answer is accepted, a provider rejection is reported as invalid-output, or more than two answers are requested;
+// protects=generateDocument returns a document only after it passes the profile checks, retries once with the rules a first answer broke, reports an answer that still breaks them as invalid-output, maps provider failures to their codes, and asks for the text in the language it is given;
+// fails_when=an answer with an invented employer or a new number is returned, the retry omits the broken rules, a second broken answer is accepted, a provider rejection is reported as invalid-output, more than two answers are requested, or the prompt names another language than the one given;
 // no_claim=every provider answer is a scripted double, not a live model; the quality of real output is not shown;
 import { describe, expect, it } from "vitest";
 import type { AiProviderConfig } from "../ai/provider";
@@ -149,6 +149,23 @@ describe("generateDocument", () => {
       content: { kind: "cover-letter", letter: fixed },
       warnings: [],
     });
+  });
+
+  it("asks for the text in the language given, and reads Italian numbers against the profile", async () => {
+    const profileWithNumbers: Profile = {
+      ...profile(),
+      summary: "Led a team of 1,000 users.",
+    };
+    const letter = { paragraphs: ["Ho guidato un team per 1.000 utenti."] };
+    const { fetchImpl, bodies } = scriptedFetch([() => chatCompletion(JSON.stringify(letter))]);
+
+    const outcome = await generateDocument(
+      input({ kind: "cover-letter", language: "it", profile: profileWithNumbers }),
+      { fetch: fetchImpl },
+    );
+
+    expect(outcome).toEqual({ ok: true, content: { kind: "cover-letter", letter }, warnings: [] });
+    expect(bodies[0]).toContain("Write all free text in Italian");
   });
 
   it("maps a rejected key to invalid-key without a retry", async () => {

@@ -21,6 +21,7 @@
     "./discovery": "./src/discovery/index.ts",
     "./discovery/types": "./src/discovery/types.ts",
     "./documents/schema": "./src/documents/schema.ts",
+    "./documents/language": "./src/documents/language.ts",
     "./documents/prompt": "./src/documents/prompt.ts",
     "./documents/render": "./src/documents/render.ts",
     "./documents/generate": "./src/documents/generate.ts",

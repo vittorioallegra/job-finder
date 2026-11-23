@@ -1,6 +1,8 @@
 import {
+  documentLanguageFor,
   isCloudAiEndpoint,
   type ApplicationDocuments,
+  type DocumentLanguage,
   type DocumentExportRequest,
   type DocumentExportResult,
   type DocumentGenerateRequest,
@@ -86,26 +88,33 @@ export function createDocumentService(options: DocumentServiceOptions): Document
   const now = options.now ?? (() => Date.now());
   const repository = options.repository;
 
-  async function languageOf(): Promise<ExplanationLanguage> {
+  async function uiLanguage(): Promise<ExplanationLanguage> {
     const { ui } = await options.settings.get();
     return explanationLanguage(ui.language, options.systemLocale());
   }
 
   return {
     async get(applicationId) {
-      return repository.forApplication(applicationId);
+      const stored = await repository.forApplication(applicationId);
+      const posting = await repository.jobOf(applicationId);
+      return {
+        ...stored,
+        defaultLanguage: documentLanguageFor(posting?.language, await uiLanguage()),
+      };
     },
 
     async generate(request) {
-      const job = await repository.jobOf(request.applicationId);
-      if (job === null) return { ok: false, code: "not-found" };
+      const posting = await repository.jobOf(request.applicationId);
+      if (posting === null) return { ok: false, code: "not-found" };
+      const { language: postingLanguage, ...job } = posting;
       const saved = await options.profile.get();
       if (saved === null) return { ok: false, code: "no-profile" };
       const { ai } = await options.settings.get();
       if (isCloudAiEndpoint(ai) && !request.consent) {
         return { ok: false, code: "consent-required" };
       }
-      const language = await languageOf();
+      const language: DocumentLanguage =
+        request.language ?? documentLanguageFor(postingLanguage, await uiLanguage()).language;
       const apiKey = await options.secrets.read("ai.apiKey");
       let outcome: GenerateDocumentOutcome;
       try {
@@ -137,6 +146,7 @@ export function createDocumentService(options: DocumentServiceOptions): Document
         request.applicationId,
         request.kind,
         outcome.content,
+        language,
         now(),
       );
       return { ok: true, document };
@@ -151,10 +161,13 @@ export function createDocumentService(options: DocumentServiceOptions): Document
       if (issues.length > 0) {
         return { ok: false, code: "validation-failed", issues };
       }
+      // An edit keeps the language the document was written in.
+      const language = existing.language ?? (await uiLanguage());
       const document = await repository.save(
         request.applicationId,
         request.content.kind,
         request.content,
+        language,
         now(),
       );
       return { ok: true, document };
@@ -165,7 +178,9 @@ export function createDocumentService(options: DocumentServiceOptions): Document
       if (stored === null) return { ok: false, code: "not-found" };
       const saved = await options.profile.get();
       if (saved === null) return { ok: false, code: "no-profile" };
-      const language = await languageOf();
+      // The PDF follows the document's own language; a document stored before languages were kept
+      // uses the UI language it was generated in.
+      const language = stored.language ?? (await uiLanguage());
       const html = renderDocumentHtml(
         stored.content,
         saved.profile.contact,

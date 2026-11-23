@@ -236,7 +236,12 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
       },
     },
     documents: {
-      get: async ({ applicationId }) => ({ applicationId, cv: null, coverLetter: null }),
+      get: async ({ applicationId }) => ({
+        applicationId,
+        cv: null,
+        coverLetter: null,
+        defaultLanguage: { language: "en" as const, source: "ui" as const },
+      }),
       generate: async () => ({ ok: false as const, code: "engine-unavailable" as const }),
       save: async () => ({ ok: false as const, code: "not-found" as const }),
       exportPdf: async () => ({ ok: false as const, code: "export-failed" as const }),

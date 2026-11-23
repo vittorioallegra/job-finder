@@ -1,9 +1,10 @@
-// protects=the document repository stores one document per application and kind, keeps the export time across an edit, reads an application's job and company through a joined query, and reports nothing for an application that has no document;
+// protects=the document repository stores one document per application and kind with its language, keeps the export time across an edit, reads an application's job, company and posting language through a joined query, and reports nothing for an application that has no document;
 // fails_when=a second save for the same kind adds a row, an edit clears the export time, the job or company of the wrong application is returned, a joined id collides so the company name is wrong, or a missing document is reported as present;
 // no_claim=the SQL of the document table is checked only through this repository against a real migrated database; the service rules are tested in service.test.ts;
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { applications, companies, jobs } from "@job-finder/core";
 import { openAppDatabase, type AppDatabase } from "../db/database";
@@ -69,13 +70,24 @@ describe("document repository", () => {
       title: "Backend Engineer",
       companyName: "Acme",
       description: "Build APIs.",
+      language: null,
     });
     expect(await repository.jobOf("missing")).toBeNull();
   });
 
+  it("reads the posting's language through the joined query, and stores each document's language", async () => {
+    await database.db.update(jobs).set({ language: "it" }).where(eq(jobs.id, "j1"));
+    expect((await repository.jobOf("a1"))?.language).toBe("it");
+
+    const stored = await repository.save("a1", "cv", letter("Prima."), "it", NOW);
+    expect(stored.language).toBe("it");
+    const resaved = await repository.save("a1", "cv", letter("Dopo."), "en", NOW + 1);
+    expect(resaved.language).toBe("en");
+  });
+
   it("stores one document per kind and replaces it on the next save", async () => {
-    await repository.save("a1", "cover-letter", letter("First."), NOW);
-    const replaced = await repository.save("a1", "cover-letter", letter("Second."), NOW + 1);
+    await repository.save("a1", "cover-letter", letter("First."), "en", NOW);
+    const replaced = await repository.save("a1", "cover-letter", letter("Second."), "en", NOW + 1);
 
     expect(replaced.content).toEqual(letter("Second."));
     const documents = await repository.forApplication("a1");
@@ -84,10 +96,10 @@ describe("document repository", () => {
   });
 
   it("keeps the export time when the text is edited, so the edit shows the PDF is old", async () => {
-    await repository.save("a1", "cover-letter", letter("Draft."), NOW);
+    await repository.save("a1", "cover-letter", letter("Draft."), "en", NOW);
     await repository.markExported("a1", "cover-letter", NOW + 10);
 
-    const edited = await repository.save("a1", "cover-letter", letter("Edited."), NOW + 20);
+    const edited = await repository.save("a1", "cover-letter", letter("Edited."), "en", NOW + 20);
 
     expect(edited.exportedAt).toBe(NOW + 10);
     expect(edited.updatedAt).toBe(NOW + 20);

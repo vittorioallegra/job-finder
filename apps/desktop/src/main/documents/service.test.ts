@@ -1,12 +1,13 @@
-// protects=the document service generates a document only after the profile, the consent for a cloud provider and the key are in place, stores what the engine returns, refuses saved edits that break the profile, and exports and reveals PDFs only for stored documents;
-// fails_when=a cloud provider is called without consent, a document is generated without a profile, an engine answer that breaks the rules is stored, a saved edit with an invented employer is stored, a PDF is written for a missing document, or reveal opens a file that was never exported;
+// protects=the document service generates a document only after the profile, the consent for a cloud provider and the key are in place, stores what the engine returns, refuses saved edits that break the profile, exports and reveals PDFs only for stored documents, and writes each document in the posting's language (or the UI language when the posting's is missing or unsupported), unless the user picks another;
+// fails_when=a cloud provider is called without consent, a document is generated without a profile, an engine answer that breaks the rules is stored, a saved edit with an invented employer is stored, a PDF is written for a missing document, reveal opens a file that was never exported, an Italian posting gets an English document, a user's pick is ignored, or an export renders in a language other than the stored one;
 // no_claim=the engine answers and the PDF bytes are scripted doubles; the AI itself and the Chromium print are not exercised here;
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { openAppDatabase, type AppDatabase } from "../db/database";
-import { applications, companies, jobs } from "@job-finder/core";
+import { applicationDocuments, applications, companies, jobs } from "@job-finder/core";
 import { emptyProfile, type Profile } from "@job-finder/core/profile";
 import type { DocumentContent } from "@job-finder/core/documents/schema";
 import { createDocumentRepository } from "./repository";
@@ -41,7 +42,10 @@ const VALID_LETTER: DocumentContent = {
 };
 
 /** Settings with a local provider (no consent needed) or a cloud one. */
-function settingsFor(cloud: boolean): Pick<SettingsRepository, "get"> {
+function settingsFor(
+  cloud: boolean,
+  uiLanguage: "en" | "it" = "en",
+): Pick<SettingsRepository, "get"> {
   return {
     get: async () =>
       ({
@@ -51,7 +55,7 @@ function settingsFor(cloud: boolean): Pick<SettingsRepository, "get"> {
           baseUrl: cloud ? "" : "http://localhost:11434/v1",
           contextSize: 8192,
         },
-        ui: { language: "en" },
+        ui: { language: uiLanguage },
       }) as never,
   };
 }
@@ -262,5 +266,91 @@ describe("document service", () => {
     await build().exportPdf({ applicationId: "a1", kind: "cover-letter" });
     expect(await build().reveal({ applicationId: "a1", kind: "cover-letter" })).toBe(true);
     expect(revealed).toEqual(["/store/a1/cover-letter.pdf"]);
+  });
+
+  it("writes the document in the posting's language, and in the UI language when the posting's is unsupported", async () => {
+    await database.db.update(jobs).set({ language: "it" }).where(eq(jobs.id, "j1"));
+    await build().generate({ applicationId: "a1", kind: "cover-letter", consent: false });
+    expect(requests[0]).toMatchObject({ language: "it" });
+    expect((await build().get("a1")).coverLetter?.language).toBe("it");
+    expect((await build().get("a1")).defaultLanguage).toEqual({
+      language: "it",
+      source: "posting",
+    });
+
+    await database.db.update(jobs).set({ language: "de" }).where(eq(jobs.id, "j1"));
+    await build({ settings: settingsFor(false, "it") }).generate({
+      applicationId: "a1",
+      kind: "cover-letter",
+      consent: false,
+    });
+    expect(requests[1]).toMatchObject({ language: "it" });
+    expect((await build({ settings: settingsFor(false, "it") }).get("a1")).defaultLanguage).toEqual(
+      { language: "it", source: "ui" },
+    );
+  });
+
+  it("uses the language the user picks over the posting's", async () => {
+    await database.db.update(jobs).set({ language: "it" }).where(eq(jobs.id, "j1"));
+    await build().generate({
+      applicationId: "a1",
+      kind: "cv",
+      consent: false,
+      language: "en",
+    });
+
+    expect(requests[0]).toMatchObject({ language: "en" });
+    expect((await build().get("a1")).cv?.language).toBe("en");
+  });
+
+  it("keeps the document's language on a saved edit, and renders the PDF in that language", async () => {
+    await database.db.update(jobs).set({ language: "it" }).where(eq(jobs.id, "j1"));
+    await build({ settings: settingsFor(false, "en") }).generate({
+      applicationId: "a1",
+      kind: "cover-letter",
+      consent: false,
+    });
+    await build({ settings: settingsFor(false, "en") }).save({
+      applicationId: "a1",
+      content: {
+        kind: "cover-letter",
+        letter: { paragraphs: ["Ho tagliato la latenza del 40%."] },
+      },
+    });
+    expect(
+      (await build({ settings: settingsFor(false, "en") }).get("a1")).coverLetter?.language,
+    ).toBe("it");
+
+    const html: string[] = [];
+    await build({
+      settings: settingsFor(false, "en"),
+      renderPdf: async (document) => {
+        html.push(document);
+        return new Uint8Array([37]);
+      },
+    }).exportPdf({ applicationId: "a1", kind: "cover-letter" });
+    expect(html[0]).toContain('lang="it"');
+  });
+
+  it("renders a document stored before languages were kept in the UI language", async () => {
+    await build({ settings: settingsFor(false, "it") }).generate({
+      applicationId: "a1",
+      kind: "cover-letter",
+      consent: false,
+    });
+    await database.db
+      .update(applicationDocuments)
+      .set({ language: null })
+      .where(eq(applicationDocuments.applicationId, "a1"));
+
+    const html: string[] = [];
+    await build({
+      settings: settingsFor(false, "it"),
+      renderPdf: async (document) => {
+        html.push(document);
+        return new Uint8Array([37]);
+      },
+    }).exportPdf({ applicationId: "a1", kind: "cover-letter" });
+    expect(html[0]).toContain('lang="it"');
   });
 });

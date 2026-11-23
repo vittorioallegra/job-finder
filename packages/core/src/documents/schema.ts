@@ -100,9 +100,24 @@ export interface DocumentIssue {
 }
 
 const NUMBER_PATTERN = /\d+(?:[.,]\d+)*/g;
+const THOUSANDS_GROUPED = /^(\d{1,3}(?:[.,]\d{3})+)([.,]\d+)?$/;
+
+/**
+ * One spelling per number, whatever the language writes it in: "1,000" (en) and "1.000" (it) are
+ * both 1000, and "3,5" (it) equals "3.5" (en). Only the separators differ between languages.
+ */
+function canonicalNumber(token: string): string {
+  const grouped = THOUSANDS_GROUPED.exec(token);
+  if (grouped) {
+    const integer = (grouped[1] ?? "").replace(/[.,]/g, "");
+    const decimal = grouped[2];
+    return decimal ? `${integer}.${decimal.slice(1)}` : integer;
+  }
+  return token.replace(",", ".");
+}
 
 function numbersOf(text: string): Set<string> {
-  return new Set(text.match(NUMBER_PATTERN) ?? []);
+  return new Set((text.match(NUMBER_PATTERN) ?? []).map(canonicalNumber));
 }
 
 /** True when `text` has a number that `allowed` does not contain. */

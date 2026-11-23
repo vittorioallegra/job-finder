@@ -158,7 +158,12 @@ function spyServices() {
     documents: {
       get: async (applicationId: string) => {
         calls.push(`documents.get:${applicationId}`);
-        return { applicationId, cv: null, coverLetter: null };
+        return {
+          applicationId,
+          cv: null,
+          coverLetter: null,
+          defaultLanguage: { language: "en" as const, source: "ui" as const },
+        };
       },
       generate: async (request: { kind: string }) => {
         calls.push(`documents.generate:${request.kind}`);

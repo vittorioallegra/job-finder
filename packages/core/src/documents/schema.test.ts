@@ -1,6 +1,6 @@
-// protects=the document validator accepts a tailored CV and letter that use only the profile's own facts, and reports every employer, title, date, degree, skill name, source index and number that the profile does not support;
-// fails_when=an employer, title, date, institution, degree or field that differs from the profile passes, a skill name outside the profile's names and aliases passes, a bullet with a number its source bullet lacks passes, a number the profile lacks in the summary or a paragraph passes, or an out-of-range or repeated profile item passes;
-// no_claim=the validator does not judge style, length of prose, language or whether the wording is accurate beyond these facts; prose that paraphrases the profile without new numbers is not checked further;
+// protects=the document validator accepts a tailored CV and letter that use only the profile's own facts, and reports every employer, title, date, degree, skill name, source index and number that the profile does not support; in an Italian document the same facts pass, with each number read the same in en and it spelling, and translated employers or titles fail;
+// fails_when=an employer, title, date, institution, degree or field that differs from the profile passes, a skill name outside the profile's names and aliases passes, a bullet with a number its source bullet lacks passes, a number the profile lacks in the summary or a paragraph passes, an out-of-range or repeated profile item passes, "1.000" and "1,000" or "3,5" and "3.5" are read as different numbers, or a translated title passes;
+// no_claim=the validator does not judge style, length of prose, the language itself or whether the wording is accurate beyond these facts; prose that paraphrases the profile without new numbers is not checked further, and number words such as "tre" are not read;
 import { describe, expect, it } from "vitest";
 import { emptyProfile, type Profile } from "../profile/schema";
 import {
@@ -10,6 +10,19 @@ import {
   validateTailoredCv,
   type TailoredCv,
 } from "./schema";
+
+/** The profile with thousands and decimal numbers, spelled the way an English CV writes them. */
+function englishNumbersProfile(): Profile {
+  const base = profile();
+  return {
+    ...base,
+    summary: "Ten years building APIs for 1,000 users.",
+    experience: [
+      { ...base.experience[0]!, bullets: ["Served 1,000 users at 3.5 seconds p95"] },
+      base.experience[1]!,
+    ],
+  };
+}
 
 function profile(): Profile {
   return {
@@ -172,5 +185,53 @@ describe("DocumentContentSchema and validateDocument", () => {
       profile(),
     );
     expect(issues).toEqual([{ code: "numbers-not-in-profile", path: "paragraphs.0" }]);
+  });
+});
+
+describe("validation across languages", () => {
+  it("accepts an Italian letter whose numbers are the profile's, written with Italian separators", () => {
+    const letter = { paragraphs: ["Ho servito 1.000 utenti con una latenza di 3,5 secondi."] };
+    expect(validateCoverLetter(letter, englishNumbersProfile())).toEqual([]);
+  });
+
+  it("accepts an Italian CV bullet with the same numbers, and reports one number more", () => {
+    const profileIt = englishNumbersProfile();
+    const bullets = (text: string) =>
+      cv({
+        summary: "Ingegnere backend.",
+        experience: [
+          {
+            ...cv().experience[0]!,
+            bullets: [{ source: 0, text }],
+          },
+        ],
+      });
+
+    expect(validateTailoredCv(bullets("Serviti 1.000 utenti in 3,5 secondi"), profileIt)).toEqual(
+      [],
+    );
+    expect(codes(validateTailoredCv(bullets("Serviti 1.000 utenti in 2 anni"), profileIt))).toEqual(
+      ["numbers-not-in-source"],
+    );
+  });
+
+  it("reads 1.000 and 1,000 as one number, and a different thousands value as another", () => {
+    const letter = (paragraph: string) => ({ paragraphs: [paragraph] });
+    expect(validateCoverLetter(letter("Su 1.000 casi."), englishNumbersProfile())).toEqual([]);
+    expect(codes(validateCoverLetter(letter("Su 1.001 casi."), englishNumbersProfile()))).toEqual([
+      "numbers-not-in-profile",
+    ]);
+  });
+
+  it("keeps employers, titles, dates and institutions verbatim, whatever the document language", () => {
+    const translatedTitle = cv({
+      experience: [{ ...cv().experience[0]!, title: "Ingegnere Senior" }],
+    });
+    expect(codes(validateTailoredCv(translatedTitle, profile()))).toEqual(["field-mismatch"]);
+
+    const verbatimEmployer = cv({
+      summary: "Ingegnere backend con un decennio di lavoro sulle API.",
+    });
+    expect(validateTailoredCv(verbatimEmployer, profile())).toEqual([]);
   });
 });

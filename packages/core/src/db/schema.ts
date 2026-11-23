@@ -239,6 +239,8 @@ export const applicationDocuments = sqliteTable(
       .references(() => applications.id),
     kind: text("kind", { enum: DOCUMENT_KINDS }).notNull(),
     content: text("content").notNull(),
+    /** The document's language (en or it). Null for documents generated before languages were stored. */
+    language: text("language"),
     updatedAt: integer("updated_at").notNull(),
     exportedAt: integer("exported_at"),
   },

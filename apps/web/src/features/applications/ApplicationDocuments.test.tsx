@@ -1,5 +1,5 @@
-// protects=the documents panel shows loading, error and AI-unavailable states, asks for consent before a cloud provider is used, shows a generated document as editable text, reports a save that breaks the profile by its issues, exports a PDF and offers to reveal it, and names every AI failure under its own message;
-// fails_when=a generate call goes out without the consent a cloud provider needs, an AI failure is shown without the settings link, a refused save is reported as saved, an export without a file is reported as exported, or the panel shows a blank page on a failed read;
+// protects=the documents panel shows loading, error and AI-unavailable states, asks for consent before a cloud provider is used, shows a generated document as editable text, reports a save that breaks the profile by its issues, exports a PDF and offers to reveal it, names every AI failure under its own message, and starts from the posting's language with the user's pick sent to generation;
+// fails_when=a generate call goes out without the consent a cloud provider needs, an AI failure is shown without the settings link, a refused save is reported as saved, an export without a file is reported as exported, the panel shows a blank page on a failed read, or the posting's language is ignored or the user's choice is not sent;
 // no_claim=the layout, the real bridge and the PDF itself are not checked here; the desktop service and PDF tests cover the rules and the file;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -36,6 +36,7 @@ function coverLetter(text: string, overrides: Partial<DocumentRecord> = {}): Doc
   return {
     kind: "cover-letter",
     content: { kind: "cover-letter", letter: { paragraphs: [text] } },
+    language: "en",
     updatedAt: 10,
     exportedAt: null,
     ...overrides,
@@ -64,6 +65,7 @@ function cvRecord(): DocumentRecord {
         skills: [{ source: 0, name: "TypeScript" }],
       },
     },
+    language: "en",
     updatedAt: 10,
     exportedAt: null,
   };
@@ -72,7 +74,13 @@ function cvRecord(): DocumentRecord {
 function documentsOf(
   overrides: Partial<ApplicationDocumentsRecord> = {},
 ): ApplicationDocumentsRecord {
-  return { applicationId: "a1", cv: null, coverLetter: null, ...overrides };
+  return {
+    applicationId: "a1",
+    cv: null,
+    coverLetter: null,
+    defaultLanguage: { language: "en", source: "ui" },
+    ...overrides,
+  };
 }
 
 function button(container: HTMLElement, text: string): HTMLButtonElement {
@@ -81,6 +89,15 @@ function button(container: HTMLElement, text: string): HTMLButtonElement {
   );
   if (!found) throw new Error(`no button ${text}`);
   return found;
+}
+
+function languageSelect(container: HTMLElement): HTMLSelectElement {
+  const label = [...container.querySelectorAll("label")].find(
+    (node) => node.textContent === "Document language",
+  );
+  const control = label?.htmlFor ? document.getElementById(label.htmlFor) : null;
+  if (!(control instanceof HTMLSelectElement)) throw new Error("no language select");
+  return control;
 }
 
 function textareaLabelled(container: HTMLElement, text: string): HTMLTextAreaElement {
@@ -195,7 +212,44 @@ describe("application documents panel", () => {
       applicationId: "a1",
       kind: "cv",
       consent: true,
+      language: "en",
     });
+  });
+
+  it("shows the posting's language as the default, and sends the language the user picks", async () => {
+    const generate = vi.fn(async () => ({ ok: true as const, document: coverLetter("Ciao.") }));
+    await render(
+      bridgeWith({
+        get: vi.fn(async () =>
+          documentsOf({ defaultLanguage: { language: "it", source: "posting" } }),
+        ),
+        generate,
+      }),
+    );
+
+    const select = languageSelect(container);
+    expect(select.value).toBe("it");
+    expect(container.textContent).toContain("Default: Italiano, the language of the posting.");
+
+    await act(async () => {
+      select.value = "en";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await act(async () => button(container, "Generate").click());
+
+    expect(generate).toHaveBeenCalledWith(expect.objectContaining({ kind: "cv", language: "en" }));
+  });
+
+  it("says which language a stored document is written in", async () => {
+    await render(
+      bridgeWith({
+        get: vi.fn(async () =>
+          documentsOf({ coverLetter: coverLetter("Ciao.", { language: "it" }) }),
+        ),
+      }),
+    );
+
+    expect(container.textContent).toContain("Written in Italiano.");
   });
 
   it("shows a generated letter as editable text and reports the saved change", async () => {

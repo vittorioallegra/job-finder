@@ -1,5 +1,10 @@
 import { z } from "zod";
 import {
+  DOCUMENT_LANGUAGES,
+  type DocumentLanguage,
+  type DocumentLanguageChoice,
+} from "@job-finder/core/documents/language";
+import {
   DOCUMENT_KINDS,
   DocumentContentSchema,
   type DocumentContent,
@@ -7,6 +12,12 @@ import {
   type DocumentKind,
 } from "@job-finder/core/documents/schema";
 
+export {
+  DOCUMENT_LANGUAGES,
+  documentLanguageFor,
+  type DocumentLanguage,
+  type DocumentLanguageChoice,
+} from "@job-finder/core/documents/language";
 export {
   DOCUMENT_ISSUE_CODES,
   DOCUMENT_KINDS,
@@ -26,12 +37,14 @@ export type DocumentGetRequest = z.input<typeof DocumentGetRequestSchema>;
 
 /**
  * Generates a document with the AI. `consent` must be true when the AI provider is a cloud service,
- * because the profile and the posting are sent to it (the same rule as the CV import).
+ * because the profile and the posting are sent to it (the same rule as the CV import). `language`
+ * overrides the language the posting and the UI would give; omitted, the default applies.
  */
 export const DocumentGenerateRequestSchema = z.strictObject({
   applicationId: identifier,
   kind: z.enum(DOCUMENT_KINDS),
   consent: z.boolean(),
+  language: z.enum(DOCUMENT_LANGUAGES).optional(),
 });
 export type DocumentGenerateRequest = z.input<typeof DocumentGenerateRequestSchema>;
 
@@ -51,10 +64,14 @@ export type DocumentExportRequest = z.input<typeof DocumentExportRequestSchema>;
 export const DocumentRevealRequestSchema = DocumentExportRequestSchema;
 export type DocumentRevealRequest = DocumentExportRequest;
 
-/** One stored document. `updatedAt` and `exportedAt` are epoch milliseconds; `exportedAt` is null before the first PDF. */
+/**
+ * One stored document. `updatedAt` and `exportedAt` are epoch milliseconds; `exportedAt` is null
+ * before the first PDF. `language` is null for documents generated before languages were stored.
+ */
 export interface DocumentRecord {
   kind: DocumentKind;
   content: DocumentContent;
+  language: DocumentLanguage | null;
   updatedAt: number;
   exportedAt: number | null;
 }
@@ -63,6 +80,8 @@ export interface ApplicationDocuments {
   applicationId: string;
   cv: DocumentRecord | null;
   coverLetter: DocumentRecord | null;
+  /** The language a new document of this application uses unless the user chooses another. */
+  defaultLanguage: DocumentLanguageChoice;
 }
 
 /**

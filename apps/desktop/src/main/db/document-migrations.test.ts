@@ -1,5 +1,5 @@
-// protects=the application_documents migration adds its table to a populated database of the previous schema without changing the applications, events, jobs or scores already there, and rejects an unknown document kind;
-// fails_when=the table is missing after migrating, an existing application or event row is lost or changed, a row with kind "resume" is accepted, or the primary key does not keep one document per application and kind;
+// protects=the application_documents migrations add its table, and then its language column, to a populated database of the previous schema without changing the applications, events, jobs or scores already there, leave the language of documents stored earlier empty, and reject an unknown document kind;
+// fails_when=the table or the language column is missing after migrating, an existing application or event row is lost or changed, a document stored before the column gets a language, a row with kind "resume" is accepted, or the primary key does not keep one document per application and kind;
 // no_claim=the migration is not checked against a database written by an earlier app release, only against one built here from the earlier migration files;
 import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -50,6 +50,7 @@ function tableNames(raw: DatabaseSync): string[] {
 /** Journal entries before the step: 0000 to 0012 are thirteen entries. */
 const SCHEMA_BEFORE_DOCUMENTS = 13;
 const SCHEMA_WITH_DOCUMENTS = 14;
+const SCHEMA_WITH_DOCUMENT_LANGUAGE = 15;
 
 const SEED =
   "INSERT INTO companies (id, name, careers_url, ats, slug, created_at) VALUES ('c1', 'Acme', 'https://boards.greenhouse.io/acme', 'greenhouse', 'acme', 1);" +
@@ -86,5 +87,24 @@ describe("application documents migration", () => {
     insert("cover-letter");
     expect(() => insert("cv")).toThrow();
     expect(() => insert("resume")).toThrow();
+  });
+
+  it("adds the language column to a populated database, and leaves earlier documents without one", async () => {
+    const db = openDatabase();
+    await db.migrate(SCHEMA_WITH_DOCUMENTS);
+    db.raw.exec(SEED);
+    db.raw.exec(
+      "INSERT INTO application_documents (application_id, kind, content, updated_at) VALUES ('a1', 'cv', '{}', 5);",
+    );
+
+    const outcome = await db.migrate(SCHEMA_WITH_DOCUMENT_LANGUAGE);
+
+    expect(outcome.backupPath).not.toBeNull();
+    const row = db.raw
+      .prepare("SELECT language, content, updated_at AS updatedAt FROM application_documents")
+      .get();
+    expect(row).toEqual({ language: null, content: "{}", updatedAt: 5 });
+    expect(db.raw.prepare("SELECT status FROM applications").get()?.["status"]).toBe("preparing");
+    expect(db.raw.prepare("SELECT title FROM jobs").get()?.["title"]).toBe("Engineer");
   });
 });

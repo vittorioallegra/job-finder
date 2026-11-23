@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import {
   DOCUMENT_AI_UNAVAILABLE_CODES,
+  DOCUMENT_LANGUAGES,
   isCloudAiEndpoint,
+  type DocumentLanguage,
   type ApplicationDocuments as ApplicationDocumentsRecord,
   type DocumentContent,
   type DocumentFailureCode,
@@ -14,6 +16,7 @@ import {
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Button } from "../../components/ui/Button";
 import { CheckboxInput } from "../../components/ui/CheckboxInput";
+import { SelectInput } from "../../components/ui/SelectInput";
 import { TextArea } from "../../components/ui/TextArea";
 
 type LoadState =
@@ -105,6 +108,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
   const [attempt, setAttempt] = useState(0);
   const [ai, setAi] = useState<AiState | null>(null);
   const [consent, setConsent] = useState(false);
+  const [language, setLanguage] = useState<DocumentLanguage>("en");
   const [drafts, setDrafts] = useState<Partial<Record<DocumentKind, Draft>>>({});
   const [busy, setBusy] = useState<{ kind: DocumentKind; action: Action } | null>(null);
   const [notices, setNotices] = useState<Partial<Record<DocumentKind, Notice>>>({});
@@ -122,6 +126,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
             aiSettings.model.trim() !== "" &&
             (aiSettings.provider !== "openai-compatible" || aiSettings.baseUrl.trim() !== ""),
         });
+        setLanguage(documents.defaultLanguage.language);
         setDrafts(
           Object.fromEntries(
             [documents.cv, documents.coverLetter]
@@ -166,6 +171,10 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
 
   const { documents } = load;
   const providerName = ai === null ? "" : t(`settings.ai.providers.${ai.provider}`);
+  const languageOptions = DOCUMENT_LANGUAGES.map((code) => ({
+    value: code,
+    label: t(`applications.documents.language.options.${code}`),
+  }));
   const records: Record<DocumentKind, DocumentRecord | null> = {
     cv: documents.cv,
     "cover-letter": documents.coverLetter,
@@ -213,7 +222,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
     setBusy({ kind, action: "generate" });
     setNotice(kind, null);
     try {
-      const result = await bridge.documents.generate({ applicationId, kind, consent });
+      const result = await bridge.documents.generate({ applicationId, kind, consent, language });
       if (result.ok) {
         applyRecord(result.document);
         setNotice(kind, { tone: "ok", text: t("applications.documents.generated") });
@@ -320,6 +329,19 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
         </div>
       ) : null}
 
+      <SelectInput
+        label={t("applications.documents.language.label")}
+        options={languageOptions}
+        value={language}
+        disabled={busy !== null}
+        hint={t(`applications.documents.language.hint.${documents.defaultLanguage.source}`, {
+          language: t(
+            `applications.documents.language.options.${documents.defaultLanguage.language}`,
+          ),
+        })}
+        onChange={(event) => setLanguage(event.target.value as DocumentLanguage)}
+      />
+
       {(["cv", "cover-letter"] as const).map((kind) => {
         const record = records[kind];
         const draft = drafts[kind];
@@ -342,6 +364,13 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
               <p className="text-sm text-app-muted">{t("applications.documents.notGenerated")}</p>
             ) : (
               <>
+                {record.language !== null ? (
+                  <p className="text-sm text-app-muted">
+                    {t("applications.documents.writtenIn", {
+                      language: t(`applications.documents.language.options.${record.language}`),
+                    })}
+                  </p>
+                ) : null}
                 {record.exportedAt !== null ? (
                   <p className="text-sm text-app-muted">
                     {t("applications.documents.exportedAt", {

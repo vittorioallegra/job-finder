@@ -1,22 +1,33 @@
 import { and, eq } from "drizzle-orm";
 import { applicationDocuments, applications, companies, jobs } from "@job-finder/core";
 import type { DocumentKind, DocumentContent } from "@job-finder/core/documents/schema";
+import type { DocumentLanguage } from "@job-finder/core/documents/language";
 import type { ApplicationDocuments, DocumentRecord } from "@job-finder/bridge";
 import type { DocumentJob } from "@job-finder/core/documents/prompt";
 import type { AppDb } from "../db/operations";
 
+/** The stored documents of an application (each null until generated). */
+export type StoredDocuments = Omit<ApplicationDocuments, "defaultLanguage">;
+
 export interface DocumentRepository {
   /** The stored documents of an application (each null until generated). */
-  forApplication(applicationId: string): Promise<ApplicationDocuments>;
+  forApplication(applicationId: string): Promise<StoredDocuments>;
   /** One stored document, or null when none was generated for the application yet. */
   find(applicationId: string, kind: DocumentKind): Promise<DocumentRecord | null>;
-  /** The job and company of an application, or null when the application does not exist. */
-  jobOf(applicationId: string): Promise<DocumentJob | null>;
-  /** Stores a document (replaces the one of that kind). Keeps the export time: an edit after it marks the PDF old. */
+  /**
+   * The job and company of an application, with the posting's normalized language (null when
+   * unknown), or null when the application does not exist.
+   */
+  jobOf(applicationId: string): Promise<(DocumentJob & { language: string | null }) | null>;
+  /**
+   * Stores a document (replaces the one of that kind) with its language. Keeps the export time:
+   * an edit after it marks the PDF old.
+   */
   save(
     applicationId: string,
     kind: DocumentKind,
     content: DocumentContent,
+    language: DocumentLanguage,
     now: number,
   ): Promise<DocumentRecord>;
   /** Records a PDF export. Resolves null when no document of that kind exists. */
@@ -33,6 +44,7 @@ function toRecord(row: Row): DocumentRecord {
   return {
     kind: row.kind,
     content: JSON.parse(row.content) as DocumentContent,
+    language: (row.language as DocumentLanguage | null) ?? null,
     updatedAt: row.updatedAt,
     exportedAt: row.exportedAt,
   };
@@ -76,6 +88,7 @@ export function createDocumentRepository(db: AppDb): DocumentRepository {
         .select({
           jobTitle: jobs.title,
           jobDescription: jobs.description,
+          jobLanguage: jobs.language,
           companyName: companies.name,
         })
         .from(applications)
@@ -88,17 +101,25 @@ export function createDocumentRepository(db: AppDb): DocumentRepository {
         title: row.jobTitle,
         companyName: row.companyName,
         description: row.jobDescription,
+        language: row.jobLanguage,
       };
     },
 
-    async save(applicationId, kind, content, now) {
+    async save(applicationId, kind, content, language, now) {
       const serialized = JSON.stringify(content);
       await db
         .insert(applicationDocuments)
-        .values({ applicationId, kind, content: serialized, updatedAt: now, exportedAt: null })
+        .values({
+          applicationId,
+          kind,
+          content: serialized,
+          language,
+          updatedAt: now,
+          exportedAt: null,
+        })
         .onConflictDoUpdate({
           target: [applicationDocuments.applicationId, applicationDocuments.kind],
-          set: { content: serialized, updatedAt: now },
+          set: { content: serialized, language, updatedAt: now },
         });
       const saved = await find(applicationId, kind);
       if (saved === null) {

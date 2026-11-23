@@ -652,7 +652,19 @@
         "skill-name": "a skill is not in your profile",
         "numbers-not-in-source": "a number in a bullet is not in its source bullet",
         "numbers-not-in-profile": "a number is not in your profile"
-      }
+      },
+      "language": {
+        "label": "Document language",
+        "options": {
+          "en": "English",
+          "it": "Italiano"
+        },
+        "hint": {
+          "posting": "Default: {{language}}, the language of the posting.",
+          "ui": "Default: {{language}}, the app language. The posting's language is unknown or not supported."
+        }
+      },
+      "writtenIn": "Written in {{language}}."
     }
   }
 }
