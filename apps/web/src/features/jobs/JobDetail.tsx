@@ -157,12 +157,12 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
   })();
 
   return (
-    <section
-      aria-labelledby="jobs-detail-title"
-      className="flex flex-col gap-4 rounded-lg border border-app-border p-4"
-    >
+    <section aria-labelledby="jobs-detail-title" className="flex flex-col gap-5">
       <div className="flex items-start justify-between gap-3">
-        <h3 id="jobs-detail-title" className="text-lg font-medium text-app-fg">
+        <h3
+          id="jobs-detail-title"
+          className="font-display text-3xl leading-tight font-semibold text-app-fg"
+        >
           {state.status === "ready" ? state.job.title : t("jobs.detail.heading")}
         </h3>
         <Button variant="secondary" onClick={onClose}>

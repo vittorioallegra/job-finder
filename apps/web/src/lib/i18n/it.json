@@ -8,18 +8,46 @@
       "openRelease": "Apri la pagina della versione",
       "dismiss": "Chiudi",
       "openFailed": "Apertura della pagina della versione non riuscita."
+    },
+    "nav": {
+      "label": "Principale",
+      "home": "Home di Job Finder",
+      "jobs": "Offerte",
+      "companies": "Aziende",
+      "applications": "Candidature",
+      "profile": "Profilo",
+      "settings": "Impostazioni"
+    },
+    "brand": {
+      "first": "job",
+      "second": "finder"
     }
   },
   "home": {
-    "title": "Job Finder",
-    "subtitle": "La configurazione è in corso.",
-    "emptyTitle": "Non c'è ancora nulla",
-    "emptyBody": "Ricerche e risultati compariranno qui.",
-    "openSettings": "Impostazioni",
-    "openOnboarding": "Configura il profilo",
-    "openProfile": "Profilo",
-    "openJobs": "Lavori",
-    "openCompanies": "Aziende"
+    "title": "La tua ricerca di lavoro",
+    "subtitle": "Tre passi dal tuo CV alle candidature su misura.",
+    "loading": "Caricamento del riepilogo…",
+    "loadFailed": "Non è stato possibile caricare il riepilogo.",
+    "retry": "Riprova",
+    "profileTitle": "Profilo",
+    "profileReady": "Il tuo profilo è pronto per il punteggio.",
+    "profileMissing": "Importa il tuo CV per ordinare le offerte in base a te.",
+    "profileAction": "Configura il profilo",
+    "profileEdit": "Modifica profilo",
+    "companiesTitle": "Aziende",
+    "companiesCount_one": "{{count}} azienda seguita",
+    "companiesCount_other": "{{count}} aziende seguite",
+    "companiesEmpty": "Trova aziende con bacheche da scansionare.",
+    "companiesAction": "Gestisci aziende",
+    "jobsTitle": "Offerte",
+    "jobsBody": "Scansiona le bacheche e vedi le offerte ordinate per affinità.",
+    "jobsAction": "Apri le offerte",
+    "applicationsTitle": "Candidature",
+    "applicationsCount_one": "{{count}} candidatura attiva",
+    "applicationsCount_other": "{{count}} candidature attive",
+    "applicationsEmpty": "Salva un'offerta per iniziare a seguirla.",
+    "applicationsAction": "Apri il tracker",
+    "stepLabel": "Passo {{n}}"
   },
   "settings": {
     "title": "Impostazioni",
@@ -263,7 +291,7 @@
     }
   },
   "jobs": {
-    "title": "Lavori",
+    "title": "Offerte",
     "backHome": "Torna alla home",
     "loading": "Caricamento dei lavori…",
     "loadFailed": "Non è stato possibile caricare aziende e lavori.",
@@ -336,7 +364,7 @@
       }
     },
     "results": {
-      "heading": "Lavori",
+      "heading": "Offerte",
       "empty": "Nessun lavoro aperto ancora. Scansiona le aziende per leggere gli annunci.",
       "noLocation": "Luogo non indicato",
       "workMode": {
@@ -492,7 +520,10 @@
         "failed": "Non è stato possibile avviare la candidatura."
       }
     },
-    "openApplications": "Apri candidature"
+    "openApplications": "Apri candidature",
+    "subtitle_one": "{{count}} offerta aperta · {{fresh}} nuove",
+    "subtitle_other": "{{count}} offerte aperte · {{fresh}} nuove",
+    "filtersToggle": "Filtri e ricerche salvate"
   },
   "companies": {
     "title": "Aziende",

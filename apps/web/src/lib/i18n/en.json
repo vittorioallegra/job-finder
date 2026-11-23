@@ -8,18 +8,46 @@
       "openRelease": "Open release page",
       "dismiss": "Dismiss",
       "openFailed": "Opening the update page failed."
+    },
+    "nav": {
+      "label": "Main",
+      "home": "Job Finder home",
+      "jobs": "Jobs",
+      "companies": "Companies",
+      "applications": "Applications",
+      "profile": "Profile",
+      "settings": "Settings"
+    },
+    "brand": {
+      "first": "job",
+      "second": "finder"
     }
   },
   "home": {
-    "title": "Job Finder",
-    "subtitle": "Setup is in progress.",
-    "emptyTitle": "Nothing here yet",
-    "emptyBody": "Searches and results will appear here.",
-    "openSettings": "Settings",
-    "openOnboarding": "Set up your profile",
-    "openProfile": "Profile",
-    "openJobs": "Jobs",
-    "openCompanies": "Companies"
+    "title": "Your job search",
+    "subtitle": "Three steps from your CV to tailored applications.",
+    "loading": "Loading your overview…",
+    "loadFailed": "The overview could not be loaded.",
+    "retry": "Try again",
+    "profileTitle": "Profile",
+    "profileReady": "Your profile is ready for scoring.",
+    "profileMissing": "Import your CV so jobs can be ranked for you.",
+    "profileAction": "Set up profile",
+    "profileEdit": "Edit profile",
+    "companiesTitle": "Companies",
+    "companiesCount_one": "{{count}} company tracked",
+    "companiesCount_other": "{{count}} companies tracked",
+    "companiesEmpty": "Find companies with boards you can scan.",
+    "companiesAction": "Manage companies",
+    "jobsTitle": "Jobs",
+    "jobsBody": "Scan the boards and see openings ranked by affinity.",
+    "jobsAction": "Open jobs",
+    "applicationsTitle": "Applications",
+    "applicationsCount_one": "{{count}} active application",
+    "applicationsCount_other": "{{count}} active applications",
+    "applicationsEmpty": "Bookmark a job to start tracking it.",
+    "applicationsAction": "Open tracker",
+    "stepLabel": "Step {{n}}"
   },
   "settings": {
     "title": "Settings",
@@ -492,7 +520,10 @@
         "failed": "The application could not be started."
       }
     },
-    "openApplications": "Open applications"
+    "openApplications": "Open applications",
+    "subtitle_one": "{{count}} open job · {{fresh}} new",
+    "subtitle_other": "{{count}} open jobs · {{fresh}} new",
+    "filtersToggle": "Filters and saved searches"
   },
   "companies": {
     "title": "Companies",

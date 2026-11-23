@@ -11,14 +11,14 @@ export function TextInput({ label, hint, id, className = "", ...rest }: TextInpu
   const inputId = id ?? generatedId;
   const hintId = `${inputId}-hint`;
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={inputId} className="text-sm font-medium text-app-fg">
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={inputId} className="text-[13px] font-medium text-app-fg">
         {label}
       </label>
       <input
         id={inputId}
         aria-describedby={hint ? hintId : undefined}
-        className={`rounded-md border border-app-border bg-transparent px-3 py-2 text-app-fg ${className}`}
+        className={`rounded-lg border border-app-border bg-app-surface px-3 py-2 text-app-fg shadow-card transition-colors placeholder:text-app-subtle hover:border-app-subtle focus:border-app-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-app-accent-soft disabled:opacity-60 ${className}`}
         {...rest}
       />
       {hint ? (

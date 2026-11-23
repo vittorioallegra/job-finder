@@ -1,6 +1,6 @@
 // protects=the renderer mounts the router and shows the home screen text in the detected language;
 // fails_when=the router is not wired into App or a home string is missing from the i18n resources;
-// no_claim=layout, styling and navigation beyond the home route are not checked here.
+// no_claim=styling and navigation beyond the home route are not checked here.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -28,7 +28,7 @@ describe("App shell", () => {
       root.render(<App />);
     });
     const heading = container.querySelector("h1");
-    expect(heading?.textContent).toBe("Job Finder");
-    expect(container.textContent).toContain("Nothing here yet");
+    expect(heading?.textContent).toBe("Your job search");
+    expect(container.querySelector("nav")?.textContent).toContain("Jobs");
   });
 });

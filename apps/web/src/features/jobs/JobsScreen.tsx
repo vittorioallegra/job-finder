@@ -17,7 +17,14 @@ import {
   type ScoreStartResult,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
+import { Briefcase, RefreshCw, SlidersHorizontal, Sparkles } from "lucide-react";
+import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { Drawer } from "../../components/ui/Drawer";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { PageHeader } from "../../components/ui/PageHeader";
+import { ScoreRing } from "../../components/ui/ScoreRing";
 import { CheckboxInput } from "../../components/ui/CheckboxInput";
 import { JobDetail } from "./JobDetail";
 import { useAiConsent } from "../../lib/useAiConsent";
@@ -335,22 +342,45 @@ export function JobsScreen() {
     }
   }
 
+  const newCount = load.status === "ready" ? load.jobs.filter((job) => job.isNew).length : 0;
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 p-8">
-      <nav>
-        <Link to="/" className="text-sm text-app-accent underline">
-          {t("jobs.backHome")}
-        </Link>
-      </nav>
-      <h1 className="text-3xl font-semibold text-app-fg">{t("jobs.title")}</h1>
-      <p className="flex flex-wrap gap-4">
-        <Link to="/companies" className="text-sm text-app-accent underline">
-          {t("jobs.openCompanies")}
-        </Link>
-        <Link to="/applications" className="text-sm text-app-accent underline">
-          {t("jobs.openApplications")}
-        </Link>
-      </p>
+    <main className="flex flex-col gap-8">
+      <PageHeader
+        title={t("jobs.title")}
+        description={
+          load.status === "ready"
+            ? t("jobs.subtitle", { count: load.jobs.length, fresh: newCount })
+            : undefined
+        }
+        actions={
+          load.status === "ready" ? (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => void scoreJobs()}
+                disabled={scoring || load.jobs.length === 0}
+              >
+                <Sparkles aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                {t("jobs.score.start")}
+              </Button>
+              {activeRunId === null ? (
+                <Button
+                  onClick={() => void startScan()}
+                  disabled={starting || load.companies.length === 0}
+                >
+                  <RefreshCw aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                  {starting ? t("jobs.scan.starting") : t("jobs.scan.start")}
+                </Button>
+              ) : (
+                <Button variant="secondary" onClick={cancelScan}>
+                  {t("jobs.scan.cancel")}
+                </Button>
+              )}
+            </>
+          ) : null
+        }
+      />
 
       {load.status === "loading" ? (
         <p role="status" className="text-app-muted">
@@ -359,244 +389,276 @@ export function JobsScreen() {
       ) : null}
 
       {load.status === "error" ? (
-        <div role="alert" className="flex flex-col items-start gap-3">
-          <p className="text-app-fg">{t("jobs.loadFailed")}</p>
-          <Button variant="secondary" onClick={retry}>
-            {t("jobs.retry")}
-          </Button>
-        </div>
+        <EmptyState
+          role="alert"
+          title={t("jobs.loadFailed")}
+          action={
+            <Button variant="secondary" onClick={retry}>
+              {t("jobs.retry")}
+            </Button>
+          }
+        />
       ) : null}
 
       {load.status === "ready" ? (
         <>
-          <section aria-labelledby="jobs-scan-title" className="flex flex-col gap-4">
-            <h2 id="jobs-scan-title" className="text-xl font-medium text-app-fg">
-              {t("jobs.scan.heading")}
-            </h2>
-            <div>
-              {activeRunId === null ? (
-                <Button
-                  onClick={() => void startScan()}
-                  disabled={starting || load.companies.length === 0}
-                >
-                  {starting ? t("jobs.scan.starting") : t("jobs.scan.start")}
-                </Button>
-              ) : (
-                <Button variant="secondary" onClick={cancelScan}>
-                  {t("jobs.scan.cancel")}
-                </Button>
-              )}
-            </div>
-            {load.companies.length === 0 ? (
-              <p className="text-sm text-app-muted">{t("jobs.scan.needCompanies")}</p>
-            ) : null}
-            <p role="status" className="text-sm text-app-muted">
-              {activeRunId === null ? t("jobs.scan.idle") : t("jobs.scan.running")}
-            </p>
-            {startFailure ? (
-              <p role="alert" className="text-sm text-app-fg">
-                {t(
-                  startFailure === "already-running"
-                    ? "jobs.scan.alreadyRunning"
-                    : "jobs.scan.engineUnavailable",
-                )}
-              </p>
-            ) : null}
-            <h3 id="jobs-log-title" className="text-base font-medium text-app-fg">
-              {t("jobs.log.heading")}
-            </h3>
-            {events.length === 0 ? (
-              <p className="text-sm text-app-muted">{t("jobs.log.empty")}</p>
-            ) : (
-              <ol
-                aria-labelledby="jobs-log-title"
-                aria-live="polite"
-                className="flex flex-col gap-1 text-sm text-app-fg"
-              >
-                {events.map((event) => (
-                  <li key={`${event.runId}-${event.seq}`}>{describeEvent(event)}</li>
-                ))}
-              </ol>
-            )}
-          </section>
-
-          <section aria-labelledby="jobs-score-title" className="flex flex-col gap-4">
-            <h2 id="jobs-score-title" className="text-xl font-medium text-app-fg">
-              {t("jobs.score.heading")}
-            </h2>
-            <p className="text-sm text-app-muted">{t("jobs.score.intro")}</p>
-            {cloud ? (
-              <div className="flex flex-col gap-3 rounded-lg border border-app-border p-4">
-                <p className="text-sm text-app-fg">
-                  {t("jobs.score.consentNote", { provider: providerName })}
-                </p>
-                <CheckboxInput
-                  label={t("jobs.score.consent", { provider: providerName })}
-                  checked={consent}
-                  onChange={(event) => setConsent(event.target.checked)}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card as="section" aria-labelledby="jobs-scan-title" className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <span
+                  aria-hidden="true"
+                  className={`size-2.5 rounded-full ${
+                    activeRunId === null ? "bg-app-subtle" : "animate-pulse bg-app-accent"
+                  }`}
                 />
+                <h2 id="jobs-scan-title" className="font-sans text-base font-semibold">
+                  {t("jobs.scan.heading")}
+                </h2>
+                <p role="status" className="ml-auto text-[13px] text-app-muted">
+                  {activeRunId === null ? t("jobs.scan.idle") : t("jobs.scan.running")}
+                </p>
               </div>
-            ) : null}
-            <div>
-              <Button onClick={() => void scoreJobs()} disabled={scoring || load.jobs.length === 0}>
-                {t("jobs.score.start")}
-              </Button>
-            </div>
-            {load.jobs.length === 0 ? (
-              <p className="text-sm text-app-muted">{t("jobs.score.needJobs")}</p>
-            ) : null}
-            {scoring ? (
-              <p role="status" className="text-sm text-app-muted">
-                {t("jobs.score.running")}
-              </p>
-            ) : null}
-            {scoreResult?.ok === true ? (
-              <p role="status" className="text-sm text-app-fg">
-                {t("jobs.score.done", {
-                  scored: scoreResult.scored,
-                  cached: scoreResult.cached,
-                  failed: scoreResult.failed,
-                  skipped: scoreResult.skipped,
-                })}
-              </p>
-            ) : null}
-            {scoreResult?.ok === false ? (
-              <div role="alert" className="flex flex-col items-start gap-2">
-                <p className="text-sm text-app-fg">
-                  {t(`jobs.score.failures.${scoreResult.code}`, {
-                    defaultValue: t("jobs.score.failures.unknown"),
+              {load.companies.length === 0 ? (
+                <p className="text-[13px] text-app-muted">
+                  {t("jobs.scan.needCompanies")}{" "}
+                  <Link to="/companies" className="text-app-accent underline">
+                    {t("jobs.openCompanies")}
+                  </Link>
+                </p>
+              ) : null}
+              {startFailure ? (
+                <p role="alert" className="text-[13px] text-app-danger">
+                  {t(
+                    startFailure === "already-running"
+                      ? "jobs.scan.alreadyRunning"
+                      : "jobs.scan.engineUnavailable",
+                  )}
+                </p>
+              ) : null}
+              <details className="group" open={events.length > 0 && activeRunId !== null}>
+                <summary
+                  id="jobs-log-title"
+                  className="cursor-pointer text-[13px] text-app-muted select-none hover:text-app-fg"
+                >
+                  {t("jobs.log.heading")}
+                </summary>
+                {events.length === 0 ? (
+                  <p className="mt-2 text-[13px] text-app-muted">{t("jobs.log.empty")}</p>
+                ) : (
+                  <ol
+                    aria-labelledby="jobs-log-title"
+                    aria-live="polite"
+                    className="mt-2 flex max-h-48 flex-col gap-1 overflow-auto rounded-lg bg-app-sunken p-3 font-mono text-xs text-app-fg"
+                  >
+                    {events.map((event) => (
+                      <li key={`${event.runId}-${event.seq}`}>{describeEvent(event)}</li>
+                    ))}
+                  </ol>
+                )}
+              </details>
+            </Card>
+
+            <Card as="section" aria-labelledby="jobs-score-title" className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <Sparkles aria-hidden="true" className="size-4 text-app-accent" strokeWidth={1.8} />
+                <h2 id="jobs-score-title" className="font-sans text-base font-semibold">
+                  {t("jobs.score.heading")}
+                </h2>
+              </div>
+              <p className="text-[13px] text-app-muted">{t("jobs.score.intro")}</p>
+              {cloud ? (
+                <div className="flex flex-col gap-2 rounded-lg bg-app-sunken p-3">
+                  <p className="text-[13px] text-app-fg">
+                    {t("jobs.score.consentNote", { provider: providerName })}
+                  </p>
+                  <CheckboxInput
+                    label={t("jobs.score.consent", { provider: providerName })}
+                    checked={consent}
+                    onChange={(event) => setConsent(event.target.checked)}
+                  />
+                </div>
+              ) : null}
+              {load.jobs.length === 0 ? (
+                <p className="text-[13px] text-app-muted">{t("jobs.score.needJobs")}</p>
+              ) : null}
+              {scoring ? (
+                <p role="status" className="text-[13px] text-app-muted">
+                  {t("jobs.score.running")}
+                </p>
+              ) : null}
+              {scoreResult?.ok === true ? (
+                <p role="status" className="text-[13px] text-app-good">
+                  {t("jobs.score.done", {
+                    scored: scoreResult.scored,
+                    cached: scoreResult.cached,
+                    failed: scoreResult.failed,
+                    skipped: scoreResult.skipped,
                   })}
                 </p>
-                {scoreResult.code === "ai-unavailable" ? (
-                  <Link to="/settings" className="text-sm text-app-accent underline">
-                    {t("jobs.score.openSettings")}
-                  </Link>
-                ) : null}
-                {scoreResult.code === "no-profile" ? (
-                  <Link to="/profile" className="text-sm text-app-accent underline">
-                    {t("jobs.score.openProfile")}
-                  </Link>
-                ) : null}
-              </div>
-            ) : null}
-          </section>
+              ) : null}
+              {scoreResult?.ok === false ? (
+                <div role="alert" className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <p className="text-[13px] text-app-danger">
+                    {t(`jobs.score.failures.${scoreResult.code}`, {
+                      defaultValue: t("jobs.score.failures.unknown"),
+                    })}
+                  </p>
+                  {scoreResult.code === "ai-unavailable" ? (
+                    <Link to="/settings" className="text-[13px] text-app-accent underline">
+                      {t("jobs.score.openSettings")}
+                    </Link>
+                  ) : null}
+                  {scoreResult.code === "no-profile" ? (
+                    <Link to="/profile" className="text-[13px] text-app-accent underline">
+                      {t("jobs.score.openProfile")}
+                    </Link>
+                  ) : null}
+                </div>
+              ) : null}
+            </Card>
+          </div>
 
-          <section aria-labelledby="jobs-results-title" className="flex flex-col gap-4">
-            <h2 id="jobs-results-title" className="text-xl font-medium text-app-fg">
-              {t("jobs.results.heading")}
-            </h2>
-            <JobFilters
-              draft={draft}
-              onChange={setDraft}
-              companies={load.companies}
-              onApply={applyDraft}
-              onReset={resetFilters}
-              invalid={filterInvalid}
-            />
-            <SavedSearches
-              state={saved}
-              saveable={!filterInvalid}
-              onApply={applySaved}
-              onCreate={(name) => void storeSearch(name)}
-              onReplace={(search) => void storeSearch(search.name, search.id)}
-              onDelete={(search) => void deleteSearch(search)}
-              onRetry={() => void readSaved()}
-            />
+          <section aria-labelledby="jobs-results-title" className="flex flex-col gap-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 id="jobs-results-title" className="sr-only">
+                {t("jobs.results.heading")}
+              </h2>
+              <div role="group" aria-label={t("jobs.sort.label")} className="flex flex-wrap gap-2">
+                {SORTS.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={sort === option}
+                    onClick={() => changeSort(option)}
+                    className={`rounded-full px-3.5 py-1.5 text-[13px] transition-colors ${
+                      sort === option
+                        ? "bg-app-accent text-app-accent-fg"
+                        : "bg-app-sunken text-app-muted hover:text-app-fg"
+                    }`}
+                  >
+                    {t(`jobs.sort.${option}`)}
+                  </button>
+                ))}
+              </div>
+              <span className="flex-1" />
+              {refreshing ? (
+                <p role="status" className="text-[13px] text-app-muted">
+                  {t("jobs.loading")}
+                </p>
+              ) : null}
+            </div>
+
+            <details className="rounded-2xl border border-app-border bg-app-surface shadow-card">
+              <summary className="flex cursor-pointer items-center gap-2 px-5 py-3 text-sm font-medium select-none">
+                <SlidersHorizontal aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                {t("jobs.filtersToggle")}
+              </summary>
+              <div className="flex flex-col gap-4 border-t border-app-border p-5">
+                <JobFilters
+                  draft={draft}
+                  onChange={setDraft}
+                  companies={load.companies}
+                  onApply={applyDraft}
+                  onReset={resetFilters}
+                  invalid={filterInvalid}
+                />
+                <SavedSearches
+                  state={saved}
+                  saveable={!filterInvalid}
+                  onApply={applySaved}
+                  onCreate={(name) => void storeSearch(name)}
+                  onReplace={(search) => void storeSearch(search.name, search.id)}
+                  onDelete={(search) => void deleteSearch(search)}
+                  onRetry={() => void readSaved()}
+                />
+              </div>
+            </details>
             {savedFailed ? (
-              <p role="alert" className="text-sm text-app-fg">
+              <p role="alert" className="text-sm text-app-danger">
                 {t("jobs.saved.saveFailed")}
               </p>
             ) : null}
 
-            <div role="group" aria-label={t("jobs.sort.label")} className="flex flex-wrap gap-2">
-              {SORTS.map((option) => (
-                <Button
-                  key={option}
-                  variant={sort === option ? "primary" : "secondary"}
-                  aria-pressed={sort === option}
-                  onClick={() => changeSort(option)}
-                >
-                  {t(`jobs.sort.${option}`)}
-                </Button>
-              ))}
-            </div>
+            {load.jobs.length === 0 ? (
+              <EmptyState
+                icon={<Briefcase aria-hidden="true" className="size-5" strokeWidth={1.8} />}
+                title={t(isDefaultFilter(applied) ? "jobs.results.empty" : "jobs.results.noMatch")}
+              />
+            ) : (
+              <ul
+                className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]"
+                aria-label={t("jobs.results.heading")}
+              >
+                {load.jobs.map((job) => (
+                  <JobCard key={job.id} job={job} onOpen={() => setSelectedJobId(job.id)} />
+                ))}
+              </ul>
+            )}
+          </section>
 
-            {selectedJobId !== null ? (
+          {selectedJobId !== null ? (
+            <Drawer label={t("jobs.detail.heading")} onClose={() => setSelectedJobId(null)}>
               <JobDetail
                 key={selectedJobId}
                 jobId={selectedJobId}
                 onChanged={jobsChanged}
                 onClose={() => setSelectedJobId(null)}
               />
-            ) : null}
-
-            {refreshing ? (
-              <p role="status" className="text-sm text-app-muted">
-                {t("jobs.loading")}
-              </p>
-            ) : null}
-            {load.jobs.length === 0 ? (
-              <p className="text-app-muted">
-                {t(isDefaultFilter(applied) ? "jobs.results.empty" : "jobs.results.noMatch")}
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-2" aria-label={t("jobs.results.heading")}>
-                {load.jobs.map((job) => (
-                  <li
-                    key={job.id}
-                    className="flex flex-col gap-1 rounded-md border border-app-border p-4"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium text-app-fg">{job.title}</p>
-                      {job.isNew ? (
-                        <span className="rounded-full bg-app-accent px-2 py-0.5 text-xs text-app-bg">
-                          {t("jobs.results.new")}
-                        </span>
-                      ) : null}
-                      {job.dismissed ? (
-                        <span className="rounded-full border border-app-border px-2 py-0.5 text-xs text-app-muted">
-                          {t("jobs.results.dismissed")}
-                        </span>
-                      ) : null}
-                      {job.applicationStatus !== null ? (
-                        <span className="rounded-full border border-app-border px-2 py-0.5 text-xs text-app-fg">
-                          {t("jobs.results.applicationStatus", {
-                            status: t(`applications.status.${job.applicationStatus}`),
-                          })}
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="text-sm text-app-muted">
-                      {job.companyName} ·{" "}
-                      {job.locations.length > 0
-                        ? job.locations.join(" / ")
-                        : t("jobs.results.noLocation")}{" "}
-                      · {t(`jobs.results.workMode.${job.workMode}`)}
-                    </p>
-                    <p className="text-sm font-medium text-app-fg">
-                      {job.score === null
-                        ? t("jobs.results.notScored")
-                        : t("jobs.results.affinity", { score: job.score })}
-                    </p>
-                    {job.explanation ? (
-                      <p className="text-sm text-app-muted">{job.explanation}</p>
-                    ) : null}
-                    <div>
-                      <Button
-                        variant="secondary"
-                        aria-label={t("jobs.results.openJob", { title: job.title })}
-                        onClick={() => setSelectedJobId(job.id)}
-                      >
-                        {t("jobs.results.open")}
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+            </Drawer>
+          ) : null}
         </>
       ) : null}
     </main>
+  );
+}
+
+function JobCard({ job, onOpen }: { job: JobListItem; onOpen: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <Card as="li" className={`flex flex-col gap-3 ${job.dismissed ? "opacity-60" : ""}`}>
+      <div className="flex items-start gap-3.5">
+        <ScoreRing
+          score={job.score}
+          label={
+            job.score === null
+              ? t("jobs.results.notScored")
+              : t("jobs.results.affinity", { score: job.score })
+          }
+        />
+        <div className="min-w-0">
+          <p className="text-[17px] leading-snug font-semibold text-app-fg">{job.title}</p>
+          <p className="mt-0.5 truncate text-[13px] text-app-muted">
+            {job.companyName} ·{" "}
+            {job.locations.length > 0 ? job.locations.join(" / ") : t("jobs.results.noLocation")}
+          </p>
+        </div>
+      </div>
+      {job.explanation ? (
+        <p className="line-clamp-3 border-l-[3px] border-app-accent-soft pl-2.5 text-[13px] text-app-muted">
+          {job.explanation}
+        </p>
+      ) : null}
+      <div className="flex flex-wrap gap-1.5">
+        <Badge>{t(`jobs.results.workMode.${job.workMode}`)}</Badge>
+        {job.isNew ? <Badge tone="accent">{t("jobs.results.new")}</Badge> : null}
+        {job.dismissed ? <Badge>{t("jobs.results.dismissed")}</Badge> : null}
+        {job.applicationStatus !== null ? (
+          <Badge tone="good">
+            {t("jobs.results.applicationStatus", {
+              status: t(`applications.status.${job.applicationStatus}`),
+            })}
+          </Badge>
+        ) : null}
+      </div>
+      <div className="mt-auto flex items-center justify-end border-t border-dashed border-app-border pt-3">
+        <Button
+          size="sm"
+          aria-label={t("jobs.results.openJob", { title: job.title })}
+          onClick={onOpen}
+        >
+          {t("jobs.results.open")}
+        </Button>
+      </div>
+    </Card>
   );
 }

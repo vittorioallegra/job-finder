@@ -10,13 +10,13 @@ export function CheckboxInput({ label, hint, id, ...rest }: CheckboxInputProps) 
   const inputId = id ?? generatedId;
   const hintId = `${inputId}-hint`;
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       <label htmlFor={inputId} className="flex items-center gap-2 text-sm text-app-fg">
         <input
           id={inputId}
           type="checkbox"
           aria-describedby={hint ? hintId : undefined}
-          className="size-4 accent-app-accent"
+          className="size-4 rounded accent-app-accent"
           {...rest}
         />
         {label}

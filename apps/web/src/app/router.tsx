@@ -7,14 +7,20 @@ import { NotFoundScreen } from "../features/home/NotFoundScreen";
 import { OnboardingScreen } from "../features/onboarding/OnboardingScreen";
 import { ProfileScreen } from "../features/profile/ProfileScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
+import { AppShell } from "./AppShell";
 
 export const router = createBrowserRouter([
-  { path: "/", element: <HomeScreen /> },
-  { path: "/onboarding", element: <OnboardingScreen /> },
-  { path: "/profile", element: <ProfileScreen /> },
-  { path: "/companies", element: <CompaniesScreen /> },
-  { path: "/jobs", element: <JobsScreen /> },
-  { path: "/applications", element: <ApplicationsScreen /> },
-  { path: "/settings", element: <SettingsScreen /> },
-  { path: "*", element: <NotFoundScreen /> },
+  {
+    element: <AppShell />,
+    children: [
+      { path: "/", element: <HomeScreen /> },
+      { path: "/onboarding", element: <OnboardingScreen /> },
+      { path: "/profile", element: <ProfileScreen /> },
+      { path: "/companies", element: <CompaniesScreen /> },
+      { path: "/jobs", element: <JobsScreen /> },
+      { path: "/applications", element: <ApplicationsScreen /> },
+      { path: "/settings", element: <SettingsScreen /> },
+      { path: "*", element: <NotFoundScreen /> },
+    ],
+  },
 ]);
