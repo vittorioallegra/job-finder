@@ -21,8 +21,8 @@ application (tailored CV, cover letter, auto-filled form) for the user to review
 - Every screen has empty, loading and error states; screens that use AI also have an
   "AI unavailable" state. Keyboard navigation and visible focus on every control.
 - Network in tests: no live calls. Engine and main code read base URLs through an
-  env-guarded override (`JOB_FINDER_FIXTURE_BASE_URL`, honored only when not packaged or
-  under E2E) pointing to a local fixture server; AI goes through the record/replay
+  env-guarded override (`JOB_FINDER_FIXTURE_BASE_URL`, honored only when not packaged,
+  and only for a loopback address) pointing to a local fixture server; AI goes through the record/replay
   provider (step 5).
 - `CLAUDE.md` is updated in the same step whenever commands, folders or conventions change.
 
@@ -316,6 +316,7 @@ Approved: yes (2026-11-23)
   - Two overlapping starts of one job (a double click) could both pass the duplicate check and create two applications — `fix: run application starts one at a time so a double click creates one application`
   - The CSV formula guard missed values with leading whitespace or full-width = + - @ — `fix: guard CSV cells that start with spaces or full-width formula characters`
   - A re-seen job never stored its changed title, description or salary, so score invalidation by content hash could never trigger — `fix: store the current content of a job seen again so changed postings are re-scored`
+  - A packaged app honoured the fixture base URL whenever JOB_FINDER_E2E was set — `fix: never honour the fixture base URL in a packaged app`
 
 ### Decisions
 - Single-user, local-only app; published as open source on GitHub, each user runs it on their own machine.

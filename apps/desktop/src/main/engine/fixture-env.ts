@@ -15,15 +15,15 @@ export function isLoopbackHttpUrl(value: string): boolean {
 }
 
 /**
- * The environment the engine process gets. The fixture override is kept only when it is not a
- * packaged app or the E2E harness is running, and it points at loopback; otherwise it is removed.
+ * The environment the engine process gets. The fixture override is kept only in an unpackaged app
+ * and only when it points at loopback; otherwise it is removed. A packaged app never honours it,
+ * not even under the E2E harness: the packaged smoke test does not use fixtures.
  */
 export function engineEnvironment(env: NodeJS.ProcessEnv, isPackaged: boolean): NodeJS.ProcessEnv {
   const result: NodeJS.ProcessEnv = { ...env };
   delete result[FIXTURE_BASE_URL_ENV];
   const value = env[FIXTURE_BASE_URL_ENV];
-  const allowed = !isPackaged || Boolean(env["JOB_FINDER_E2E"]);
-  if (allowed && value && isLoopbackHttpUrl(value)) {
+  if (!isPackaged && value && isLoopbackHttpUrl(value)) {
     result[FIXTURE_BASE_URL_ENV] = value;
   }
   return result;
