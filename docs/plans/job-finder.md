@@ -277,7 +277,7 @@ Approved: yes (2026-11-23)
 - [x] 1. Workspace scaffold — `docs: add CLAUDE.md, README, license, contributing guide and repo conventions test`
 - [x] 2. Engine walking skeleton and persistence foundation — `feat: start engine and migrations from main, reconcile runs on startup`
 - [x] 3. CI and release pipeline — `ci: build, smoke-test and draft-release the desktop installers from v* tags`
-- [ ] 4. Bridge, settings and secrets
+- [x] 4. Bridge, settings and secrets — `feat: add settings screen over the typed bridge`
 - [ ] 5. AI layer
 - [ ] 6. Onboarding and profile
 - [ ] 7. Fetch infrastructure and page loader
@@ -331,7 +331,16 @@ Approved: yes (2026-11-23)
 - Workflow YAML validated with a parser (js-yaml); actionlint is not installed here.
 - Root `tsconfig.json` gets `allowJs` so the `.mjs` release script can be imported by its `.ts` test; `scripts/` is a Vitest project.
 
+- Step 4: no table or migration. Settings are one JSON row per section (`settings.<section>`) in the existing settings table; encrypted secrets are rows `secret.<name>` (base64 safeStorage ciphertext).
+- Step 4: zod 4.6.7 in `packages/bridge` (Architecture version, released 2026-10-12). `@job-finder/bridge` moved to desktop devDependencies so electron-vite bundles it like `core`; `apps/web` depends on it.
+- Step 4: `URL.origin` is `"null"` for `app://`, so the renderer origin and the navigation guard compare scheme and host (`security/origin.ts`). The guard in `window.ts` had the same flaw and is fixed here.
+- Step 4: the sandboxed preload imports only `electron` and types, so it repeats the channel names typed as `IpcChannel`. The renderer sees only storage mode and set / not set per key; no secret value leaves main except through the engine path added in step 5.
+- Step 4: Linux `basic_text` keys stay in memory until the Settings opt-in; the opt-in flushes them to disk. No UI revokes the opt-in.
+- Step 4: close behaviour, scheduler interval, notifications, launch at login and update check are stored only; their effects land with step 19. UI language applies in the renderer; main-process dialogs keep following the system locale.
+- Step 4: UI kit starts with native-control components (`Button`, `TextInput`, `SelectInput`, `CheckboxInput`); Radix is deferred until a dialog or menu needs it.
+- Step 4: a plain browser (`pnpm dev`) uses an in-memory bridge, so the settings screen works without Electron. The `bridge` Vitest project was added.
+
 ### Open questions
 
 ### Next
-Step 4: bridge, settings and secrets (typed IPC contract with zod schemas, sender-frame checks, settings repository, `safeStorage` with the Linux `basic_text` opt-in, settings screen).
+Step 5: AI layer (`packages/core/src/ai/`: provider factory over Vercel AI SDK 7, record/replay provider, "AI unavailable" state).
