@@ -22,6 +22,34 @@
       "when": 1795434782689,
       "tag": "0002_profile_versions",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1795436672120,
+      "tag": "0003_companies",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1795436680798,
+      "tag": "0004_jobs",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1795436685756,
+      "tag": "0005_job_sources",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1795436689175,
+      "tag": "0006_run_events",
+      "breakpoints": true
     }
   ]
 }
