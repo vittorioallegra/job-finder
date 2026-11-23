@@ -1,0 +1,53 @@
+[
+  {
+    "id": "ad208490-4052-4f91-a57e-433f2d1e484b",
+    "text": "Customer Success Manager",
+    "hostedUrl": "https://jobs.lever.co/leverdemo/ad208490-4052-4f91-a57e-433f2d1e484b",
+    "applyUrl": "https://jobs.lever.co/leverdemo/ad208490-4052-4f91-a57e-433f2d1e484b/apply",
+    "createdAt": 1788199939703,
+    "workplaceType": "hybrid",
+    "country": "US",
+    "categories": {
+      "commitment": "Regular Full Time (Salary)",
+      "department": "Customer Success",
+      "location": "Atlanta, Georgia",
+      "team": "Customer Success Team",
+      "allLocations": ["Atlanta, Georgia"]
+    },
+    "descriptionPlain": "This is a test job - created by Alex Haugan, for testing candidate insights.\n \nJoin a scaling, tight-knit team that’s working directly with innovative talent acquisition teams and thought leaders across various industries and geographies to make hiring a strategic advantage for their organizations. You'll serve as an advisor to our customers and take a consultative approach to ensure customers are setup for long-term success as high performing hiring organizations using the Lever product suite.\n \nAs a Customer Success Manager on the Customer Advocacy team, you will be our customers biggest champion and make their voice heard in everything we do- the problems we help solve, the solutions we build and the consultation we deliver. You will do that by building trusting partnerships with our customers and consistently empowering them to achieve their ongoing talent goals with Lever. We advoca"
+  },
+  {
+    "id": "120b5976-ee4e-4dc5-b31b-2b1ca124460c",
+    "text": "Dentist",
+    "hostedUrl": "https://jobs.lever.co/leverdemo/120b5976-ee4e-4dc5-b31b-2b1ca124460c",
+    "applyUrl": "https://jobs.lever.co/leverdemo/120b5976-ee4e-4dc5-b31b-2b1ca124460c/apply",
+    "createdAt": 1787600587936,
+    "workplaceType": "onsite",
+    "country": "US",
+    "categories": {
+      "commitment": "Regular Full Time (Salary)",
+      "department": "People (HR)",
+      "location": "Houston, TX",
+      "team": "People",
+      "allLocations": ["Houston, TX"]
+    },
+    "descriptionPlain": ""
+  },
+  {
+    "id": "1dbf02a6-d434-4e47-8d66-3aba2c17bed1",
+    "text": "Director of Diversity, Equity, and Inclusion",
+    "hostedUrl": "https://jobs.lever.co/leverdemo/1dbf02a6-d434-4e47-8d66-3aba2c17bed1",
+    "applyUrl": "https://jobs.lever.co/leverdemo/1dbf02a6-d434-4e47-8d66-3aba2c17bed1/apply",
+    "createdAt": 1718633877107,
+    "workplaceType": "onsite",
+    "country": "GB",
+    "categories": {
+      "commitment": "Regular Full Time (Salary)",
+      "department": "Executive",
+      "location": "London, UK",
+      "team": "Executive",
+      "allLocations": ["London, UK"]
+    },
+    "descriptionPlain": ""
+  }
+]

@@ -11,7 +11,8 @@
     "./cv": "./src/cv/index.ts",
     "./net": "./src/net/index.ts",
     "./normalize": "./src/normalize/index.ts",
-    "./profile": "./src/profile/schema.ts"
+    "./profile": "./src/profile/schema.ts",
+    "./ats": "./src/ats/index.ts"
   },
   "scripts": {
     "typecheck": "node ../../node_modules/typescript7/bin/tsc --noEmit -p tsconfig.json"

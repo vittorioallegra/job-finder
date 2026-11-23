@@ -1,0 +1,488 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "id": "7458d4e9-da2e-47bd-98cb-adfda43d42b2",
+      "title": "Engineering Manager - EU",
+      "department": "Engineering",
+      "team": "EMEA Engineering",
+      "employmentType": "FullTime",
+      "location": "Remote - European Union",
+      "secondaryLocations": [
+        {
+          "location": "Spain",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Spain",
+              "addressCountry": "Spain",
+              "addressLocality": "Spain"
+            }
+          }
+        },
+        {
+          "location": "Italy",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "Italy",
+              "addressLocality": ""
+            }
+          }
+        },
+        {
+          "location": "Germany",
+          "address": {
+            "postalAddress": {
+              "addressCountry": "Germany",
+              "addressLocality": ""
+            }
+          }
+        },
+        {
+          "location": "Switzerland",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "Switzerland",
+              "addressLocality": ""
+            }
+          }
+        },
+        {
+          "location": "Denmark",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "Denmark",
+              "addressLocality": ""
+            }
+          }
+        },
+        {
+          "location": "Norway",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "Norway",
+              "addressLocality": ""
+            }
+          }
+        },
+        {
+          "location": "Croatia",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "Croatia",
+              "addressLocality": ""
+            }
+          }
+        },
+        {
+          "location": "Ireland",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Ireland",
+              "addressCountry": "Ireland",
+              "addressLocality": "Ireland"
+            }
+          }
+        },
+        {
+          "location": "Stockholm",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Stockholm",
+              "addressCountry": "Sweden",
+              "addressLocality": "Stockholm"
+            }
+          }
+        },
+        {
+          "location": "Romania",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "Romania",
+              "addressLocality": ""
+            }
+          }
+        },
+        {
+          "location": "Austria",
+          "address": {
+            "postalAddress": {
+              "addressCountry": "Austria"
+            }
+          }
+        },
+        {
+          "location": "Barcelona",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Catalonia",
+              "addressCountry": "Spain",
+              "addressLocality": "Barcelona"
+            }
+          }
+        },
+        {
+          "location": "Netherlands",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "Netherlands",
+              "addressLocality": "Amsterdam"
+            }
+          }
+        },
+        {
+          "location": "Portugal",
+          "address": {
+            "postalAddress": {
+              "addressCountry": "Portugal"
+            }
+          }
+        },
+        {
+          "location": "France",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "France",
+              "addressLocality": ""
+            }
+          }
+        },
+        {
+          "location": "Berlin",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "Germany",
+              "addressLocality": "Berlin"
+            }
+          }
+        },
+        {
+          "location": "Sweden",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "Sweden",
+              "addressLocality": ""
+            }
+          }
+        },
+        {
+          "location": "Hungary",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Hungary",
+              "addressCountry": "Hungary",
+              "addressLocality": "Budapest"
+            }
+          }
+        },
+        {
+          "location": "Estonia",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "Estonia",
+              "addressLocality": ""
+            }
+          }
+        }
+      ],
+      "publishedAt": "2024-03-04T14:29:08.532+00:00",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "address": {
+        "postalAddress": {
+          "postalCode": "",
+          "addressRegion": "",
+          "addressCountry": "European Union",
+          "addressLocality": ""
+        }
+      },
+      "jobUrl": "https://jobs.ashbyhq.com/Ashby/7458d4e9-da2e-47bd-98cb-adfda43d42b2",
+      "applyUrl": "https://jobs.ashbyhq.com/Ashby/7458d4e9-da2e-47bd-98cb-adfda43d42b2/application",
+      "descriptionPlain": "Hi 👋 I’m Colin https://uk.linkedin.com/in/colinhoweuk, Director of Engineering, Europe. How do you feel about software engineers writing product specs, making product decisions, and not breaking down projects into individual tickets? If that sounds exciting (even if a bit scary), read on because I’m looking for an engineering manager to help us build a different type of engineering team and culture at Ashby.\n\nTo start, why do we need to be different? Time and again, I have witnessed engineers knowing what needs to be done yet being unable to get things done because of “the process” or because “more data is needed.” Some of the most effective projects have been skunkworks projects, where engineers have taken total ownership of a problem and driven it to completion. I want to normalize that at Ashby.\n\nWhen we think about how these processes came about, we realize they carry a pessimistic "
+    },
+    {
+      "id": "86a60834-ba64-484d-9658-afa1bc97a957",
+      "title": "Mid Market Account Executive - EMEA (French Speaking)",
+      "department": "Sales",
+      "team": "Sales",
+      "employmentType": "FullTime",
+      "location": "France",
+      "secondaryLocations": [
+        {
+          "location": "United Kingdom",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "United Kingdom",
+              "addressLocality": ""
+            }
+          }
+        },
+        {
+          "location": "Belgium",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "Belgium",
+              "addressLocality": ""
+            }
+          }
+        },
+        {
+          "location": "Germany",
+          "address": {
+            "postalAddress": {
+              "addressCountry": "Germany",
+              "addressLocality": ""
+            }
+          }
+        },
+        {
+          "location": "Switzerland",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "Switzerland",
+              "addressLocality": ""
+            }
+          }
+        },
+        {
+          "location": "Ireland",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "Ireland",
+              "addressLocality": ""
+            }
+          }
+        },
+        {
+          "location": "Austria",
+          "address": {
+            "postalAddress": {
+              "addressCountry": "Austria"
+            }
+          }
+        },
+        {
+          "location": "Spain",
+          "address": {
+            "postalAddress": {
+              "addressCountry": "Spain"
+            }
+          }
+        },
+        {
+          "location": "Stuttgart",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Baden-Wurttemberg",
+              "addressCountry": "Germany",
+              "addressLocality": "Stuttgart"
+            }
+          }
+        },
+        {
+          "location": "Berlin",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "Germany",
+              "addressLocality": "Berlin"
+            }
+          }
+        }
+      ],
+      "publishedAt": "2026-09-08T16:27:26.694+00:00",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "address": {
+        "postalAddress": {
+          "addressRegion": "",
+          "addressCountry": "France",
+          "addressLocality": ""
+        }
+      },
+      "jobUrl": "https://jobs.ashbyhq.com/Ashby/86a60834-ba64-484d-9658-afa1bc97a957",
+      "applyUrl": "https://jobs.ashbyhq.com/Ashby/86a60834-ba64-484d-9658-afa1bc97a957/application",
+      "descriptionPlain": "WHY JOIN SALES AT ASHBY\n\nSales at Ashby is a unique opportunity to sell a product customers genuinely love https://www.ashbyhq.com/customers during an AI-fueled market expansion. Over 5,000 companies rely on Ashby, including OpenAI, Doctolib, Alan, Mistral and Monday.com http://Monday.com, and our business is durably growing faster than 100% year-over-year. We’re well funded https://www.ashbyhq.com/blog/culture/series-d, and on a path to profitability. That's exceptionally rare for a company at our scale, and puts us in the top 10% of benchmarks.\n\nNearly 1 in 3 of Ashby’s globally distributed team call Europe home! We’ve landed over 1000 customers in EMEA representing ~23% of our global revenue base,with well over 100 in France, clear evidence of strong product-market fit. We’re doubling down our investment in the region with in-market GTM, CS and Support resources. EU Data Residency and"
+    },
+    {
+      "id": "f40ef345-82a8-4956-9150-193b4fdf8183",
+      "title": "Senior Product Designer",
+      "department": "Design",
+      "team": "Design",
+      "employmentType": "FullTime",
+      "location": "Remote - US",
+      "secondaryLocations": [
+        {
+          "location": "Austin",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Texas",
+              "addressCountry": "USA",
+              "addressLocality": "Austin"
+            }
+          }
+        },
+        {
+          "location": "Los Angeles",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "California",
+              "addressCountry": "USA",
+              "addressLocality": "Los Angeles"
+            }
+          }
+        },
+        {
+          "location": "Portland",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Oregon",
+              "addressCountry": "USA",
+              "addressLocality": "Portland"
+            }
+          }
+        },
+        {
+          "location": "Salt Lake City",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Utah",
+              "addressCountry": "USA",
+              "addressLocality": "Salt Lake City"
+            }
+          }
+        },
+        {
+          "location": "Waterloo",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Ontario",
+              "addressCountry": "Canada",
+              "addressLocality": "Waterloo"
+            }
+          }
+        },
+        {
+          "location": "Boston",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Massachusetts",
+              "addressCountry": "USA",
+              "addressLocality": "Boston"
+            }
+          }
+        },
+        {
+          "location": "Remote - Canada",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "",
+              "addressCountry": "Canada",
+              "addressLocality": ""
+            }
+          }
+        },
+        {
+          "location": "Seattle",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Washington",
+              "addressCountry": "USA",
+              "addressLocality": "Seattle"
+            }
+          }
+        },
+        {
+          "location": "New York",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "New York",
+              "addressCountry": "USA",
+              "addressLocality": "New York"
+            }
+          }
+        },
+        {
+          "location": "San Francisco",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "CA",
+              "addressCountry": "USA",
+              "addressLocality": "San Francisco"
+            }
+          }
+        },
+        {
+          "location": "Vancouver",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "British Columbia",
+              "addressCountry": "Canada",
+              "addressLocality": "Vancouver"
+            }
+          }
+        },
+        {
+          "location": "Denver",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Colorado",
+              "addressCountry": "USA",
+              "addressLocality": "Denver"
+            }
+          }
+        },
+        {
+          "location": "Toronto",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Ontario",
+              "addressCountry": "Canada",
+              "addressLocality": "Toronto"
+            }
+          }
+        },
+        {
+          "location": "Chicago",
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Illinois",
+              "addressCountry": "USA",
+              "addressLocality": "Chicago"
+            }
+          }
+        }
+      ],
+      "publishedAt": "2025-12-05T22:43:22.147+00:00",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "address": {
+        "postalAddress": {
+          "addressRegion": "",
+          "addressCountry": "United States",
+          "addressLocality": ""
+        }
+      },
+      "jobUrl": "https://jobs.ashbyhq.com/Ashby/f40ef345-82a8-4956-9150-193b4fdf8183",
+      "applyUrl": "https://jobs.ashbyhq.com/Ashby/f40ef345-82a8-4956-9150-193b4fdf8183/application",
+      "descriptionPlain": "Hi! 👋 I'm Chris https://www.linkedin.com/in/chkrlee/, head of Product Design at Ashby.\n\nWe're looking for a versatile, intrinsically motivated designer who is excited to contribute to rethinking how modern software is designed. At Ashby, you'll be part designer, part product manager, part consultant, and part design system manager (or some combination of the 4!). We do design differently here, and if that excites you, read on.\n\nOur unique approach is working - we're growing >100% year-over-year and have notable customers like Notion, Linear, Shopify, and Snowflake. Our growth and retention metrics are best-in-class among our peers: we have tens of millions in ARR, very low churn, and many years of runway. We're backed by amazing investors like Y Combinator, Elad Gil, Lachy Groom, and many more! We’ll share more details once we meet.\n\n\n\n\nHOW WE WORK\n\nIn my previous roles, product teams a"
+    }
+  ]
+}
