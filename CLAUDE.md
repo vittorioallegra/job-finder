@@ -5,7 +5,7 @@ Native desktop app (Electron 45 + React 19), pnpm workspace. Full plan: `docs/pl
 ## Commands
 
 - Install: `pnpm setup` (runs `pnpm install`)
-- Dev web renderer only: `pnpm dev` (Vite on http://localhost:5173)
+- Dev web renderer only: `pnpm dev` (Vite on http://localhost:5173; no preload, so settings and secrets use an in-memory bridge)
 - Dev desktop app: `pnpm desktop:dev`
 - Build desktop: `pnpm desktop:build` (output in `apps/desktop/out`)
 - Package installers for this OS: `pnpm desktop:dist` (output in `apps/desktop/dist`; release steps in `docs/release.md`)
@@ -23,12 +23,12 @@ Native desktop app (Electron 45 + React 19), pnpm workspace. Full plan: `docs/pl
 
 ## Folder map
 
-- `apps/desktop/` Electron shell: `build/` (app icon, `after-pack.mjs` fuses hook), `electron-builder.yml` (installers), `src/main` (window, protocol, logging, security, i18n, `db/` SQLite adapter, migrator and operations, `engine/` utility-process supervisor), `src/engine` (engine utility process: entry, typed message protocol, runtime), `drizzle/` (generated SQL migrations), `src/preload`, `e2e/` (Playwright: dev smoke and `packaged.spec.ts`), `electron.vite.config.ts`
+- `apps/desktop/` Electron shell: `build/` (app icon, `after-pack.mjs` fuses hook), `electron-builder.yml` (installers), `src/main` (window, protocol, logging, security, i18n, `db/` SQLite adapter, migrator and operations, `engine/` utility-process supervisor, `settings/` repository, `secrets/` safeStorage store, `ipc/` guarded handlers), `src/engine` (engine utility process: entry, typed message protocol, runtime), `drizzle/` (generated SQL migrations), `src/preload`, `e2e/` (Playwright: dev smoke and `packaged.spec.ts`), `electron.vite.config.ts`
 - `scripts/` repo tooling (`release-notes.mjs`, unit-tested)
 - `.github/workflows/` `ci.yml` (typecheck, lint, tests) and `desktop.yml` (installers, packaged smoke, draft release)
 - `apps/web/` React renderer: `src/app` (router, shell), `src/features/<name>` (screens), `src/lib/i18n` (en.json, it.json), `src/styles.css` (tokens)
 - `packages/core/` pure TypeScript domain logic, no Electron or React imports; `src/db/schema.ts` holds the drizzle schema
-- `packages/bridge/` typed contract between preload and renderer
+- `packages/bridge/` typed contract between preload and renderer: zod schemas for settings, secrets and IPC payloads
 - `tests/repo/` repository-level conventions tests
 - `docs/` specs, plans, `release.md` (installers, releases, unsigned apps)
 
@@ -36,7 +36,9 @@ Native desktop app (Electron 45 + React 19), pnpm workspace. Full plan: `docs/pl
 
 - Everything in the repo is English: code, comments, tests, commits, docs. Only user-facing strings are translated, through i18n keys present in both `en.json` and `it.json` (desktop main: `apps/desktop/src/main/i18n`; renderer: `apps/web/src/lib/i18n`). Key-parity tests enforce this.
 - Every test file starts with the card: `// protects=...; fails_when=...; no_claim=...`. The repo test enforces it.
-- Renderer never goes online: CSP is set in the main process (`src/main/security/csp.ts`). Renderer reaches the OS only through `window.jobFinder` (preload).
+- Renderer never goes online: CSP is set in the main process (`src/main/security/csp.ts`). Renderer reaches the OS only through `window.jobFinder` (preload), typed by `JobFinderBridge` in packages/bridge; screens take it from `useBridge()`.
+- IPC: every channel is a zod schema in `packages/bridge/src/ipc.ts`. Main checks the sender (top-level frame at the renderer origin, `security/origin.ts`) and validates the payload before any service runs. The sandboxed preload may import only `electron` and types, so it repeats channel names typed as `IpcChannel`.
+- Settings are one JSON row per section (`settings.<section>`). Secrets are safeStorage ciphertext in rows `secret.<name>`; the renderer sees only storage mode and set / not set. Linux `basic_text` keys reach disk only after the Settings opt-in.
 - Protocol: the renderer loads from `app://renderer/`, served only through `resolveAppRequest` (path-traversal guard).
 - Electron main/preload build as CommonJS (no `"type": "module"` in `apps/desktop`); the preload runs in the sandbox, so it may import only `electron` and types.
 - Only main opens SQLite. The engine asks for database work through the typed `DbCall` batches in `apps/desktop/src/engine/protocol.ts`; main executes them through drizzle's sqlite-proxy over `node:sqlite`.

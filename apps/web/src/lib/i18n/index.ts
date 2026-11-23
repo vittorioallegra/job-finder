@@ -17,6 +17,14 @@ export function detectLanguage(languages: readonly string[]): SupportedLanguage 
   return "en";
 }
 
+/** Resolves the saved UI language setting; "system" follows the browser language list. */
+export function resolveUiLanguage(
+  setting: "system" | SupportedLanguage,
+  languages: readonly string[] = navigator.languages,
+): SupportedLanguage {
+  return setting === "system" ? detectLanguage(languages) : setting;
+}
+
 void i18n.use(initReactI18next).init({
   resources: { en: { translation: en }, it: { translation: it } },
   lng: detectLanguage(navigator.languages),

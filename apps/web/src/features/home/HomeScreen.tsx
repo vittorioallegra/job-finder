@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 
 export function HomeScreen() {
   const { t } = useTranslation();
@@ -15,6 +16,9 @@ export function HomeScreen() {
         </h2>
         <p className="text-app-muted">{t("home.emptyBody")}</p>
       </section>
+      <Link to="/settings" className="w-fit text-app-accent underline">
+        {t("home.openSettings")}
+      </Link>
     </main>
   );
 }

@@ -7,6 +7,91 @@
     "title": "Job Finder",
     "subtitle": "Setup is in progress.",
     "emptyTitle": "Nothing here yet",
-    "emptyBody": "Searches and results will appear here."
+    "emptyBody": "Searches and results will appear here.",
+    "openSettings": "Settings"
+  },
+  "settings": {
+    "title": "Settings",
+    "backHome": "Back to home",
+    "loading": "Loading settings…",
+    "loadFailed": "Settings could not be loaded.",
+    "retry": "Try again",
+    "save": "Save settings",
+    "saving": "Saving…",
+    "saved": "Settings saved.",
+    "saveFailed": "Settings could not be saved.",
+    "invalid": "Some values are out of range or incomplete. Nothing was saved.",
+    "sections": {
+      "ai": "AI provider",
+      "search": "Job search",
+      "language": "Language",
+      "notifications": "Notifications",
+      "scheduler": "Scheduler",
+      "window": "Window and startup",
+      "updates": "Updates"
+    },
+    "ai": {
+      "provider": "Provider",
+      "providers": {
+        "anthropic": "Anthropic",
+        "openai": "OpenAI",
+        "openaiCompatible": "OpenAI-compatible"
+      },
+      "model": "Model",
+      "baseUrl": "Base URL",
+      "baseUrlHint": "Required for OpenAI-compatible endpoints such as Ollama or LM Studio.",
+      "contextSize": "Context size (tokens)",
+      "contextSizeHint": "How much text is sent to the model in one request.",
+      "apiKey": "API key"
+    },
+    "search": {
+      "duckduckgo": "DuckDuckGo",
+      "duckduckgoHint": "Free, no key needed.",
+      "brave": "Brave Search",
+      "tavily": "Tavily",
+      "serper": "Serper",
+      "keyHint": "Optional. Used only while this provider is enabled."
+    },
+    "language": {
+      "label": "Interface language",
+      "system": "Same as the system",
+      "en": "English",
+      "it": "Italiano"
+    },
+    "notifications": {
+      "enabled": "Desktop notifications"
+    },
+    "scheduler": {
+      "intervalHours": "Check saved searches every (hours)",
+      "hint": "Between 1 and 168 hours."
+    },
+    "window": {
+      "closeBehavior": "When the window is closed",
+      "closeAsk": "Ask me each time",
+      "closeKeepRunning": "Keep running in the background",
+      "closeQuit": "Quit the app",
+      "launchAtLogin": "Launch at login"
+    },
+    "updates": {
+      "checkEnabled": "Check for new versions",
+      "hint": "Looks at GitHub Releases for a newer version. Nothing else is sent."
+    },
+    "secrets": {
+      "keySet": "A key is saved.",
+      "keyNotSet": "No key saved.",
+      "save": "Save key",
+      "remove": "Remove key",
+      "keySaved": "Key saved.",
+      "keyRemoved": "Key removed.",
+      "keyFailed": "The key could not be saved.",
+      "removeFailed": "The key could not be removed.",
+      "storageEncrypted": "Keys are encrypted with the system keychain.",
+      "storageBasicText": "Keys are stored on disk without keyring encryption, because you allowed it.",
+      "storageSessionOnly": "Keys are kept in memory and forgotten when the app quits.",
+      "optInTitle": "No system keyring found",
+      "optInBody": "Keys can be stored on disk only without keyring encryption. Until you allow that, they are kept for this session only.",
+      "optIn": "Allow storing keys on disk without keyring encryption",
+      "optInFailed": "That choice could not be saved."
+    }
   }
 }
