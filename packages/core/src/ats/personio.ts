@@ -16,7 +16,10 @@ function parse(body: string, board: BoardRef): ParsedPage | undefined {
       collapseWhitespace(position.children(name).first().text());
     const id = field("id");
     const title = field("name");
-    if (id === "" || title === "") continue;
+    if (id === "" || title === "") {
+      // A posting that cannot be read means the feed changed: fail the scan, never close postings on a partial read.
+      return undefined;
+    }
 
     const offices = [
       field("office"),

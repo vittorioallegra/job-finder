@@ -15,7 +15,10 @@ function parse(body: string, board: BoardRef): ParsedPage | undefined {
     const field = (name: string): string => item.children(name).first().text().trim();
     const link = field("link");
     const guid = field("guid") || link;
-    if (guid === "" || link === "") continue;
+    if (guid === "" || link === "") {
+      // A posting that cannot be read means the feed changed: fail the scan, never close postings on a partial read.
+      return undefined;
+    }
 
     const remoteStatus = field("remoteStatus").toLowerCase();
     const locations = item
