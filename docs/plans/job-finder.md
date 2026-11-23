@@ -280,7 +280,7 @@ Approved: yes (2026-11-23)
 - [x] 4. Bridge, settings and secrets — `feat: add settings screen over the typed bridge`
 - [x] 5. AI layer — `feat: test the AI connection from the settings screen through the engine`
 - [x] 6. Onboarding and profile — `feat: add onboarding and profile editor screens`
-- [ ] 7. Fetch infrastructure and page loader
+- [x] 7. Fetch infrastructure and page loader — `feat: render JavaScript pages in a hidden loader for the engine`
 - [ ] 8. Normalization and ATS adapters
 - [ ] 9. Ingestion pipeline vertical slice
 - [ ] 10. Discovery A: web search and companies
@@ -368,7 +368,20 @@ Approved: yes (2026-11-23)
 - Step 6: `migrate.test.ts` counted the rollback's recorded migrations as a hard-coded 1; it now counts the repo's migrations, since the profile migrations add to them.
 - Step 6: not exercised: real provider calls (no keys here); extraction quality on real models (scripted doubles only, no CV recording); the file picker and CV flow inside the packaged app; PDF and DOCX files from real users (three fixtures only: PDF and DOCX, plus TXT, in English and Italian).
 
+- Step 7: `p-queue` 10.0.0 and `robots-parser` 3.1.1 (exact, in core; the Architecture versions, no release-age exclusion needed). No `allowBuilds` change.
+- Step 7: the fixture override rewrites only the origin: `https://host/path?query` goes to `<JOB_FINDER_FIXTURE_BASE_URL>/path?query`, and robots.txt is read from the fixture origin too. The engine gets it only when the app is not packaged or `JOB_FINDER_E2E` is set, and only for loopback http(s) (`main/engine/fixture-env.ts`).
+- Step 7: user agent `Mozilla/5.0 (compatible; job-finder)`; robots rules matched for the product token `job-finder`.
+- Step 7: one request per second per host (p-queue, concurrency 1, interval cap 1). robots.txt fetches and retries count against that queue; the backoff wait happens outside it.
+- Step 7: robots.txt: 2xx is parsed; 401 and 403 block the origin for an hour; 5xx, network errors, timeouts and oversize files block it for five minutes; other 4xx allow everything. The final URL of a redirect is checked too.
+- Step 7: retries for 429, 5xx and network errors: up to three attempts, waits of 1 s then 2 s, or `Retry-After` capped at 60 s. Timeouts (20 s) and caller cancellations are not retried. Bodies over 5 MiB are refused.
+- Step 7: the response cache is in memory only (2xx GET, 10 minutes, 200 entries). No table: the plan has no persistent HTTP cache.
+- Step 7: the runtime exposes `renderPage(url)`: it resolves the URL, checks robots.txt, then asks main over the port (`page-render`). Main's supervisor forwards it to the page loader and answers with `page-render-result`.
+- Step 7: the hidden loader opens one window per request with the in-memory partition `job-finder-page-loader`, sandboxed, no preload, JavaScript on, never shown. Every permission is denied, downloads are blocked, `window.open` is denied, subresources are limited to http, https, data and blob, and top-frame, redirect and subframe navigation off the requested origin is cancelled. Load timeout 30 s, one second of settle time after the load event, HTML limit 5 MiB. The window is destroyed and its partition storage cleared after each request.
+- Step 7: the hardening is unit-tested against a fake window; the Electron window itself is only typechecked and started by the E2E run. The E2E smoke passed after the change (engine ready, packaged-style build).
+- Step 7: no UI, no table, no user-facing strings. Job HTML is not shown anywhere yet; the sanitized-text rule applies when the first screen shows it (step 9 or 12).
+- Step 7: not exercised: a real hidden window rendering a real JavaScript page (no automated test reaches Electron's window), real sites and their robots.txt, and the 1 s spacing under real timers in production (tests use 60 ms).
+
 ### Open questions
 
 ### Next
-Step 7: Fetch infrastructure and page loader (`packages/core/src/net/`: HTTP client with a per-host queue at 1 request per second, cached `robots.txt`, response cache, backoff on 429 and 5xx, generic user agent, fixture base-URL override; hidden page loader in main, exposed to the engine as `renderPage(url)`).
+Step 8: Normalization and ATS adapters (normalized job model and helpers: country codes, work mode, remote scope, employment type, seniority, salary, language, visa; identity keyed by (source, source_job_id) with a fingerprint for cross-source dedupe; adapters for Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Personio, Recruitee and Teamtailor against sanitized recorded fixtures; ATS detection from URL and page markers; `docs/adding-an-ats-adapter.md`).
