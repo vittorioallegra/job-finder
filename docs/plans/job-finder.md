@@ -283,7 +283,7 @@ Approved: yes (2026-11-23)
 - [x] 7. Fetch infrastructure and page loader — `feat: render JavaScript pages in a hidden loader for the engine`
 - [x] 8. Normalization and ATS adapters — `docs: add ATS adapter guide and record step 8 decisions`
 - [x] 9. Ingestion pipeline vertical slice — `docs: record step 9 decisions and tick the step`
-- [ ] 10. Discovery A: web search and companies
+- [x] 10. Discovery A: web search and companies — `docs: record step 10 decisions and tick the step`
 - [ ] 11. Discovery B: Common Crawl and keyed providers
 - [ ] 12. Generic careers page adapter
 - [ ] 13. Matching and ranking
@@ -405,7 +405,19 @@ Approved: yes (2026-11-23)
 - Step 9: `runs.kind` is `ingest`. Progress reaches the renderer on the `ingest:progress` channel through `ingest.onProgress`.
 - Step 9: not exercised: a scan against a live Greenhouse board (the adapter tests read recorded fixtures, and no test runs a scan end to end through the fixture server); a scan inside the packaged app (the desktop E2E run covers the window and the engine start, and its packaged smoke test was skipped without `JOB_FINDER_PACKAGED_APP`); a real HTTP request cancelled in flight (the core test uses a scripted abort).
 
+- Step 10: DuckDuckGo robots.txt (checked 2026-11-23): `html.duckduckgo.com/robots.txt` has `User-agent: *` with `Allow: /`, so the HTML endpoint is allowed. The main host's robots.txt disallows `/html` and `/lite`, but the app does not use that host. The terms page was searched for an automation clause and none was found; this is not a legal review.
+- Step 10: the live HTML endpoint answered a scripted request (the app's user agent, a `site:` query) with a bot-challenge page (HTTP 200, an "anomaly" modal, no results). It is kept as `packages/core/src/discovery/fixtures/duckduckgo-challenge.html`. The client reports a challenge as `search-blocked`, stops the run at the first one, and never tries to get past it. So keyless discovery is best-effort, and a free-tier search key (step 11) is the default for reliable discovery.
+- Step 10: `packages/core/src/discovery/fixtures/duckduckgo-results.html` is hand-written in the results layout, not a recording. Prettier skips the fixtures folder because the challenge page is not valid HTML for its parser.
+- Step 10: queries are one per keyword, location and ATS domain group (`"keyword" "location" (site:a OR site:b)`), capped at 12 per run (`MAX_QUERIES`). The HTTP queue spaces them one second apart. Keywords and locations are trimmed, quotes and operators are removed, and at most five of each are kept.
+- Step 10: a candidate is one board (ATS and token). Its careers URL is the canonical address for that ATS, kept only when detection reads it back as the same board. The name is the board token, which the user can change later; company names from the ATS APIs are not used.
+- Step 10: discovery is a request, not a run: no table, no run log. The engine answers within a 120 s deadline with what it found. Found boards are returned to the Companies screen and stored only when the user adds them. Keyless, so no settings or secrets were added; keyed sources (step 11) will read them.
+- Step 10: the Companies screen shows each company's last scan from the run log (the latest `company-scanned` or `company-failed` event per company). No new table or column. "No parseable jobs" means the last complete scan read zero postings.
+- Step 10: "retry" starts a run limited to one company (`ingest:start` with `companyId`); the run and its closing rules are unchanged. Other companies are not touched.
+- Step 10: manual company entry moved from the jobs screen to `/companies`. The jobs screen keeps the scan, its log and the results, and points to the Companies screen when no company is saved.
+- Step 10: no migration: the existing `companies` and `run_events` tables cover the step.
+- Step 10: not exercised: a real results page from DuckDuckGo (only the hand-written results fixture and the recorded challenge); a real search from the app (the challenge blocks scripted clients here); a scan of a live board from the app; discovery in the packaged app (the E2E run covers the window and the engine start only).
+
 ### Open questions
 
 ### Next
-Step 10: Discovery A: web search and companies (first verify DuckDuckGo's `robots.txt` and terms for the HTML endpoint and record the outcome in Decisions; if disallowed, keep it best-effort and document a free-tier key as the default; source interface; DuckDuckGo HTML client with cheerio; query builder from saved-search criteria; company registry storing careers URL and detected ATS; manual company entry, moved from the jobs screen to a Companies screen with add by URL, detected ATS, last scan, "no parseable jobs" and retry).
+Step 11: Discovery B: Common Crawl and keyed providers (Common Crawl CDX index client enumerating company slugs on ATS domains, scoped and cached; optional Brave, Tavily and Serper clients enabled only with a key).
