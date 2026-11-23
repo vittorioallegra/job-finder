@@ -73,6 +73,8 @@ export const JobFilterSchema = z.strictObject({
   sources: z.array(identifier).max(20).default([]),
   minScore: z.number().int().min(0).max(100).nullable().default(null),
   hideDismissed: z.boolean().default(true),
+  /** Hides jobs with an application that was submitted or ended (see APPLIED_STATUSES). */
+  hideApplied: z.boolean().default(true),
   /** Only jobs the user has not opened yet. */
   newOnly: z.boolean().default(false),
 });

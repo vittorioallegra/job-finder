@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { EXPLANATION_LANGUAGES } from "../ranking/prompt";
+import { APPLICATION_STATUSES } from "../applications/status";
 
 /** Run states. `interrupted` marks runs left `running` when the engine or app crashed. */
 export const RUN_STATUSES = ["running", "succeeded", "failed", "cancelled", "interrupted"] as const;
@@ -186,3 +187,40 @@ export const jobFlags = sqliteTable("job_flags", {
   viewedAt: integer("viewed_at"),
   updatedAt: integer("updated_at").notNull(),
 });
+
+/**
+ * An application to one job. A bookmark is an application with status `bookmarked`. A job can have
+ * several applications over time (a duplicate needs a confirmation). `status_changed_at` is the time of
+ * the last status change; the duplicate window reads it.
+ */
+export const applications = sqliteTable(
+  "applications",
+  {
+    id: text("id").primaryKey(),
+    jobId: text("job_id")
+      .notNull()
+      .references(() => jobs.id),
+    status: text("status", { enum: APPLICATION_STATUSES }).notNull(),
+    createdAt: integer("created_at").notNull(),
+    statusChangedAt: integer("status_changed_at").notNull(),
+  },
+  (table) => [index("applications_job_idx").on(table.jobId)],
+);
+
+/**
+ * The timeline of an application: one row per status change and per note, in time order. `status` is
+ * the status after the event. `note` is the user's text, or null for a plain status change.
+ */
+export const applicationEvents = sqliteTable(
+  "application_events",
+  {
+    id: text("id").primaryKey(),
+    applicationId: text("application_id")
+      .notNull()
+      .references(() => applications.id),
+    status: text("status", { enum: APPLICATION_STATUSES }).notNull(),
+    note: text("note"),
+    at: integer("at").notNull(),
+  },
+  (table) => [index("application_events_application_idx").on(table.applicationId)],
+);

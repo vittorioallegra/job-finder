@@ -24,6 +24,7 @@ describe("job filter schema", () => {
       sources: [],
       minScore: null,
       hideDismissed: true,
+      hideApplied: true,
       newOnly: false,
     });
   });

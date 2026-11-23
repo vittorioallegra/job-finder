@@ -1,5 +1,6 @@
 import { and, eq, inArray, notInArray, sql, type SQL } from "drizzle-orm";
-import { jobFlags, jobScores, jobSources, jobs, profile } from "../db/schema";
+import { applications, jobFlags, jobScores, jobSources, jobs, profile } from "../db/schema";
+import { APPLIED_STATUSES } from "../applications/status";
 import { postedSince, type JobFilter } from "./schema";
 
 /** Escapes LIKE wildcards so a keyword matches its own characters only. */
@@ -92,6 +93,11 @@ export function jobFilterCondition(filter: JobFilter, now: number): SQL | undefi
   if (filter.hideDismissed) {
     parts.push(
       sql`not exists (select 1 from ${jobFlags} where ${jobFlags.jobId} = ${jobs.id} and ${jobFlags.dismissedAt} is not null)`,
+    );
+  }
+  if (filter.hideApplied) {
+    parts.push(
+      sql`not exists (select 1 from ${applications} where ${applications.jobId} = ${jobs.id} and ${inArray(applications.status, APPLIED_STATUSES)})`,
     );
   }
   if (filter.newOnly) {

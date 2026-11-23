@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./ai": "./src/ai/index.ts",
+    "./applications": "./src/applications/index.ts",
     "./cv": "./src/cv/index.ts",
     "./net": "./src/net/index.ts",
     "./normalize": "./src/normalize/index.ts",

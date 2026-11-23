@@ -78,6 +78,20 @@
       "when": 1795439549051,
       "tag": "0010_job_flags",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1795440173071,
+      "tag": "0011_applications",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1795440173596,
+      "tag": "0012_application_events",
+      "breakpoints": true
     }
   ]
 }
