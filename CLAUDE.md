@@ -5,7 +5,7 @@ Native desktop app (Electron 45 + React 19), pnpm workspace. Full plan: `docs/pl
 ## Commands
 
 - Install: `pnpm setup` (runs `pnpm install`)
-- Dev web renderer only: `pnpm dev` (Vite on http://localhost:5173; no preload, so settings and secrets use an in-memory bridge)
+- Dev web renderer only: `pnpm dev` (Vite on http://localhost:5173; no preload, so settings and secrets use an in-memory bridge; open `/?demo` for made-up sample data, `?demo=off` to clear it)
 - Dev desktop app: `pnpm desktop:dev`
 - Build desktop: `pnpm desktop:build` (output in `apps/desktop/out`)
 - Package installers for this OS: `pnpm desktop:dist` (output in `apps/desktop/dist`; release steps in `docs/release.md`)

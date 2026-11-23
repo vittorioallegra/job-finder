@@ -42,6 +42,10 @@ export interface MemoryBridgeOptions {
   profile?: Profile;
   companies?: CompanyRecord[];
   jobs?: JobListItem[];
+  /** Extra detail fields per job id; missing fields fall back to "unknown". */
+  jobDetails?: Record<string, Partial<JobDetail>>;
+  /** Applications that exist before the page loads, with their history. */
+  applications?: ApplicationDetail[];
   savedSearches?: SavedSearch[];
   latestRun?: LatestRun | null;
   /** Answer to "start a run". Defaults to engine unavailable, since there is no engine here. */
@@ -70,7 +74,12 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
   const jobs: JobListItem[] = structuredClone(options.jobs ?? []);
   const savedSearches: SavedSearch[] = structuredClone(options.savedSearches ?? []);
   // Applications live only in this page: a bookmark, a preparation and status moves, no engine involved.
-  const applicationList: ApplicationSummary[] = [];
+  const applicationList: ApplicationSummary[] = (options.applications ?? []).map(
+    ({ events: _events, ...summary }) => structuredClone(summary),
+  );
+  const applicationEvents = new Map(
+    (options.applications ?? []).map((item) => [item.id, structuredClone(item.events)]),
+  );
   const progressListeners = new Set<(event: IngestEvent) => void>();
   let profile: ProfileRecord | null = options.profile
     ? { profile: options.profile, version: 1, updatedAt: 0 }
@@ -148,6 +157,7 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
           remoteScope: null,
           closedAt: null,
           sources: [],
+          ...structuredClone(options.jobDetails?.[jobId] ?? {}),
         };
         return detail;
       },
@@ -164,7 +174,10 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
       detail: async ({ applicationId }) => {
         const found = applicationList.find((item) => item.id === applicationId);
         if (!found) return null;
-        const detail: ApplicationDetail = { ...structuredClone(found), events: [] };
+        const detail: ApplicationDetail = {
+          ...structuredClone(found),
+          events: structuredClone(applicationEvents.get(applicationId) ?? []),
+        };
         return detail;
       },
       bookmark: async ({ jobId, bookmarked }) => {
