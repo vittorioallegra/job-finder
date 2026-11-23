@@ -224,6 +224,60 @@ export function createApplicationRepository(db: AppDb): ApplicationRepository {
       .values({ id: newId(), applicationId, status: to, note, at: now });
   }
 
+  /**
+   * The duplicate check and the insert are several awaited statements, so two starts for one job
+   * (a double click, two windows) could both see no open application. They run one at a time.
+   */
+  let startQueue: Promise<unknown> = Promise.resolve();
+
+  async function startOnce(
+    request: ApplicationStartRequest,
+    now: number,
+    newId: () => string,
+  ): Promise<ApplicationStartResult> {
+    const duplicates = await findDuplicates(db, request.jobId, now);
+    if (duplicates === null) return { ok: false, code: "job-not-found" };
+    if (duplicates.requiredConfirmations > (request.confirmations ?? 0)) {
+      return { ok: false, code: "duplicate-confirmation-required", duplicates };
+    }
+
+    // The job's open application (its bookmark or its preparation) is moved on, not duplicated.
+    const [open] = await db
+      .select({ id: applications.id, status: applications.status })
+      .from(applications)
+      .where(
+        and(
+          eq(applications.jobId, request.jobId),
+          inArray(applications.status, ["bookmarked", "preparing"]),
+        ),
+      )
+      .orderBy(desc(applications.statusChangedAt))
+      .limit(1);
+    if (open) {
+      if (open.status === "bookmarked") {
+        await moveTo(open.id, "preparing", null, now, newId);
+      }
+      const application = await detailOf(open.id);
+      return application === null
+        ? { ok: false, code: "job-not-found" }
+        : { ok: true, application };
+    }
+
+    const id = newId();
+    await db.insert(applications).values({
+      id,
+      jobId: request.jobId,
+      status: "preparing",
+      createdAt: now,
+      statusChangedAt: now,
+    });
+    await db
+      .insert(applicationEvents)
+      .values({ id: newId(), applicationId: id, status: "preparing", note: null, at: now });
+    const application = await detailOf(id);
+    return application === null ? { ok: false, code: "job-not-found" } : { ok: true, application };
+  }
+
   return {
     async list() {
       const rows = await selectSummaries(db).orderBy(desc(applications.statusChangedAt));
@@ -286,50 +340,10 @@ export function createApplicationRepository(db: AppDb): ApplicationRepository {
       );
     },
 
-    async start(request, now = Date.now(), newId = newIdDefault) {
-      const duplicates = await findDuplicates(db, request.jobId, now);
-      if (duplicates === null) return { ok: false, code: "job-not-found" };
-      if (duplicates.requiredConfirmations > (request.confirmations ?? 0)) {
-        return { ok: false, code: "duplicate-confirmation-required", duplicates };
-      }
-
-      // The job's open application (its bookmark or its preparation) is moved on, not duplicated.
-      const [open] = await db
-        .select({ id: applications.id, status: applications.status })
-        .from(applications)
-        .where(
-          and(
-            eq(applications.jobId, request.jobId),
-            inArray(applications.status, ["bookmarked", "preparing"]),
-          ),
-        )
-        .orderBy(desc(applications.statusChangedAt))
-        .limit(1);
-      if (open) {
-        if (open.status === "bookmarked") {
-          await moveTo(open.id, "preparing", null, now, newId);
-        }
-        const application = await detailOf(open.id);
-        return application === null
-          ? { ok: false, code: "job-not-found" }
-          : { ok: true, application };
-      }
-
-      const id = newId();
-      await db.insert(applications).values({
-        id,
-        jobId: request.jobId,
-        status: "preparing",
-        createdAt: now,
-        statusChangedAt: now,
-      });
-      await db
-        .insert(applicationEvents)
-        .values({ id: newId(), applicationId: id, status: "preparing", note: null, at: now });
-      const application = await detailOf(id);
-      return application === null
-        ? { ok: false, code: "job-not-found" }
-        : { ok: true, application };
+    start(request, now = Date.now(), newId = newIdDefault) {
+      const run = startQueue.then(() => startOnce(request, now, newId));
+      startQueue = run.catch(() => undefined);
+      return run;
     },
 
     async update(request, now = Date.now(), newId = newIdDefault) {

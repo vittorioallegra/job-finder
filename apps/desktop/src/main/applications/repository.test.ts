@@ -96,6 +96,18 @@ describe("application repository", () => {
     expect(await repository.list()).toHaveLength(1);
   });
 
+  it("creates one application when the same job is started twice at once", async () => {
+    // protects=concurrent starts of one job (a double click) leave a single preparing application; fails_when=two starts that overlap each create an application; no_claim=starts for different jobs;
+    const newId = ids("a");
+    const [first, second] = await Promise.all([
+      repository.start({ jobId: "j1", confirmations: 0 }, NOW, newId),
+      repository.start({ jobId: "j1", confirmations: 0 }, NOW, newId),
+    ]);
+
+    expect(first.ok && second.ok).toBe(true);
+    expect(await repository.list()).toHaveLength(1);
+  });
+
   it("moves a bookmark to preparing when the job is started", async () => {
     const newId = ids("a");
     await repository.bookmark({ jobId: "j3", bookmarked: true }, NOW, newId);

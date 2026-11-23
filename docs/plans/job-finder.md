@@ -313,6 +313,7 @@ Approved: yes (2026-11-23)
   - A page change handler calling form.submit() or requestSubmit() could submit the application while autofill set the fields — `fix: cancel scripted form submits from the page until the user interacts, so autofill can never submit`
   - The autofill AI call re-read the settings after the consent check, so a provider switched to a cloud service while the form loaded got the profile without consent — `fix: re-check cloud consent when the autofill AI call is made`
   - Teamtailor and Personio feeds with unreadable items returned ok with fewer or no jobs, closing the company's postings (the other adapters already fail on a wrong shape) — `fix: fail a Teamtailor or Personio scan whose feed items cannot be read`
+  - Two overlapping starts of one job (a double click) could both pass the duplicate check and create two applications — `fix: run application starts one at a time so a double click creates one application`
 
 ### Decisions
 - Single-user, local-only app; published as open source on GitHub, each user runs it on their own machine.
