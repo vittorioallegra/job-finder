@@ -17,7 +17,7 @@ export interface SchedulerDeps {
   now: () => number;
   settings: () => Promise<SchedulerSettings>;
   savedSearches: () => Promise<SavedSearch[]>;
-  /** When the last ingestion run that succeeded or failed ended; null before any run. */
+  /** When the last ingestion run that ended, however it ended; null before any run. */
   lastRunFinishedAt: () => Promise<number | null>;
   /** Starts an ingestion run over every company through the ingestion service. */
   startRun: () => Promise<StartOutcome>;

@@ -1,5 +1,5 @@
-// protects=the scheduler's "last run" is the newest ingestion run that succeeded or failed, so a cancelled, interrupted or running run never moves the schedule and a missing history reads as none;
-// fails_when=a cancelled or interrupted run resets the interval, a scan of another kind counts, the newest finish is not the one returned, or an empty runs table returns a time;
+// protects=the scheduler's "last run" is the newest ingestion run that ended, however it ended, so a cancelled or crashed scan is not restarted a minute later, a running run never moves the schedule, and a missing history reads as none;
+// fails_when=a cancelled or interrupted run is ignored (a cancelled scan restarts at once), a scan of another kind counts, the newest finish is not the one returned, or an empty runs table returns a time;
 // no_claim=how runs are written by the engine and reconciled at startup is covered by the database and engine tests, not here.
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -41,7 +41,7 @@ describe("last finished ingestion run", () => {
     expect(await lastFinishedIngestRunAt(database.db)).toBeNull();
   });
 
-  it("returns the newest run that succeeded or failed, and skips cancelled, interrupted and running ones", async () => {
+  it("returns the newest run that ended in any way, and skips running ones and other kinds", async () => {
     await addRun("old", "ingest", "succeeded", 100);
     await addRun("newest-cancelled", "ingest", "cancelled", 900);
     await addRun("newest-interrupted", "ingest", "interrupted", 800);
@@ -49,6 +49,6 @@ describe("last finished ingestion run", () => {
     await addRun("failed", "ingest", "failed", 300);
     await addRun("other-kind", "export", "succeeded", 950);
 
-    expect(await lastFinishedIngestRunAt(database.db)).toBe(300);
+    expect(await lastFinishedIngestRunAt(database.db)).toBe(900);
   });
 });

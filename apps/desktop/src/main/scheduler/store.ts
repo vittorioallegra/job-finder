@@ -3,10 +3,13 @@ import { runs } from "@job-finder/core";
 import { INGEST_RUN_KIND } from "@job-finder/core/ingest/events";
 import type { AppDb } from "../db/operations";
 
-/** Ingestion runs that ended on their own (not cancelled, not interrupted by a crash). */
-const FINISHED_RUN_STATUSES = ["succeeded", "failed"] as const;
+/**
+ * Every ending counts as an attempt, cancelled and interrupted included: otherwise a cancelled
+ * scan, or one that crashes the engine, would be started again a minute later, forever.
+ */
+const FINISHED_RUN_STATUSES = ["succeeded", "failed", "cancelled", "interrupted"] as const;
 
-/** When the newest ingestion run that succeeded or failed ended; null when none has. */
+/** When the newest ingestion run that ended (any way) finished; null when none has. */
 export async function lastFinishedIngestRunAt(db: AppDb): Promise<number | null> {
   const [row] = await db
     .select({ finishedAt: runs.finishedAt })
