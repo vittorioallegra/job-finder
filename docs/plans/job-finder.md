@@ -290,7 +290,7 @@ Approved: yes (2026-11-23)
 - [x] 14. Search and filters UI — `feat: filter, sort and flag jobs, with saved searches`
 - [x] 15. Application tracker — `feat: add the applications screen, bookmarks and the hide-applied filter`
 - [x] 16. CV and cover letter — `feat: add the CV and cover letter panel to application details`
-- [ ] 17. Autofill core and ATS adapters
+- [x] 17. Autofill core and ATS adapters — `feat: open and autofill the application form from its detail screen`
 - [ ] 18. Autofill AI fallback
 - [ ] 19. Scheduler, notifications, tray, updates
 - [ ] 20. End-to-end and docs
@@ -504,7 +504,24 @@ Approved: yes (2026-11-23)
 - Step 16: `/verify` could not run: `origin/main` is not resolvable and fetching it is a GitHub call, which the step forbids. The same checks were run by hand: full unit suite, typecheck, lint, `pnpm format:check` and `pnpm test:e2e:desktop`, all green.
 - Step 16: not exercised: real provider output quality (scripted doubles only); the exported PDF's layout and print output in a real window (no test renders a PDF); the packaged app; the panel in a real browser for keyboard order, focus and phone width (jsdom tests only); a generated document on a real job with a real profile.
 
+- Step 17: the form opens in a visible window with an in-memory partition of its own (`job-finder-apply-<uuid>`), sandboxed, no preload, all permissions denied, `window.open` denied, subresources limited to http, https, data and blob. One form window at a time: starting again closes the previous one, and its cookies and storage are cleared on close.
+- Step 17: downloads are allowed only within 5 seconds after a key press or mouse button in that window, so the OS save dialog asks where the file goes; otherwise they are blocked. This is how "downloads blocked except user-initiated" is read.
+- Step 17: navigation is limited to web addresses, not to the posting's origin: an ATS may redirect, or host the form on another domain, and the page loader's same-origin rule would break that.
+- Step 17: the DevTools session (`cdp.ts`) sends only an allow list: `Runtime.enable`, `Runtime.evaluate`, `DOM.enable`, `DOM.describeNode`, `DOM.setFileInputFiles`. There is no `Input` domain, so no key or click can be sent. Tests assert that no `Input` command is sent and that no page script calls click, submit or a key event.
+- Step 17: the page scripts (`page-script.ts`) are plain JavaScript strings run with `Runtime.evaluate` in each same-process frame, and they reach open shadow roots. Out-of-process (cross-origin) iframes and closed shadow roots are not reached and not reported: a known limit.
+- Step 17: file inputs are always reported, even when visually hidden, because ATS upload buttons hide them; other controls hidden by CSS are skipped. Honeypots (names like `honeypot` or `gotcha`, a "leave blank" label, a control pushed off-screen, or one inside a transparent ancestor) are skipped and never highlighted. Known limit: a real field inside a transparent fade-in container counts as a honeypot until it is visible.
+- Step 17: a control that already holds a value is never overwritten, whether the user typed it or the URL prefilled it. A select whose first option holds a real value counts as chosen.
+- Step 17: the ATS is decided from the window's final URL (after redirects) with `detectAts`; the page HTML is not read. An ATS embedded in a company page is treated as generic.
+- Step 17: matching order: the ATS field name (Greenhouse `job_application[...]`, Lever `name`, `email`, `urls[...]`, Ashby `_systemfield_*`), then the autocomplete token, then a stored answer whose question equals the label after normalizing, then whole-label keywords in English and Italian. A label that only contains a keyword ("Company name") does not match.
+- Step 17: deliberately not mapped: the current company (the profile has no "current job"), work authorization (needs per-country wording), checkboxes and radio groups (never ticked), and free-text questions without a stored answer. They are highlighted for the user; the AI fallback is step 18.
+- Step 17: autofill works while an application is `preparing` or `ready` and never changes its status. "I submitted it" is the only move to `applied`; the panel enables it only when `ready`, because the status machine has no `preparing` to `applied` move. Closing the form window leaves the status as it was.
+- Step 17: the CV and the cover letter are uploaded only when their PDF exists in `<userData>/applications/<id>/`. Otherwise the field is reported as not exported and highlighted; autofill does not export.
+- Step 17: no new table and no new dependency. The bridge gains `autofill:start` only; the confirmation uses the existing `applications:update`.
+- Step 17: the form panel shows the reason for each field left over (no profile field, no value, no matching choice, PDF not exported, control not supported, value refused).
+- Step 17 tests: the page scripts run in jsdom on the fixture pages (`apps/desktop/src/main/autofill/fixtures/`, hand-written and modeled on the public markup of Greenhouse, Lever and Ashby, not recorded from live forms; nothing is fetched). The service test runs the real scripts and planner over a scripted window. The Electron E2E serves the same fixtures on loopback, seeds a ready application and a CV PDF, and checks in the real window the values, the uploaded file, the session (not persistent), that DevTools is attached, that the fixture received no submission, and that closing the window leaves the application ready. On the loopback host the ATS is generic, so the E2E does not cover the ATS rules.
+- Step 17: not exercised: real Greenhouse, Lever and Ashby forms and their current markup; cross-origin iframes and closed shadow roots; the save dialog; how the highlight looks and keyboard order inside the form window; the E2E on Windows and Linux (run here on macOS only).
+
 ### Open questions
 
 ### Next
-Step 17: Autofill core and ATS adapters (apply window with its own session partition, sandboxed, no preload, permissions denied, downloads blocked except user-initiated; filling through `webContents.debugger` (CDP) with native value setters and input/change events for React-controlled inputs, iframes and open shadow roots, `DOM.setFileInputFiles` for uploads; hidden and honeypot fields skipped; never sends Enter and never submits; deterministic adapters for Greenhouse, Lever and Ashby; unfilled fields highlighted; "I submitted it" moves to `applied`, closing without confirming keeps `ready`).
+Step 18: Autofill AI fallback (AI maps form fields to profile keys and stored answers only, output constrained to known keys, page text treated as untrusted; drafted answers for free-text questions visibly marked as AI-drafted; the same never-submit guard as step 17).
