@@ -1,12 +1,27 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
-import { companies, jobScores, jobs, profile, runEvents, runs } from "@job-finder/core";
+import {
+  companies,
+  jobFlags,
+  jobScores,
+  jobSources,
+  jobs,
+  profile,
+  runEvents,
+  runs,
+} from "@job-finder/core";
 import { detectAts } from "@job-finder/core/ats";
 import { INGEST_RUN_KIND, type IngestEvent } from "@job-finder/core/ingest/events";
+import { JobFilterSchema } from "@job-finder/core/filters";
+import { jobFilterCondition } from "@job-finder/core/filters/sql";
+import type { Salary } from "@job-finder/core/normalize";
 import type {
   CompanyAddResult,
   CompanyRecord,
   CompanyScan,
+  JobDetail,
+  JobFlagRequest,
   JobListItem,
+  JobsListRequest,
   LatestRun,
 } from "@job-finder/bridge";
 import type { AppDb } from "../db/operations";
@@ -21,13 +36,23 @@ export interface IngestRepository {
   /** Detects the ATS board from the careers URL (no network) and stores the company. */
   addCompany(input: AddCompanyInput, now?: number, newId?: () => string): Promise<CompanyAddResult>;
   /**
-   * Open jobs, highest affinity first; jobs without a score for the current profile version come
-   * last, newest first.
+   * Open jobs matching the request. By affinity (the default), highest first, with the jobs
+   * without a score for the current profile version last; by newest, the latest posting first.
    */
-  listJobs(limit?: number): Promise<JobListItem[]>;
+  listJobs(request?: JobsListRequest, now?: number, limit?: number): Promise<JobListItem[]>;
+  /** One job with its source links, open or closed; null when it does not exist. */
+  jobDetail(jobId: string, now?: number): Promise<JobDetail | null>;
+  /**
+   * Dismisses or restores a job, or marks it viewed. Resolves false when the job does not exist.
+   * A flag that is not in the request keeps its value.
+   */
+  setJobFlag(request: JobFlagRequest, now?: number): Promise<boolean>;
   /** The latest ingestion run with its log, or null when none has run. */
   latestRun(): Promise<LatestRun | null>;
 }
+
+/** The newest first key of a job: its posting date, or when the job was first seen. */
+const NEWEST = sql`coalesce(${jobs.postedAt}, ${jobs.firstSeenAt})`;
 
 function parseLocations(value: string): string[] {
   try {
@@ -125,9 +150,10 @@ export function createIngestRepository(db: AppDb): IngestRepository {
       return { ok: true, company: { ...row, lastScan: null } };
     },
 
-    async listJobs(limit = 200) {
+    async listJobs(request = { filter: {}, sort: "affinity" }, now = Date.now(), limit = 200) {
       // Scores of the current profile version only: a new version starts unscored until the next run.
       const currentVersion = sql`(select ${profile.version} from ${profile} where ${profile.id} = 1)`;
+      const condition = jobFilterCondition(JobFilterSchema.parse(request.filter), now);
       const rows = await db
         .select({
           id: jobs.id,
@@ -137,9 +163,12 @@ export function createIngestRepository(db: AppDb): IngestRepository {
           workMode: jobs.workMode,
           url: jobs.url,
           applyUrl: jobs.applyUrl,
+          postedAt: jobs.postedAt,
           firstSeenAt: jobs.firstSeenAt,
           score: jobScores.score,
           explanation: jobScores.explanation,
+          dismissedAt: jobFlags.dismissedAt,
+          viewedAt: jobFlags.viewedAt,
         })
         .from(jobs)
         .innerJoin(companies, eq(jobs.companyId, companies.id))
@@ -147,10 +176,128 @@ export function createIngestRepository(db: AppDb): IngestRepository {
           jobScores,
           and(eq(jobScores.jobId, jobs.id), eq(jobScores.profileVersion, currentVersion)),
         )
-        .where(isNull(jobs.closedAt))
-        .orderBy(sql`${jobScores.score} desc nulls last`, desc(jobs.firstSeenAt), asc(jobs.title))
+        .leftJoin(jobFlags, eq(jobFlags.jobId, jobs.id))
+        .where(and(isNull(jobs.closedAt), condition))
+        .orderBy(
+          ...(request.sort === "newest"
+            ? [desc(NEWEST), asc(jobs.title)]
+            : [sql`${jobScores.score} desc nulls last`, desc(NEWEST), asc(jobs.title)]),
+        )
         .limit(limit);
-      return rows.map((row) => ({ ...row, locations: parseLocations(row.locations) }));
+      return rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        companyName: row.companyName,
+        locations: parseLocations(row.locations),
+        workMode: row.workMode,
+        url: row.url,
+        applyUrl: row.applyUrl,
+        postedAt: row.postedAt,
+        firstSeenAt: row.firstSeenAt,
+        score: row.score,
+        explanation: row.explanation,
+        dismissed: row.dismissedAt !== null,
+        isNew: row.viewedAt === null,
+      }));
+    },
+
+    async jobDetail(jobId) {
+      const currentVersion = sql`(select ${profile.version} from ${profile} where ${profile.id} = 1)`;
+      const [row] = await db
+        .select({
+          id: jobs.id,
+          title: jobs.title,
+          companyName: companies.name,
+          locations: jobs.locations,
+          workMode: jobs.workMode,
+          url: jobs.url,
+          applyUrl: jobs.applyUrl,
+          postedAt: jobs.postedAt,
+          firstSeenAt: jobs.firstSeenAt,
+          description: jobs.description,
+          employmentType: jobs.employmentType,
+          seniority: jobs.seniority,
+          salary: jobs.salary,
+          visaSponsorship: jobs.visaSponsorship,
+          language: jobs.language,
+          remoteScope: jobs.remoteScope,
+          closedAt: jobs.closedAt,
+          score: jobScores.score,
+          explanation: jobScores.explanation,
+          dismissedAt: jobFlags.dismissedAt,
+          viewedAt: jobFlags.viewedAt,
+        })
+        .from(jobs)
+        .innerJoin(companies, eq(jobs.companyId, companies.id))
+        .leftJoin(
+          jobScores,
+          and(eq(jobScores.jobId, jobs.id), eq(jobScores.profileVersion, currentVersion)),
+        )
+        .leftJoin(jobFlags, eq(jobFlags.jobId, jobs.id))
+        .where(eq(jobs.id, jobId))
+        .limit(1);
+      if (!row) return null;
+
+      const sources = await db
+        .select()
+        .from(jobSources)
+        .where(eq(jobSources.jobId, jobId))
+        .orderBy(asc(jobSources.source));
+      return {
+        id: row.id,
+        title: row.title,
+        companyName: row.companyName,
+        locations: parseLocations(row.locations),
+        workMode: row.workMode,
+        url: row.url,
+        applyUrl: row.applyUrl,
+        postedAt: row.postedAt,
+        firstSeenAt: row.firstSeenAt,
+        score: row.score,
+        explanation: row.explanation,
+        dismissed: row.dismissedAt !== null,
+        isNew: row.viewedAt === null,
+        description: row.description,
+        employmentType: row.employmentType,
+        seniority: row.seniority,
+        salary: row.salary === null ? null : (JSON.parse(row.salary) as Salary),
+        visaSponsorship: row.visaSponsorship,
+        language: row.language,
+        remoteScope: row.remoteScope,
+        closedAt: row.closedAt,
+        sources: sources.map((source) => ({
+          source: source.source,
+          url: source.url,
+          applyUrl: source.applyUrl,
+          closed: source.closedAt !== null,
+          lastSeenAt: source.lastSeenAt,
+        })),
+      };
+    },
+
+    async setJobFlag(request, now = Date.now()) {
+      const [job] = await db
+        .select({ id: jobs.id })
+        .from(jobs)
+        .where(eq(jobs.id, request.jobId))
+        .limit(1);
+      if (!job) return false;
+
+      const changes = {
+        updatedAt: now,
+        ...(request.dismissed === undefined ? {} : { dismissedAt: request.dismissed ? now : null }),
+        ...(request.viewed === undefined ? {} : { viewedAt: request.viewed ? now : null }),
+      };
+      await db
+        .insert(jobFlags)
+        .values({
+          jobId: request.jobId,
+          dismissedAt: null,
+          viewedAt: null,
+          ...changes,
+        })
+        .onConflictDoUpdate({ target: jobFlags.jobId, set: changes });
+      return true;
     },
 
     async latestRun() {

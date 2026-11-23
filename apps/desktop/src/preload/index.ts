@@ -50,7 +50,14 @@ const api: JobFinderBridge = {
     add: (input) => invoke("companies:add", input),
   },
   jobs: {
-    list: () => invoke("jobs:list"),
+    list: (request) => invoke("jobs:list", request),
+    detail: (request) => invoke("jobs:detail", request),
+    flag: (request) => invoke("jobs:flag", request),
+  },
+  savedSearches: {
+    list: () => invoke("saved-searches:list"),
+    save: (request) => invoke("saved-searches:save", request),
+    delete: (request) => invoke("saved-searches:delete", request),
   },
   ingest: {
     start: (companyId) =>

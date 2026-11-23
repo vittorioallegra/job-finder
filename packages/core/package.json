@@ -18,7 +18,10 @@
     "./ingest": "./src/ingest/index.ts",
     "./ingest/events": "./src/ingest/events.ts",
     "./discovery": "./src/discovery/index.ts",
-    "./discovery/types": "./src/discovery/types.ts"
+    "./discovery/types": "./src/discovery/types.ts",
+    "./filters": "./src/filters/schema.ts",
+    "./filters/sql": "./src/filters/sql.ts",
+    "./normalize/job": "./src/normalize/job.ts"
   },
   "scripts": {
     "typecheck": "node ../../node_modules/typescript7/bin/tsc --noEmit -p tsconfig.json"

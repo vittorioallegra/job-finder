@@ -6,6 +6,11 @@ import {
   type DiscoverySearchRequest,
   type IngestStartRequest,
   type IpcChannel,
+  type JobDetailRequest,
+  type JobFlagRequest,
+  type JobsListRequest,
+  type SavedSearchDeleteRequest,
+  type SavedSearchSaveRequest,
   type ScoreStartRequest,
   type SecretName,
 } from "@job-finder/bridge";
@@ -16,6 +21,7 @@ import type { IngestionService } from "../ingest/service";
 import type { CvImportService } from "../profile/cv-import";
 import type { DiscoveryService } from "../discovery/service";
 import type { ScoringService } from "../scoring/service";
+import type { SavedSearchRepository } from "../saved-searches/repository";
 import type { ProfileRepository } from "../profile/repository";
 import { originOf } from "../security/origin";
 import type { SecretStore } from "../secrets/store";
@@ -31,6 +37,7 @@ export interface IpcServices {
   ingestion: IngestionService;
   discovery: DiscoveryService;
   scoring: ScoringService;
+  savedSearches: SavedSearchRepository;
 }
 
 /** The parts of an Electron invoke event that the sender check reads. */
@@ -101,7 +108,18 @@ export async function handleInvoke(
     case "companies:add":
       return services.repository.addCompany(payload as CompanyAddRequest);
     case "jobs:list":
-      return services.repository.listJobs();
+      return services.repository.listJobs(payload as JobsListRequest);
+    case "jobs:detail":
+      return services.repository.jobDetail((payload as JobDetailRequest).jobId);
+    case "jobs:flag":
+      return services.repository.setJobFlag(payload as JobFlagRequest);
+    case "saved-searches:list":
+      return services.savedSearches.list();
+    case "saved-searches:save":
+      return services.savedSearches.save(payload as SavedSearchSaveRequest);
+    case "saved-searches:delete":
+      await services.savedSearches.delete((payload as SavedSearchDeleteRequest).id);
+      return undefined;
     case "ingest:start":
       return services.ingestion.start((payload as IngestStartRequest | undefined)?.companyId);
     case "discovery:search":

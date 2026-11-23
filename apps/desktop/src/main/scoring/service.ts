@@ -3,6 +3,7 @@ import {
   type ScoreStartRequest,
   type ScoreStartResult,
 } from "@job-finder/bridge";
+import { hardFilter, JobFilterSchema, type JobFilter } from "@job-finder/core/filters";
 import { scoringFields } from "@job-finder/core/profile";
 import type { ExplanationLanguage } from "@job-finder/core/ranking";
 import type { ScoreJobsOutcome, ScoreJobsRequest } from "../../engine/protocol";
@@ -30,8 +31,11 @@ export interface ScoringServiceOptions {
   profile: Pick<ProfileRepository, "get">;
   settings: Pick<SettingsRepository, "get">;
   secrets: Pick<SecretStore, "read">;
-  /** Open job ids, newest first, at most `limit`. */
-  openJobIds(limit: number): Promise<string[]>;
+  /**
+   * Open job ids that pass the given (hard) filter: the `preferredIds` first, then the newest, at most
+   * `limit`.
+   */
+  candidateIds(filter: JobFilter, preferredIds: string[], limit: number): Promise<string[]>;
   /** The OS locale, used when the UI language setting is "system". */
   systemLocale(): string;
 }
@@ -61,7 +65,13 @@ export function createScoringService(options: ScoringServiceOptions): ScoringSer
     if (isCloudAiEndpoint(ai) && !request.consent) {
       return { ok: false, code: "consent-required" };
     }
-    const jobIds = await options.openJobIds(MAX_SCORED_JOBS);
+    // The scores of the jobs that pass the hard filters are scored; the minimum score and the new-only
+    // view only narrow the list, so they do not narrow the run.
+    const jobIds = await options.candidateIds(
+      hardFilter(JobFilterSchema.parse(request.filter ?? {})),
+      request.visibleJobIds ?? [],
+      MAX_SCORED_JOBS,
+    );
     if (jobIds.length === 0) {
       return { ok: true, scored: 0, cached: 0, failed: 0, skipped: 0 };
     }

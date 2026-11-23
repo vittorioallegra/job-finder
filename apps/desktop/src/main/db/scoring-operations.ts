@@ -1,5 +1,7 @@
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { companies, jobScores, jobs } from "@job-finder/core";
+import { jobFilterCondition } from "@job-finder/core/filters/sql";
+import type { JobFilter } from "@job-finder/core/filters";
 import type { JobLocation, Salary } from "@job-finder/core/normalize";
 import type { ScoringJob, StoredScore } from "@job-finder/core/ranking";
 import type { AppDb } from "./operations";
@@ -76,13 +78,32 @@ export async function persistScores(db: AppDb, rows: StoredScore[]): Promise<voi
   }
 }
 
-/** Open jobs to score when a run starts: the newest first. */
-export async function openJobIds(db: AppDb, limit: number): Promise<string[]> {
+/**
+ * The open jobs a scoring run may score: those that pass the hard filters, the jobs in
+ * `preferredIds` (the visible ones) first, then the newest first.
+ */
+export async function scoringCandidateIds(
+  db: AppDb,
+  filter: JobFilter,
+  preferredIds: string[],
+  now: number,
+  limit: number,
+): Promise<string[]> {
+  const newest = sql`coalesce(${jobs.postedAt}, ${jobs.firstSeenAt}) desc`;
+  const preferredFirst =
+    preferredIds.length === 0
+      ? []
+      : [
+          sql`case when ${jobs.id} in (${sql.join(
+            preferredIds.map((id) => sql`${id}`),
+            sql`, `,
+          )}) then 0 else 1 end`,
+        ];
   const rows = await db
     .select({ id: jobs.id })
     .from(jobs)
-    .where(isNull(jobs.closedAt))
-    .orderBy(desc(jobs.firstSeenAt), jobs.title)
+    .where(and(isNull(jobs.closedAt), jobFilterCondition(filter, now)))
+    .orderBy(...preferredFirst, newest, jobs.title)
     .limit(limit);
   return rows.map((row) => row.id);
 }

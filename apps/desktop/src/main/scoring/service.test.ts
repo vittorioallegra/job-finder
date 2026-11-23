@@ -1,10 +1,11 @@
-// protects=a scoring run starts only with a saved profile and, for a cloud provider, the user's consent; the explanations are asked for in the UI language (the system locale when the setting follows the system); the engine gets the ranking fields and the key but no contact details; a second run is refused while one is active; and an engine that is gone is reported as unavailable;
-// fails_when=the explanations are asked in another language than the UI setting, the engine is asked without a profile or without consent for a cloud provider, the contact details leave main with the profile, the key is missing from the request, a second run starts while one is active, or a lost engine is reported as a store failure;
+// protects=a scoring run starts only with a saved profile and, for a cloud provider, the user's consent; its candidates pass the hard filters with the visible jobs first; the explanations are asked for in the UI language (the system locale when the setting follows the system); the engine gets the ranking fields and the key but no contact details; a second run is refused while one is active; and an engine that is gone is reported as unavailable;
+// fails_when=the run scores jobs outside the hard filters, the minimum score or the new-only view narrows the run, the visible jobs are not first, the explanations are asked in another language than the UI setting, the engine is asked without a profile or without consent for a cloud provider, the contact details leave main with the profile, the key is missing from the request, a second run starts while one is active, or a lost engine is reported as a store failure;
 // no_claim=the real engine, the database and the provider are not reached; the engine and database tests cover them;
 import { describe, expect, it } from "vitest";
 import { DEFAULT_APP_SETTINGS, type AppSettings } from "@job-finder/bridge";
 import { emptyProfile, type Profile } from "@job-finder/core/profile";
 import { EngineUnavailableError } from "../engine/supervisor";
+import type { JobFilter } from "@job-finder/core/filters";
 import { createScoringService, MAX_SCORED_JOBS, type ScoringEngine } from "./service";
 import type { ScoreJobsRequest } from "../../engine/protocol";
 
@@ -31,6 +32,7 @@ function deps(overrides: {
   locale?: string;
 }) {
   const requests: ScoreJobsRequest[] = [];
+  const candidateCalls: Array<{ filter: JobFilter; preferredIds: string[] }> = [];
   const engine: ScoringEngine = {
     scoreJobs: async (request) => {
       requests.push(request);
@@ -52,10 +54,13 @@ function deps(overrides: {
       }),
     },
     secrets: { read: async () => (overrides.key === undefined ? "sk-test" : overrides.key) },
-    openJobIds: async (limit) => (overrides.openJobIds ?? ["j2", "j1"]).slice(0, limit),
+    candidateIds: async (filter, preferredIds, limit) => {
+      candidateCalls.push({ filter, preferredIds });
+      return (overrides.openJobIds ?? ["j2", "j1"]).slice(0, limit);
+    },
     systemLocale: () => overrides.locale ?? "en-US",
   });
-  return { service, requests };
+  return { service, requests, candidateCalls };
 }
 
 describe("scoring service", () => {
@@ -139,6 +144,25 @@ describe("scoring service", () => {
     expect(requests[0]?.jobIds).toHaveLength(MAX_SCORED_JOBS);
   });
 
+  it("scores the jobs that pass the hard filters, with the visible jobs first, and ignores the minimum score and the new-only view", async () => {
+    const { service, candidateCalls } = deps({});
+
+    await service.start({
+      consent: false,
+      filter: { keywords: ["backend"], minScore: 80, newOnly: true, hideDismissed: true },
+      visibleJobIds: ["j9", "j3"],
+    });
+
+    expect(candidateCalls).toHaveLength(1);
+    expect(candidateCalls[0]?.filter).toMatchObject({
+      keywords: ["backend"],
+      minScore: null,
+      newOnly: false,
+      hideDismissed: true,
+    });
+    expect(candidateCalls[0]?.preferredIds).toEqual(["j9", "j3"]);
+  });
+
   it("refuses a second run while one is active", async () => {
     let release: () => void = () => {};
     const engine: ScoringEngine = {
@@ -152,7 +176,7 @@ describe("scoring service", () => {
       profile: { get: async () => ({ profile: profile(), version: 1, updatedAt: 1 }) },
       settings: { get: async () => settings("openai-compatible", "http://localhost:11434/v1") },
       secrets: { read: async () => null },
-      openJobIds: async () => ["j1"],
+      candidateIds: async () => ["j1"],
       systemLocale: () => "en-US",
     });
 
@@ -176,7 +200,7 @@ describe("scoring service", () => {
       profile: { get: async () => ({ profile: profile(), version: 1, updatedAt: 1 }) },
       settings: { get: async () => settings("openai-compatible", "http://localhost:11434/v1") },
       secrets: { read: async () => null },
-      openJobIds: async () => ["j1"],
+      candidateIds: async () => ["j1"],
       systemLocale: () => "en-US",
     });
 

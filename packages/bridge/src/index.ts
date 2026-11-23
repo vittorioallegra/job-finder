@@ -5,6 +5,15 @@ import type { CvImportRequest, CvImportResult, Profile, ProfileRecord } from "./
 import type { DiscoverySearchRequest, DiscoverySearchResult } from "./discovery";
 import type { ScoreStartRequest, ScoreStartResult } from "./scoring";
 import type {
+  JobDetail,
+  JobDetailRequest,
+  JobFlagRequest,
+  JobsListRequest,
+  SavedSearch,
+  SavedSearchDeleteRequest,
+  SavedSearchSaveRequest,
+} from "./jobs";
+import type {
   CompanyAddRequest,
   CompanyAddResult,
   CompanyRecord,
@@ -22,6 +31,7 @@ export * from "./secrets";
 export * from "./ipc";
 export * from "./profile";
 export * from "./scoring";
+export * from "./jobs";
 
 /** Shape of the API the preload script exposes as `window.jobFinder`. Values never include secrets. */
 export interface JobFinderBridge {
@@ -53,8 +63,18 @@ export interface JobFinderBridge {
     add(input: CompanyAddRequest): Promise<CompanyAddResult>;
   };
   readonly jobs: {
-    /** Open jobs, newest first. */
-    list(): Promise<JobListItem[]>;
+    /** Open jobs matching the filter, in the requested order. */
+    list(request: JobsListRequest): Promise<JobListItem[]>;
+    /** One job with all its source links, or null when it does not exist. */
+    detail(request: JobDetailRequest): Promise<JobDetail | null>;
+    /** Dismisses or restores a job, or marks it viewed. Resolves false when the job does not exist. */
+    flag(request: JobFlagRequest): Promise<boolean>;
+  };
+  readonly savedSearches: {
+    list(): Promise<SavedSearch[]>;
+    /** Creates a saved search, or replaces the one with the given id. Resolves null when that id is unknown. */
+    save(request: SavedSearchSaveRequest): Promise<SavedSearch | null>;
+    delete(request: SavedSearchDeleteRequest): Promise<void>;
   };
   readonly scores: {
     /**

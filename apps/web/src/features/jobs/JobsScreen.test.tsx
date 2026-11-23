@@ -29,9 +29,12 @@ const posting: JobListItem = {
   workMode: "hybrid",
   url: "https://boards.greenhouse.io/acme/jobs/1",
   applyUrl: "https://boards.greenhouse.io/acme/jobs/1",
+  postedAt: null,
   firstSeenAt: 1,
   score: null,
   explanation: null,
+  dismissed: false,
+  isNew: false,
 };
 
 function button(container: HTMLElement, text: string): HTMLButtonElement {
@@ -82,12 +85,20 @@ describe("jobs screen", () => {
     expect(button(container, "Scan companies").disabled).toBe(true);
   });
 
-  it("lists the open jobs with their company, location and apply link", async () => {
-    await render(createMemoryBridge({ companies: [acme], jobs: [posting] }));
+  it("lists the open jobs with their company, location and work mode, and opens one with its apply page", async () => {
+    await render(createMemoryBridge({ companies: [acme], jobs: [{ ...posting, isNew: true }] }));
 
     expect(container.textContent).toContain("Backend Engineer");
+    expect(container.textContent).toContain("Milan, Italy");
     expect(container.textContent).toContain("Hybrid");
-    expect(container.textContent).toContain(`Apply page: ${posting.applyUrl}`);
+    expect([...container.querySelectorAll("span")].some((node) => node.textContent === "New")).toBe(
+      true,
+    );
+
+    await act(async () => {
+      button(container, "Open").click();
+    });
+    expect(container.textContent).toContain("Dismiss");
   });
 
   it("shows an error with a retry when the lists cannot be read, and recovers on retry", async () => {
@@ -179,7 +190,7 @@ describe("jobs screen", () => {
       "Strong Kubernetes match; asks for 5+ years, you have 3.",
     );
     expect(container.textContent).toContain("Not scored yet");
-    expect(container.textContent).toContain("Sorted by affinity, highest first.");
+    expect(button(container, "Best match").getAttribute("aria-pressed")).toBe("true");
   });
 
   it("scores the jobs on the profile, reports the counts and reloads the list with the new scores", async () => {
@@ -199,7 +210,7 @@ describe("jobs screen", () => {
     });
     await act(async () => {});
 
-    expect(start).toHaveBeenCalledWith({ consent: false });
+    expect(start).toHaveBeenCalledWith(expect.objectContaining({ consent: false }));
     expect(container.textContent).toContain("Scored 1 jobs.");
   });
 
@@ -219,7 +230,7 @@ describe("jobs screen", () => {
     });
     await act(async () => {});
 
-    expect(start).toHaveBeenCalledWith({ consent: true });
+    expect(start).toHaveBeenCalledWith(expect.objectContaining({ consent: true }));
   });
 
   it("shows the AI unavailable state with a link to Settings and keeps the jobs listed", async () => {

@@ -76,12 +76,18 @@ export interface JobListItem {
   workMode: string;
   url: string;
   applyUrl: string;
+  /** Epoch milliseconds, from the posting's own date when the source gives one. */
+  postedAt: number | null;
   /** Epoch milliseconds. */
   firstSeenAt: number;
   /** The affinity score 0-100 for the current profile version, or null when the job is not scored. */
   score: number | null;
   /** The model's explanation of the score, or null when the job is not scored. */
   explanation: string | null;
+  /** The user dismissed the job. */
+  dismissed: boolean;
+  /** The user has not opened the job yet. */
+  isNew: boolean;
 }
 
 export interface RunSummary {

@@ -6,9 +6,15 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { companies, jobs } from "@job-finder/core";
+import { DEFAULT_JOB_FILTER, JobFilterSchema } from "@job-finder/core/filters";
 import type { StoredScore } from "@job-finder/core/ranking";
 import { openAppDatabase, type AppDatabase } from "./database";
-import { loadScoringJobs, lookupScores, openJobIds, persistScores } from "./scoring-operations";
+import {
+  loadScoringJobs,
+  lookupScores,
+  persistScores,
+  scoringCandidateIds,
+} from "./scoring-operations";
 
 const repoMigrations = resolve(__dirname, "../../../drizzle");
 
@@ -103,7 +109,7 @@ describe("scoring database calls", () => {
     ]);
   });
 
-  it("lists open jobs newest first, leaving out closed ones", async () => {
+  it("lists the open jobs that pass the filter, the preferred ones first, then the newest, leaving out closed ones", async () => {
     const database = await openDatabase();
     await database.db.insert(companies).values({
       id: "c1",
@@ -117,7 +123,25 @@ describe("scoring database calls", () => {
       .insert(jobs)
       .values([jobRow("old", 1), jobRow("new", 5), jobRow("gone", 9, 10)]);
 
-    expect(await openJobIds(database.db, 10)).toEqual(["new", "old"]);
-    expect(await openJobIds(database.db, 1)).toEqual(["new"]);
+    const hybrid = JobFilterSchema.parse({ workModes: ["hybrid"] });
+    expect(await scoringCandidateIds(database.db, DEFAULT_JOB_FILTER, [], 10, 10)).toEqual([
+      "new",
+      "old",
+    ]);
+    expect(await scoringCandidateIds(database.db, DEFAULT_JOB_FILTER, ["old"], 10, 10)).toEqual([
+      "old",
+      "new",
+    ]);
+    expect(await scoringCandidateIds(database.db, DEFAULT_JOB_FILTER, [], 10, 1)).toEqual(["new"]);
+    expect(await scoringCandidateIds(database.db, hybrid, [], 10, 10)).toEqual(["new", "old"]);
+    expect(
+      await scoringCandidateIds(
+        database.db,
+        JobFilterSchema.parse({ workModes: ["remote"] }),
+        [],
+        10,
+        10,
+      ),
+    ).toEqual([]);
   });
 });

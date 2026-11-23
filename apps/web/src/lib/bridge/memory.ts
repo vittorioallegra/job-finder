@@ -11,8 +11,11 @@ import {
   type IngestEvent,
   type IngestStartResult,
   type JobFinderBridge,
+  type JobDetail,
   type JobListItem,
   type LatestRun,
+  type SavedSearch,
+  JobFilterSchema,
   type Profile,
   ProfileSchema,
   type ProfileRecord,
@@ -34,6 +37,7 @@ export interface MemoryBridgeOptions {
   profile?: Profile;
   companies?: CompanyRecord[];
   jobs?: JobListItem[];
+  savedSearches?: SavedSearch[];
   latestRun?: LatestRun | null;
   /** Answer to "start a run". Defaults to engine unavailable, since there is no engine here. */
   ingestStart?: IngestStartResult;
@@ -58,6 +62,7 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
   const status = async (): Promise<SecretsStatus> => ({ storage, keys: { ...keys } });
   const companies: CompanyRecord[] = structuredClone(options.companies ?? []);
   const jobs: JobListItem[] = structuredClone(options.jobs ?? []);
+  const savedSearches: SavedSearch[] = structuredClone(options.savedSearches ?? []);
   const progressListeners = new Set<(event: IngestEvent) => void>();
   let profile: ProfileRecord | null = options.profile
     ? { profile: options.profile, version: 1, updatedAt: 0 }
@@ -118,8 +123,59 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
         return { ok: true, company: structuredClone(company) };
       },
     },
+    // No filtering here: the list returns the jobs it was given, in their given order.
     jobs: {
       list: async () => structuredClone(jobs),
+      detail: async ({ jobId }) => {
+        const job = jobs.find((item) => item.id === jobId);
+        if (!job) return null;
+        const detail: JobDetail = {
+          ...structuredClone(job),
+          description: "",
+          employmentType: "unknown",
+          seniority: "unknown",
+          salary: null,
+          visaSponsorship: "unknown",
+          language: null,
+          remoteScope: null,
+          closedAt: null,
+          sources: [],
+        };
+        return detail;
+      },
+      flag: async ({ jobId, dismissed, viewed }) => {
+        const job = jobs.find((item) => item.id === jobId);
+        if (!job) return false;
+        if (dismissed !== undefined) job.dismissed = dismissed;
+        if (viewed !== undefined) job.isNew = !viewed;
+        return true;
+      },
+    },
+    savedSearches: {
+      list: async () => structuredClone(savedSearches),
+      save: async (request) => {
+        const filter = JobFilterSchema.parse(request.filter);
+        if (request.id !== undefined) {
+          const existing = savedSearches.find((item) => item.id === request.id);
+          if (!existing) return null;
+          existing.name = request.name;
+          existing.filter = filter;
+          existing.updatedAt = Date.now();
+          return structuredClone(existing);
+        }
+        const created: SavedSearch = {
+          id: `memory-search-${savedSearches.length + 1}`,
+          name: request.name,
+          filter,
+          updatedAt: Date.now(),
+        };
+        savedSearches.push(created);
+        return structuredClone(created);
+      },
+      delete: async ({ id }) => {
+        const at = savedSearches.findIndex((item) => item.id === id);
+        if (at >= 0) savedSearches.splice(at, 1);
+      },
     },
     scores: {
       start: async () =>

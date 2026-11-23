@@ -22,6 +22,14 @@ import type { DiscoverySearchResult } from "./discovery";
 import { DiscoverySearchRequestSchema } from "./discovery";
 import type { ScoreStartResult } from "./scoring";
 import { ScoreStartRequestSchema } from "./scoring";
+import type { JobDetail, SavedSearch } from "./jobs";
+import {
+  JobDetailRequestSchema,
+  JobFlagRequestSchema,
+  JobsListRequestSchema,
+  SavedSearchDeleteRequestSchema,
+  SavedSearchSaveRequestSchema,
+} from "./jobs";
 
 /**
  * Request payload per channel. Main validates every incoming payload with these schemas before
@@ -39,7 +47,12 @@ export const IPC_REQUEST_SCHEMAS = {
   "profile:import-cv": CvImportRequestSchema,
   "companies:list": z.undefined(),
   "companies:add": CompanyAddRequestSchema,
-  "jobs:list": z.undefined(),
+  "jobs:list": JobsListRequestSchema,
+  "jobs:detail": JobDetailRequestSchema,
+  "jobs:flag": JobFlagRequestSchema,
+  "saved-searches:list": z.undefined(),
+  "saved-searches:save": SavedSearchSaveRequestSchema,
+  "saved-searches:delete": SavedSearchDeleteRequestSchema,
   "ingest:start": IngestStartRequestSchema,
   "ingest:cancel": IngestCancelRequestSchema,
   "ingest:latest": z.undefined(),
@@ -64,6 +77,11 @@ export interface IpcResponses {
   "companies:list": CompanyRecord[];
   "companies:add": CompanyAddResult;
   "jobs:list": JobListItem[];
+  "jobs:detail": JobDetail | null;
+  "jobs:flag": boolean;
+  "saved-searches:list": SavedSearch[];
+  "saved-searches:save": SavedSearch | null;
+  "saved-searches:delete": void;
   "ingest:start": IngestStartResult;
   "ingest:cancel": void;
   "ingest:latest": LatestRun | null;

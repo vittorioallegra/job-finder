@@ -341,7 +341,134 @@
       "applyLink": "Apply page: {{url}}",
       "affinity": "Affinity {{score}}/100",
       "notScored": "Not scored yet",
-      "sortedByAffinity": "Sorted by affinity, highest first."
+      "new": "New",
+      "dismissed": "Dismissed",
+      "open": "Open",
+      "openJob": "Open {{title}}",
+      "noMatch": "No job matches these filters. Change them or reset the filters."
+    },
+    "filters": {
+      "heading": "Filters",
+      "keywords": "Keywords (any of them, comma separated)",
+      "keywordsHint": "Matched in the title and the description.",
+      "excludedKeywords": "Leave out jobs with these keywords (comma separated)",
+      "locationText": "City or region",
+      "countryCode": "Country code",
+      "countryCodeHint": "Two letters, for example IT or DE.",
+      "remoteScope": "Remote scope contains",
+      "remoteScopeHint": "For example EU or US.",
+      "language": "Posting language",
+      "languageHint": "Two letters, for example en or it.",
+      "postedWithin": {
+        "label": "Posted within",
+        "any": "Any time",
+        "24h": "24 hours",
+        "3d": "3 days",
+        "7d": "7 days",
+        "30d": "30 days"
+      },
+      "visa": {
+        "label": "Visa sponsorship",
+        "any": "Any",
+        "yes": "Offered",
+        "no": "Not offered",
+        "unknown": "Not stated"
+      },
+      "workModes": "Work mode",
+      "employmentTypes": "Employment type",
+      "seniorities": "Seniority",
+      "sources": "Source",
+      "values": {
+        "employment": {
+          "full_time": "Full-time",
+          "part_time": "Part-time",
+          "contract": "Contract",
+          "freelance": "Freelance",
+          "internship": "Internship",
+          "temporary": "Temporary",
+          "unknown": "Not stated"
+        },
+        "seniority": {
+          "intern": "Intern",
+          "junior": "Junior",
+          "mid": "Mid-level",
+          "senior": "Senior",
+          "lead": "Lead"
+        },
+        "period": {
+          "year": "year",
+          "month": "month",
+          "week": "week",
+          "day": "day",
+          "hour": "hour"
+        }
+      },
+      "salary": {
+        "legend": "Minimum salary",
+        "amount": "Amount",
+        "currency": "Currency",
+        "period": "Per",
+        "hideWithout": "Hide jobs without a salary in this currency and period",
+        "hideWithoutHint": "Without it, jobs that state no salary, or one in another currency or period, are kept."
+      },
+      "companies": {
+        "include": "Only these companies",
+        "exclude": "Leave out these companies",
+        "none": "Add a company on the Companies screen first."
+      },
+      "minScore": "Minimum affinity (0 to 100)",
+      "minScoreHint": "When set, jobs without a score are left out.",
+      "hideDismissed": "Hide dismissed jobs",
+      "newOnly": "Only new jobs (not opened yet)",
+      "apply": "Apply filters",
+      "reset": "Reset filters",
+      "invalid": "Check the filters: a number, a country code or a language code is not valid."
+    },
+    "saved": {
+      "heading": "Saved searches",
+      "loading": "Loading saved searches…",
+      "loadFailed": "The saved searches could not be loaded.",
+      "retry": "Try again",
+      "empty": "No saved searches yet.",
+      "apply": "Apply",
+      "applyNamed": "Apply the saved search {{name}}",
+      "replace": "Replace with current filters",
+      "replaceNamed": "Replace {{name}} with the current filters",
+      "delete": "Delete",
+      "deleteNamed": "Delete the saved search {{name}}",
+      "name": "Name for the current filters",
+      "save": "Save current filters",
+      "saveFailed": "The saved search could not be saved."
+    },
+    "sort": {
+      "label": "Order",
+      "affinity": "Best match",
+      "newest": "Newest first"
+    },
+    "detail": {
+      "heading": "Job",
+      "loading": "Loading job…",
+      "loadFailed": "The job could not be loaded.",
+      "retry": "Try again",
+      "missing": "This job no longer exists.",
+      "close": "Close",
+      "dismiss": "Dismiss",
+      "restore": "Restore",
+      "closed": "Closed: no source lists it any more",
+      "notStated": "Not stated",
+      "workMode": "Work mode",
+      "employment": "Employment",
+      "seniority": "Seniority",
+      "visa": "Visa sponsorship",
+      "language": "Language",
+      "salary": "Salary as stated",
+      "description": "Description",
+      "noDescription": "No description was stated.",
+      "sources": "Sources",
+      "noSources": "No source is recorded for this job.",
+      "sourceClosed": "no longer listed",
+      "postingUrl": "Posting: {{url}}",
+      "applyUrl": "Apply page: {{url}}"
     }
   },
   "companies": {

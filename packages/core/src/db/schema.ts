@@ -164,3 +164,25 @@ export const jobScores = sqliteTable(
     check("job_scores_score_range", sql`${table.score} between 0 and 100`),
   ],
 );
+
+/** A saved search: a name and the typed job filter as JSON. The scheduler reads these later. */
+export const savedSearches = sqliteTable("saved_searches", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  filters: text("filters").notNull(),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+/**
+ * The user's flags on a job: `dismissed_at` hides it from the results, `viewed_at` ends its "new"
+ * badge. A job without a row is neither dismissed nor viewed.
+ */
+export const jobFlags = sqliteTable("job_flags", {
+  jobId: text("job_id")
+    .primaryKey()
+    .references(() => jobs.id),
+  dismissedAt: integer("dismissed_at"),
+  viewedAt: integer("viewed_at"),
+  updatedAt: integer("updated_at").notNull(),
+});

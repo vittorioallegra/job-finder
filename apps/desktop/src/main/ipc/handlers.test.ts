@@ -92,6 +92,14 @@ function spyServices() {
       calls.push("repository.listJobs");
       return [];
     },
+    jobDetail: async () => {
+      calls.push("repository.jobDetail");
+      return null;
+    },
+    setJobFlag: async () => {
+      calls.push("repository.setJobFlag");
+      return false;
+    },
     latestRun: async () => {
       calls.push("repository.latestRun");
       return null;
@@ -124,6 +132,14 @@ function spyServices() {
     ingestion,
     discovery,
     scoring: { start: async () => ({ ok: false as const, code: "no-profile" as const }) },
+    savedSearches: {
+      list: async () => {
+        calls.push("savedSearches.list");
+        return [];
+      },
+      save: async () => null,
+      delete: async () => {},
+    },
   };
   return { services, calls };
 }
@@ -221,10 +237,15 @@ describe("IPC sender and payload guard", () => {
         "ingest:cancel",
         "ingest:latest",
         "ingest:start",
+        "jobs:detail",
+        "jobs:flag",
         "jobs:list",
         "profile:get",
         "profile:import-cv",
         "profile:save",
+        "saved-searches:delete",
+        "saved-searches:list",
+        "saved-searches:save",
         "scores:start",
         "secrets:clear",
         "secrets:set",
@@ -238,13 +259,31 @@ describe("IPC sender and payload guard", () => {
   it("routes the ingestion channels to their services, and passes a cancel's run id on", async () => {
     const { services, calls } = spyServices();
     await handleInvoke("companies:list", services, topFrame(), undefined, APP_ORIGIN);
-    await handleInvoke("jobs:list", services, topFrame(), undefined, APP_ORIGIN);
+    await handleInvoke(
+      "jobs:list",
+      services,
+      topFrame(),
+      { filter: {}, sort: "affinity" },
+      APP_ORIGIN,
+    );
+    await handleInvoke("jobs:detail", services, topFrame(), { jobId: "j1" }, APP_ORIGIN);
+    await handleInvoke(
+      "jobs:flag",
+      services,
+      topFrame(),
+      { jobId: "j1", viewed: true },
+      APP_ORIGIN,
+    );
+    await handleInvoke("saved-searches:list", services, topFrame(), undefined, APP_ORIGIN);
     await handleInvoke("ingest:latest", services, topFrame(), undefined, APP_ORIGIN);
     await handleInvoke("ingest:start", services, topFrame(), undefined, APP_ORIGIN);
     await handleInvoke("ingest:cancel", services, topFrame(), { runId: "run-7" }, APP_ORIGIN);
     expect(calls).toEqual([
       "repository.listCompanies",
       "repository.listJobs",
+      "repository.jobDetail",
+      "repository.setJobFlag",
+      "savedSearches.list",
       "repository.latestRun",
       "ingestion.start",
       "ingestion.cancel:run-7",
