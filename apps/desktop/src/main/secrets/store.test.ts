@@ -94,6 +94,26 @@ describe("secret store", () => {
     expect(await store.read("ai.apiKey")).toBe("sk-linux-value");
   });
 
+  it("removes the keys from disk when the Linux opt-in is withdrawn", async () => {
+    // protects=withdrawing the basic_text opt-in deletes the stored keys and keeps them for the session; fails_when=a key stays in the database after the opt-in is turned off or is reported as not set while still stored; no_claim=the Settings screen;
+    let allowed = true;
+    const rows = memoryRows();
+    const store = createSecretStore({
+      safeStorage: fakeSafeStorage({ backend: "basic_text" }),
+      rows,
+      isBasicTextAllowed: async () => allowed,
+    });
+    await store.set("ai.apiKey", "sk-linux-value");
+    expect(rows.rows.size).toBe(1);
+
+    allowed = false;
+    await store.onBasicTextAllowedChanged();
+
+    expect(rows.rows.size).toBe(0);
+    expect((await store.status()).keys["ai.apiKey"]).toBe(true);
+    expect(await store.read("ai.apiKey")).toBe("sk-linux-value");
+  });
+
   it("removes both the memory copy and the disk blob on clear", async () => {
     const { store, rows } = storeWith({ safeStorage: fakeSafeStorage() });
     await store.set("ai.apiKey", "sk-test-value");

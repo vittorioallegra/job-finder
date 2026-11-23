@@ -96,6 +96,9 @@ export function createSecretStore(options: SecretStoreOptions): SecretStore {
       const info = await storage();
       if (info.mode === "session-only") {
         inMemory.set(name, value);
+        if (info.optInRequired) {
+          await rows.remove(rowKey(name));
+        }
       } else {
         await writeToDisk(name, value);
         inMemory.delete(name);
@@ -128,6 +131,22 @@ export function createSecretStore(options: SecretStoreOptions): SecretStore {
     async onBasicTextAllowedChanged() {
       const info = await storage();
       if (info.mode === "session-only") {
+        if (info.optInRequired) {
+          // The user withdrew the opt-in: nothing may stay on disk. Keys move to memory for this
+          // session when they can be read back, and the rows are deleted either way.
+          for (const name of SECRET_NAMES) {
+            const cipher = await rows.read(rowKey(name));
+            if (cipher === null) continue;
+            if (!inMemory.has(name)) {
+              try {
+                inMemory.set(name, safeStorage.decryptString(Buffer.from(cipher, "base64")));
+              } catch {
+                // Unreadable blob: dropping it is all that is left to do.
+              }
+            }
+            await rows.remove(rowKey(name));
+          }
+        }
         return;
       }
       for (const [name, value] of inMemory) {
