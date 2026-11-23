@@ -63,7 +63,23 @@ function spyServices() {
       return { ok: false as const, code: "not-configured" as const };
     },
   };
-  const services: IpcServices = { settings, secrets, ai };
+  const profile = {
+    get: async () => {
+      calls.push("profile.get");
+      return null;
+    },
+    save: async () => {
+      calls.push("profile.save");
+      throw new Error("not reached");
+    },
+  };
+  const cvImport = {
+    importCv: async () => {
+      calls.push("cvImport.importCv");
+      return { ok: false as const, code: "consent-required" as const };
+    },
+  };
+  const services: IpcServices = { settings, secrets, ai, profile, cvImport };
   return { services, calls };
 }
 
@@ -154,6 +170,9 @@ describe("IPC sender and payload guard", () => {
     expect(registered.sort()).toEqual(
       [
         "ai:test-connection",
+        "profile:get",
+        "profile:import-cv",
+        "profile:save",
         "secrets:clear",
         "secrets:set",
         "secrets:status",
@@ -161,5 +180,24 @@ describe("IPC sender and payload guard", () => {
         "settings:update",
       ].sort(),
     );
+  });
+
+  it("keeps an invalid profile and a CV upload without consent away from their services", async () => {
+    const { services, calls } = spyServices();
+    const invalidProfile = { headline: "x", links: [{ label: "x", url: "file:///etc/passwd" }] };
+    await expect(
+      handleInvoke("profile:save", services, topFrame(), invalidProfile, APP_ORIGIN),
+    ).rejects.toThrow();
+    await expect(
+      handleInvoke(
+        "profile:import-cv",
+        services,
+        topFrame(),
+        { fileName: "cv.txt", bytes: "text", consent: true },
+        APP_ORIGIN,
+      ),
+    ).rejects.toThrow();
+    expect(calls).not.toContain("profile.save");
+    expect(calls).not.toContain("cvImport.importCv");
   });
 });

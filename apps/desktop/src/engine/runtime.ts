@@ -1,4 +1,5 @@
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
+import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
 import type { DbCall, DbResult, EngineToMainMessage, MainToEngineMessage } from "./protocol";
 import type { PortLike } from "./port";
 
@@ -11,6 +12,7 @@ export interface EngineRuntime {
 /** Work the engine does for main that needs the network or the AI layer. */
 export interface EngineServices {
   testAiConnection(config: AiProviderConfig): Promise<AiConnectionResult>;
+  importCv(request: CvImportRequest): Promise<CvImportOutcome>;
 }
 
 /**
@@ -33,6 +35,14 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
         .testAiConnection(config)
         .catch((): AiConnectionResult => ({ ok: false, code: "unknown" }))
         .then((result) => post(port, { type: "ai-test-result", id, result }));
+      return;
+    }
+    if (message.type === "cv-import") {
+      const { id, request } = message;
+      void services
+        .importCv(request)
+        .catch((): CvImportOutcome => ({ ok: false, code: "unknown" }))
+        .then((outcome) => post(port, { type: "cv-import-result", id, outcome }));
       return;
     }
     if (message.type === "db-result") {

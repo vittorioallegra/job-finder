@@ -42,6 +42,7 @@ describe("engine runtime", () => {
     const port = fakePort();
     const services: EngineServices = {
       testAiConnection: async () => ({ ok: true, model: "claude-test" }),
+      importCv: async () => ({ ok: false, code: "unknown" }),
     };
     createEngineRuntime(port, services);
 
@@ -59,6 +60,7 @@ describe("engine runtime", () => {
       testAiConnection: async () => {
         throw new Error(`boom with ${config.apiKey}`);
       },
+      importCv: async () => ({ ok: false, code: "unknown" }),
     };
     createEngineRuntime(port, services);
 
@@ -70,9 +72,57 @@ describe("engine runtime", () => {
     expect(JSON.stringify(port.sent)).not.toContain(config.apiKey);
   });
 
+  it("answers a CV import with the service outcome under the same request id", async () => {
+    const port = fakePort();
+    const services: EngineServices = {
+      testAiConnection: async () => ({ ok: false, code: "unknown" }),
+      importCv: async (request) => {
+        expect(request.fileName).toBe("cv.txt");
+        return { ok: false, code: "empty-document" };
+      },
+    };
+    createEngineRuntime(port, services);
+
+    port.deliver({
+      type: "cv-import",
+      id: 9,
+      request: { config, contextSize: 8192, fileName: "cv.txt", bytes: new Uint8Array([32]) },
+    });
+    await settle();
+
+    expect(port.sent).toEqual([
+      { type: "cv-import-result", id: 9, outcome: { ok: false, code: "empty-document" } },
+    ]);
+  });
+
+  it("reports an unexpected CV import failure as unknown", async () => {
+    const port = fakePort();
+    const services: EngineServices = {
+      testAiConnection: async () => ({ ok: false, code: "unknown" }),
+      importCv: async () => {
+        throw new Error("parser crashed on the CV text");
+      },
+    };
+    createEngineRuntime(port, services);
+
+    port.deliver({
+      type: "cv-import",
+      id: 10,
+      request: { config, contextSize: 8192, fileName: "cv.txt", bytes: new Uint8Array([32]) },
+    });
+    await settle();
+
+    expect(port.sent).toEqual([
+      { type: "cv-import-result", id: 10, outcome: { ok: false, code: "unknown" } },
+    ]);
+  });
+
   it("still answers pings", () => {
     const port = fakePort();
-    createEngineRuntime(port, { testAiConnection: async () => ({ ok: false, code: "unknown" }) });
+    createEngineRuntime(port, {
+      testAiConnection: async () => ({ ok: false, code: "unknown" }),
+      importCv: async () => ({ ok: false, code: "unknown" }),
+    });
 
     port.deliver({ type: "ping", id: 1 });
 

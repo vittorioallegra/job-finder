@@ -6,6 +6,8 @@ import { openAppDatabase, resolveMigrationsFolder, type AppDatabase } from "./db
 import { executeDbCalls, reconcileInterruptedRuns } from "./db/operations";
 import { registerIpcHandlers } from "./ipc/handlers";
 import { createAiConnectionService } from "./ai/connection";
+import { createCvImportService } from "./profile/cv-import";
+import { createProfileRepository } from "./profile/repository";
 import { createUtilityProcessLauncher } from "./engine/launcher";
 import { startEngineSupervisor } from "./engine/supervisor";
 import { createFileLogger } from "./logging/file-logger";
@@ -136,9 +138,21 @@ if (gotSingleInstanceLock) {
       secrets: secretStore,
       engine: supervisor,
     });
+    const profileRepository = createProfileRepository(database.db);
+    const cvImport = createCvImportService({
+      settings: settingsRepository,
+      secrets: secretStore,
+      engine: supervisor,
+    });
     registerIpcHandlers(
       ipcMain,
-      { settings: settingsRepository, secrets: secretStore, ai: aiConnection },
+      {
+        settings: settingsRepository,
+        secrets: secretStore,
+        ai: aiConnection,
+        profile: profileRepository,
+        cvImport,
+      },
       originOf(rendererUrl) ?? rendererUrl,
     );
 

@@ -4,6 +4,8 @@ import { AppSettingsPatchSchema } from "./settings";
 import type { AiTestResult } from "./ai";
 import type { SecretsStatus } from "./secrets";
 import { SecretClearRequestSchema, SecretSetRequestSchema } from "./secrets";
+import type { CvImportResult, ProfileRecord } from "./profile";
+import { CvImportRequestSchema, ProfileSchema } from "./profile";
 
 /**
  * Request payload per channel. Main validates every incoming payload with these schemas before
@@ -16,6 +18,9 @@ export const IPC_REQUEST_SCHEMAS = {
   "secrets:set": SecretSetRequestSchema,
   "secrets:clear": SecretClearRequestSchema,
   "ai:test-connection": z.undefined(),
+  "profile:get": z.undefined(),
+  "profile:save": ProfileSchema,
+  "profile:import-cv": CvImportRequestSchema,
 } as const;
 
 export type IpcChannel = keyof typeof IPC_REQUEST_SCHEMAS;
@@ -29,6 +34,9 @@ export interface IpcResponses {
   "secrets:set": SecretsStatus;
   "secrets:clear": SecretsStatus;
   "ai:test-connection": AiTestResult;
+  "profile:get": ProfileRecord | null;
+  "profile:save": ProfileRecord;
+  "profile:import-cv": CvImportResult;
 }
 
 export type IpcResponse<C extends IpcChannel> = IpcResponses[C];

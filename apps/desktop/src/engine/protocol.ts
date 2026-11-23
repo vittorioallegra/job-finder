@@ -1,5 +1,6 @@
 import type { RunStatus } from "@job-finder/core";
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
+import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
 
 /**
  * Database operations the engine may request. Main owns the database and executes these in
@@ -22,10 +23,13 @@ export type DbResult = { ok: true; value: unknown } | { ok: false; error: string
 export type MainToEngineMessage =
   | { type: "ping"; id: number }
   | { type: "db-result"; id: number; results: DbResult[] }
-  | { type: "ai-test"; id: number; config: AiProviderConfig };
+  | { type: "ai-test"; id: number; config: AiProviderConfig }
+  /** The CV bytes and the API key travel to the engine only; the outcome carries no CV text. */
+  | { type: "cv-import"; id: number; request: CvImportRequest };
 
 /** Messages sent by the engine to main over the message port. */
 export type EngineToMainMessage =
   | { type: "pong"; id: number }
   | { type: "db"; id: number; calls: DbCall[] }
-  | { type: "ai-test-result"; id: number; result: AiConnectionResult };
+  | { type: "ai-test-result"; id: number; result: AiConnectionResult }
+  | { type: "cv-import-result"; id: number; outcome: CvImportOutcome };

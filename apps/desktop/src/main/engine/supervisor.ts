@@ -1,4 +1,5 @@
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
+import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
 import type { DbCall, DbResult, EngineToMainMessage } from "../../engine/protocol";
 import type { PortLike } from "../../engine/port";
 
@@ -64,6 +65,8 @@ export interface EngineSupervisor {
    * the engine only and never logged or returned to the renderer.
    */
   testAiConnection(config: AiProviderConfig): Promise<AiConnectionResult>;
+  /** Runs a CV import in the engine. The request carries the key and the CV bytes; neither is logged. */
+  importCv(request: CvImportRequest): Promise<CvImportOutcome>;
   readonly state: EngineSupervisorState;
   stop(): void;
 }
@@ -78,11 +81,17 @@ interface PendingAiTest {
   reject: (error: Error) => void;
 }
 
+interface PendingCvImport {
+  resolve: (outcome: CvImportOutcome) => void;
+  reject: (error: Error) => void;
+}
+
 interface Current {
   handle: EngineHandle;
   ready: boolean;
   pendingPings: Map<number, Pending>;
   pendingAiTests: Map<number, PendingAiTest>;
+  pendingCvImports: Map<number, PendingCvImport>;
 }
 
 /**
@@ -112,6 +121,7 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       ready: false,
       pendingPings: new Map(),
       pendingAiTests: new Map(),
+      pendingCvImports: new Map(),
     };
     current = state;
     phase = "running";
@@ -148,6 +158,10 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pending.reject(new EngineUnavailableError(reason));
     }
     state.pendingAiTests.clear();
+    for (const pending of state.pendingCvImports.values()) {
+      pending.reject(new EngineUnavailableError(reason));
+    }
+    state.pendingCvImports.clear();
   }
 
   function rejectReadyWaiters(reason: EngineUnavailableReason): void {
@@ -178,6 +192,12 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       const pending = state.pendingAiTests.get(message.id);
       state.pendingAiTests.delete(message.id);
       pending?.resolve(message.result);
+      return;
+    }
+    if (message.type === "cv-import-result") {
+      const pending = state.pendingCvImports.get(message.id);
+      state.pendingCvImports.delete(message.id);
+      pending?.resolve(message.outcome);
     }
   }
 
@@ -246,6 +266,15 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       return new Promise<AiConnectionResult>((resolve, reject) => {
         ready.pendingAiTests.set(id, { resolve, reject });
         ready.handle.port.postMessage({ type: "ai-test", id, config });
+      });
+    },
+    async importCv(request) {
+      const ready = current?.ready ? current : await waitUntilReady();
+      const id = nextRequestId;
+      nextRequestId += 1;
+      return new Promise<CvImportOutcome>((resolve, reject) => {
+        ready.pendingCvImports.set(id, { resolve, reject });
+        ready.handle.port.postMessage({ type: "cv-import", id, request });
       });
     },
     get state() {

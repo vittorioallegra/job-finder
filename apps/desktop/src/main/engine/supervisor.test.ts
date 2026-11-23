@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { openAppDatabase, type AppDatabase } from "../db/database";
 import { executeDbCalls, reconcileInterruptedRuns } from "../db/operations";
 import type { AiProviderConfig } from "@job-finder/core/ai";
+import type { CvImportRequest } from "@job-finder/core/cv";
 import type { PortLike } from "../../engine/port";
 import { createEngineRuntime, type EngineRuntime } from "../../engine/runtime";
 import {
@@ -46,6 +47,7 @@ interface Harness {
     aiHangs: boolean;
     /** Configs the engine received for AI connection tests. */
     aiConfigs: AiProviderConfig[];
+    cvRequests: CvImportRequest[];
   };
 }
 
@@ -66,6 +68,7 @@ async function startHarness(): Promise<Harness> {
     reconcileFails: false,
     aiHangs: false,
     aiConfigs: [],
+    cvRequests: [],
   };
   const launch = (): EngineHandle => {
     const { port1, port2 } = new MessageChannel();
@@ -76,6 +79,10 @@ async function startHarness(): Promise<Harness> {
           return new Promise(() => {});
         }
         return Promise.resolve({ ok: true, model: config.model });
+      },
+      importCv: async (request) => {
+        control.cvRequests.push(request);
+        return { ok: false, code: "invalid-output" };
       },
     });
     const exit = new EventEmitter();
@@ -258,6 +265,29 @@ describe("engine supervisor", () => {
     });
     expect(result).toEqual({ ok: true, model: "local-model" });
     expect(control.aiConfigs).toEqual([expect.objectContaining({ apiKey: "sk-test-key" })]);
+  });
+
+  it("runs a CV import in the engine and hands it the key and the bytes only there", async () => {
+    const { supervisor, control } = await startHarness();
+    const outcome = await supervisor.importCv({
+      config: {
+        provider: "openai-compatible",
+        model: "local-model",
+        baseUrl: "http://localhost:11434/v1",
+        apiKey: "sk-cv-key",
+      },
+      contextSize: 8192,
+      fileName: "cv.txt",
+      bytes: new Uint8Array([72, 105]),
+    });
+    expect(outcome).toEqual({ ok: false, code: "invalid-output" });
+    expect(control.cvRequests).toEqual([
+      expect.objectContaining({
+        fileName: "cv.txt",
+        bytes: new Uint8Array([72, 105]),
+        config: expect.objectContaining({ apiKey: "sk-cv-key" }),
+      }),
+    ]);
   });
 
   it("rejects an AI connection test in flight when the engine crashes", async () => {

@@ -1,10 +1,14 @@
 import {
   IPC_REQUEST_SCHEMAS,
   type AppSettingsPatch,
+  type CvImportRequest,
   type IpcChannel,
   type SecretName,
 } from "@job-finder/bridge";
+import type { Profile } from "@job-finder/core/profile";
 import type { AiConnectionService } from "../ai/connection";
+import type { CvImportService } from "../profile/cv-import";
+import type { ProfileRepository } from "../profile/repository";
 import { originOf } from "../security/origin";
 import type { SecretStore } from "../secrets/store";
 import type { SettingsRepository } from "../settings/repository";
@@ -13,6 +17,8 @@ export interface IpcServices {
   settings: SettingsRepository;
   secrets: SecretStore;
   ai: AiConnectionService;
+  profile: ProfileRepository;
+  cvImport: CvImportService;
 }
 
 /** The parts of an Electron invoke event that the sender check reads. */
@@ -72,6 +78,12 @@ export async function handleInvoke(
     }
     case "ai:test-connection":
       return services.ai.testConnection();
+    case "profile:get":
+      return services.profile.get();
+    case "profile:save":
+      return services.profile.save(payload as Profile);
+    case "profile:import-cv":
+      return services.cvImport.importCv(payload as CvImportRequest);
   }
 }
 

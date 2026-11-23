@@ -5,7 +5,11 @@ import {
   type AiTestResult,
   type AppSettings,
   type AppSettingsPatch,
+  type CvImportResult,
   type JobFinderBridge,
+  type Profile,
+  ProfileSchema,
+  type ProfileRecord,
   type SecretName,
   type SecretStorageInfo,
   type SecretsStatus,
@@ -17,6 +21,10 @@ export interface MemoryBridgeOptions {
   storage?: SecretStorageInfo;
   /** Outcome of "test connection". Defaults to AI unavailable, since there is no engine here. */
   aiTest?: AiTestResult;
+  /** Outcome of a CV import. Defaults to engine unavailable, since there is no engine here. */
+  cvImport?: CvImportResult;
+  /** A profile already saved before the page loads. Defaults to none (onboarding not done). */
+  profile?: Profile;
 }
 
 /**
@@ -32,6 +40,9 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
   >;
 
   const status = async (): Promise<SecretsStatus> => ({ storage, keys: { ...keys } });
+  let profile: ProfileRecord | null = options.profile
+    ? { profile: options.profile, version: 1, updatedAt: 0 }
+    : null;
 
   return {
     platform: options.platform ?? "darwin",
@@ -56,6 +67,20 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
     ai: {
       testConnection: async () =>
         structuredClone(options.aiTest ?? { ok: false, code: "engine-unavailable" }),
+    },
+    profile: {
+      get: async () => (profile ? structuredClone(profile) : null),
+      save: async (input) => {
+        const parsed = ProfileSchema.parse(input);
+        const version =
+          profile && JSON.stringify(profile.profile) === JSON.stringify(parsed)
+            ? profile.version
+            : (profile?.version ?? 0) + 1;
+        profile = { profile: parsed, version, updatedAt: Date.now() };
+        return structuredClone(profile);
+      },
+      importCv: async () =>
+        structuredClone(options.cvImport ?? { ok: false, code: "engine-unavailable" }),
     },
   };
 }

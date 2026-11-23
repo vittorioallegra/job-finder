@@ -30,6 +30,11 @@ const api: JobFinderBridge = {
   ai: {
     testConnection: () => invoke("ai:test-connection"),
   },
+  profile: {
+    get: () => invoke("profile:get"),
+    save: (profile) => invoke("profile:save", profile),
+    importCv: (request) => invoke("profile:import-cv", request),
+  },
 };
 
 contextBridge.exposeInMainWorld("jobFinder", Object.freeze(api));
