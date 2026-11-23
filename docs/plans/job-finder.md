@@ -292,7 +292,7 @@ Approved: yes (2026-11-23)
 - [x] 16. CV and cover letter — `feat: add the CV and cover letter panel to application details`
 - [x] 17. Autofill core and ATS adapters — `feat: open and autofill the application form from its detail screen`
 - [x] 18. Autofill AI fallback — `feat: fill unmapped form fields with the AI, marking drafts for review`
-- [ ] 19. Scheduler, notifications, tray, updates
+- [x] 19. Scheduler, notifications, tray, updates — `feat: show engine and update notices and open new jobs from a notification`
 - [ ] 20. End-to-end and docs
 
 ### Verification
@@ -530,10 +530,26 @@ Approved: yes (2026-11-23)
 - Step 18: the engine gets one new message pair (`map-form-fields` and its result), built like `score-jobs` and `generate-document`: main reads the key and passes it along, and nothing is stored. No table, no dependency, no new DevTools command; the form is still never submitted.
 - Step 18: the AI can map a field to the wrong key (for example an authorization question to the relocation key). The planner's checks only ensure the key resolves to a value the profile holds, not that it answers the question, so the user reviews every fill before submitting. Known limit.
 - Step 18: the generic fixture is the only fixture with free-text questions; the Greenhouse, Lever and Ashby fixtures are covered by the rules and not sent to the AI.
+- Step 19: the scheduler lives in main (`main/scheduler`), not in the engine as the plan's Architecture line says. It needs the settings, the saved searches, `powerMonitor` and the notification, all of which main owns. The engine still does the run: main starts it through the ingestion service, so one run is active at a time.
+- Step 19: a run is due when no ingestion run succeeded or failed yet, or the interval (1 to 168 h) passed since the newest one that did. Cancelled and interrupted runs do not move the schedule. Without saved searches nothing runs. The check runs every minute, at start and on `powerMonitor` resume, against the wall clock.
+- Step 19: one notification per run the scheduler or the tray's "Search now" started, when it has new matches: jobs first seen at or after the run's start that match a saved search's filter. A run started from the window is not notified. The text names the search when one matched and the count when several did; the top score appears only when a job is scored. Notifications are off under the E2E harness.
+- Step 19: a click opens `/jobs?new=1`, with `saved=<id>` when one search matched. The request waits in main until a window takes it, so a click while the window is hidden or loading still opens the list once. The list applies the saved filter with the new-only flag.
+- Step 19: closing the window asks (`app.closeBehavior` = `ask`) with three buttons: keep running, quit, cancel. Escape is cancel, so it closes nothing. Keep running hides the window, on every platform. "Remember my choice" saves the answer to the setting, which Settings can change. A start at login with a behaviour other than quit starts hidden in the tray.
+- Step 19: launch at login is applied only from the installed app on macOS and Windows; Linux and development runs leave the operating system untouched.
+- Step 19: the tray menu has Open, Search now (enabled only while the engine runs), a notice for a newer version, a notice when the engine has stopped (`failed`), and Quit. The icon is `build/icon.png` copied into the app's resources and resized to 18 px. The Windows AppUserModelID is `dev.job-finder.desktop`, the app id.
+- Step 19: an engine that gave up (`failed`) is shown as a banner in every window and in the tray. Nothing restarts it beyond the supervisor's own limit; the banner says to restart the app.
+- Step 19: the update check asks GitHub's latest-release endpoint through the engine's HTTP client, so the fixture override and robots.txt apply. It runs at start and then once a day, and when the setting is turned off the notice is cleared. Drafts and pre-releases are never returned by that endpoint. The notice links to the release page built from the repository and the tag; main opens only `github.com` addresses. There is no automatic download or install.
+- Step 19: the version comparison is a small parser for `x.y.z` (optional `v`) with no semver dependency; pre-releases are never reported as updates.
+- Step 19: the main-process strings use `{{name}}` interpolation (added to the main translator) and separate `one` and `other` keys for plurals.
+- Step 19: the desktop E2E runs with the update check and OS notifications off, so it never reaches GitHub. The update check's request is tested in core through a scripted fetch behind the fixture override; no test calls the live API.
+- Step 19: not exercised: real OS notifications and their click on each platform; the tray on Windows and Linux; the launch-at-login setting in the installed app; the close prompt in a real window; the release banner against a real published release; the scheduled run on a real schedule (only the clock-driven unit tests); the packaged app (the E2E ran unpackaged, `pnpm test:e2e:packaged` was not run); Windows and Linux E2E (macOS only).
+
 - Step 18 tests: the AI is a scripted double in service and adapter tests, and a scripted provider in core (`generate`-style fetch with replies in order). The desktop E2E runs with the AI off; no live model is called.
 - Step 18: not exercised: real models and their choice of keys, the quality and language of drafts, the highlight and the drafted-field outline on screen, the Settings link from the panel in the real app, the AI path inside the real Electron window (only the scripted window runs it), and E2E on Windows and Linux (run here on macOS only).
 
 ### Open questions
 
+- Step 19: `RELEASES_REPOSITORY` in `packages/core/src/updates/release.ts` is null, because the repository has no git remote and no `owner/name` in its metadata. Set it to the GitHub repository (`owner/name`) before release; until then the update check makes no request.
+
 ### Next
-Step 19: Scheduler, notifications, tray, updates (scheduler in the engine with interval 1–168 h, default 24 h, catch-up at start, wall-clock check on `powerMonitor` resume and an injected clock for tests; one native notification per run with new jobs and a click that opens the filtered results, also at cold start; Windows AppUserModelID; tray or menu-bar icon with Open, Search now and Quit; close prompt with keep-running or quit and a remembered choice; launch at login on macOS and Windows; update check against GitHub Releases with a "new version available" banner and a settings toggle).
+Step 20: End-to-end and docs (Electron E2E of the full journey against the fixture server and recorded AI: onboard, search, open job, prepare, autofill on a local fixture form, mark applied, duplicate guard; README with install, first launch, providers, Ollama setup and a privacy section listing every outbound connection, including the update check; a documented live smoke test; an optional scheduled CI canary; a final `CLAUDE.md` pass).
