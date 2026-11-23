@@ -305,6 +305,7 @@ Approved: yes (2026-11-23)
   - A base URL left from an OpenAI-compatible setup redirected the Anthropic or OpenAI API key and prompts to that host — `fix: ignore the stored base URL for hosted AI providers so their key only goes to the vendor`
   - Turning off the Linux basic_text opt-in left the API keys in the database while the UI reported them as not set — `fix: delete stored keys when the Linux no-keyring opt-in is withdrawn`
   - Careers-page postings sharing a link collapsed into one identity (closing the rest), and fallback identities were shared across companies — `fix: keep careers-page postings distinct and scope their identity to the company`
+  - The HTTP client fetched a redirect target before checking its robots.txt, and could be redirected to loopback or private-network addresses — `fix: check robots and block private addresses on every redirect hop before fetching it`
 
 ### Decisions
 - Single-user, local-only app; published as open source on GitHub, each user runs it on their own machine.

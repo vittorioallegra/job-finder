@@ -114,6 +114,8 @@ interface CacheEntry {
  */
 type RawAttempt =
   | { kind: "failed"; code: "aborted" | "timeout" | "network" }
+  | { kind: "refused"; code: "invalid-url" | "blocked-by-robots"; url: string }
+  | { kind: "redirect"; status: number; location: string }
   | {
       kind: "response";
       status: number;
@@ -126,6 +128,36 @@ type RawAttempt =
 
 const defaultSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+const MAX_REDIRECTS = 5;
+
+/**
+ * True for hosts that name this computer or a private network: `localhost`, loopback, link-local
+ * and private IPv4/IPv6 literals. Public hosts that resolve to a private address are not caught.
+ */
+export function isPrivateHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return true;
+  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
+  if (v4) {
+    const [a = 0, b = 0] = [Number(v4[1]), Number(v4[2])];
+    return (
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 100 && b >= 64 && b <= 127)
+    );
+  }
+  if (host.includes(":")) {
+    const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(host);
+    if (mapped?.[1]) return isPrivateHost(mapped[1]);
+    return host === "::" || host === "::1" || /^f[cd]/.test(host) || /^fe[89ab]/.test(host);
+  }
+  return false;
+}
 
 /** Resolves a URL to the one actually fetched, or undefined when it is not http(s). */
 export function resolveRequestUrl(url: string, fixtureBaseUrl?: string): string | undefined {
@@ -271,11 +303,18 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
         method: spec.method,
         headers: { "user-agent": JOB_FINDER_USER_AGENT, accept: ACCEPT, ...spec.headers },
         body: spec.body,
-        redirect: "follow",
+        // Redirects are followed by `send`, hop by hop, with robots.txt, the host queue and the
+        // private-address check applied to every hop.
+        redirect: "manual",
         signal: requestSignal,
       });
     } catch {
       return failed();
+    }
+    const location = response.headers.get("location");
+    if (response.status >= 300 && response.status < 400 && location !== null) {
+      await response.body?.cancel();
+      return { kind: "redirect", status: response.status, location };
     }
     const base = {
       kind: "response" as const,
@@ -371,6 +410,48 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
     },
   };
 
+  /** Runs a request and follows its redirects one hop at a time, checking each hop before it is fetched. */
+  async function fetchFollowing(
+    target: string,
+    signal: AbortSignal | undefined,
+    spec: RequestSpec,
+  ): Promise<Exclude<RawAttempt, { kind: "redirect" }>> {
+    let current = target;
+    let currentSpec = spec;
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+      if (hop > 0) {
+        if (!allowedHost(current)) return { kind: "refused", code: "invalid-url", url: current };
+        if (!(await robotsAllow(current))) {
+          return { kind: "refused", code: "blocked-by-robots", url: current };
+        }
+      }
+      const hopUrl = current;
+      const hopSpec = currentSpec;
+      const raw = await queueFor(new URL(hopUrl).host).add(() =>
+        attemptOnce(hopUrl, signal, hopSpec),
+      );
+      if (raw.kind === "response") return { ...raw, finalUrl: current };
+      if (raw.kind !== "redirect") return raw;
+      let next: string | undefined;
+      try {
+        next = resolveRequestUrl(new URL(raw.location, current).toString(), options.fixtureBaseUrl);
+      } catch {
+        next = undefined;
+      }
+      if (next === undefined) return { kind: "failed", code: "network" };
+      if (currentSpec.method === "POST" && raw.status !== 307 && raw.status !== 308) {
+        currentSpec = { method: "GET", headers: currentSpec.headers };
+      }
+      current = next;
+    }
+    return { kind: "failed", code: "network" };
+  }
+
+  /** The app never fetches this computer or a private network, except the loopback test fixtures. */
+  function allowedHost(url: string): boolean {
+    return options.fixtureBaseUrl !== undefined || !isPrivateHost(new URL(url).hostname);
+  }
+
   async function send(
     url: string,
     spec: RequestSpec,
@@ -381,6 +462,9 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
     if (target === undefined) {
       return { ok: false, code: "invalid-url", url };
     }
+    if (!allowedHost(target)) {
+      return { ok: false, code: "invalid-url", url: target };
+    }
     if (cacheable) {
       const cached = cacheGet(target);
       if (cached) {
@@ -390,13 +474,14 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
     if (!(await robotsAllow(target))) {
       return { ok: false, code: "blocked-by-robots", url: target };
     }
-    const queue = queueFor(new URL(target).host);
     for (let attempt = 1; ; attempt += 1) {
       if (signal?.aborted) {
         return { ok: false, code: "aborted", url: target };
       }
-      const attempted = (): Promise<RawAttempt> => attemptOnce(target, signal, spec);
-      const raw: RawAttempt = await queue.add(attempted);
+      const raw = await fetchFollowing(target, signal, spec);
+      if (raw.kind === "refused") {
+        return { ok: false, code: raw.code, url: raw.url };
+      }
       if (raw.kind === "failed") {
         if (raw.code === "network" && attempt < maxAttempts) {
           await sleep(backoffMs(attempt));

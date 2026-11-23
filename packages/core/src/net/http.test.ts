@@ -336,14 +336,18 @@ describe("http client", () => {
     expect(calls.filter((call) => call.url.endsWith("/cancelled"))).toHaveLength(0);
   });
 
-  it("checks robots.txt for the final URL after a redirect", async () => {
-    const { fetch } = scriptedFetch((url) => {
+  it("checks robots.txt before fetching a redirect target, and never requests a disallowed one", async () => {
+    const { fetch, calls } = scriptedFetch((url) => {
       if (url.pathname === "/robots.txt") {
         return robotsTxt("User-agent: *\nDisallow: /private\n");
       }
-      const response = html("secret");
-      Object.defineProperty(response, "url", { value: `https://jobs.example.test/private/x` });
-      return response;
+      if (url.pathname === "/public/redirect") {
+        return new Response(null, {
+          status: 302,
+          headers: { location: "https://jobs.example.test/private/x" },
+        });
+      }
+      return html("secret");
     });
     const client = createHttpClient({ fetch, intervalMs: 1, sleep: recordSleep });
 
@@ -354,6 +358,57 @@ describe("http client", () => {
       code: "blocked-by-robots",
       url: "https://jobs.example.test/private/x",
     });
+    expect(calls.some((call) => call.url.endsWith("/private/x"))).toBe(false);
+  });
+
+  it("follows an allowed redirect to another host through that host's robots.txt", async () => {
+    const { fetch, calls } = scriptedFetch((url) => {
+      if (url.pathname === "/robots.txt") return new Response("", { status: 404 });
+      if (url.host === "a.example.test") {
+        return new Response(null, {
+          status: 301,
+          headers: { location: "https://b.example.test/x" },
+        });
+      }
+      return html("moved");
+    });
+    const client = createHttpClient({ fetch, intervalMs: 1, sleep: recordSleep });
+
+    const result = await client.get("https://a.example.test/start");
+
+    expect(result).toMatchObject({ ok: true, body: "moved" });
+    expect(calls.some((call) => call.url === "https://b.example.test/robots.txt")).toBe(true);
+  });
+
+  it("never fetches this computer or a private network, directly or through a redirect", async () => {
+    // protects=the client refuses loopback, link-local and private addresses before any request; fails_when=a public page redirecting to 127.0.0.1 or the LAN is fetched, or a private URL is requested directly; no_claim=DNS names that resolve to private addresses;
+    const { fetch, calls } = scriptedFetch((url) => {
+      if (url.pathname === "/robots.txt") return new Response("", { status: 404 });
+      if (url.host === "jobs.example.test") {
+        return new Response(null, {
+          status: 302,
+          headers: { location: "http://192.168.1.1/admin" },
+        });
+      }
+      return html("internal");
+    });
+    const client = createHttpClient({ fetch, intervalMs: 1, sleep: recordSleep });
+
+    expect(await client.get("https://jobs.example.test/go")).toMatchObject({
+      ok: false,
+      code: "invalid-url",
+    });
+    for (const url of [
+      "http://127.0.0.1:8080/",
+      "http://localhost/",
+      "http://[::1]/",
+      "http://169.254.169.254/",
+    ]) {
+      expect(await client.get(url)).toMatchObject({ ok: false, code: "invalid-url" });
+    }
+    expect(calls.some((call) => /192\.168|127\.0|localhost|169\.254|\[::1\]/.test(call.url))).toBe(
+      false,
+    );
   });
 
   it("fetches through a real local fixture server when the fixture base URL is set", async () => {
