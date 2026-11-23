@@ -54,7 +54,8 @@ describe("pdfWindowOptions", () => {
     expect(web.sandbox).toBe(true);
     expect(web.contextIsolation).toBe(true);
     expect(web.nodeIntegration).toBe(false);
-    expect(web.partition).toBe(PDF_PARTITION);
+    expect(web.partition).toContain(PDF_PARTITION);
+    expect(pdfWindowOptions().webPreferences?.partition).not.toBe(web.partition);
     expect(PDF_PARTITION.startsWith("persist:")).toBe(false);
   });
 });

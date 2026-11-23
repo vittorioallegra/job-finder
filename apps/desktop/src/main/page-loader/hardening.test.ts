@@ -48,7 +48,7 @@ describe("hidden page loader window", () => {
     const options = pageWindowOptions();
     expect(options.show).toBe(false);
     expect(options.webPreferences).toMatchObject({
-      partition: PAGE_LOADER_PARTITION,
+      partition: expect.stringContaining(PAGE_LOADER_PARTITION),
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
@@ -58,6 +58,10 @@ describe("hidden page loader window", () => {
     });
     expect(options.webPreferences?.preload).toBeUndefined();
     expect(PAGE_LOADER_PARTITION.startsWith("persist:")).toBe(false);
+    // One partition per window: concurrent renders never share session handlers or storage.
+    expect(pageWindowOptions().webPreferences?.partition).not.toBe(
+      pageWindowOptions().webPreferences?.partition,
+    );
   });
 
   it("denies every permission request, check and device permission", () => {

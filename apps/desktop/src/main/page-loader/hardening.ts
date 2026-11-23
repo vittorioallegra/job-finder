@@ -1,20 +1,29 @@
+import { randomUUID } from "node:crypto";
 import type { BrowserWindow, BrowserWindowConstructorOptions } from "electron";
 import { isAllowedSubresource, isSameOrigin } from "./policy";
 
-/**
- * A partition without the `persist:` prefix is in memory: cookies and storage vanish with the
- * window and never mix with the app's own session.
- */
+/** Prefix of a loader partition. Without `persist:` it is in memory and vanishes with the window. */
 export const PAGE_LOADER_PARTITION = "job-finder-page-loader";
 
+/**
+ * A fresh in-memory partition per loader window. The session handlers and the request filter are
+ * per session, so a shared partition would let concurrent renders overwrite each other's rules and
+ * let one render's clean-up wipe the storage of another.
+ */
+export function pageLoaderPartition(): string {
+  return `${PAGE_LOADER_PARTITION}-${randomUUID()}`;
+}
+
 /** Options for the hidden loader window. No preload, sandboxed, never shown, JavaScript on for rendering. */
-export function pageWindowOptions(): BrowserWindowConstructorOptions {
+export function pageWindowOptions(
+  partition: string = pageLoaderPartition(),
+): BrowserWindowConstructorOptions {
   return {
     show: false,
     width: 1024,
     height: 768,
     webPreferences: {
-      partition: PAGE_LOADER_PARTITION,
+      partition,
       javascript: true,
       sandbox: true,
       contextIsolation: true,

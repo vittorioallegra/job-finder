@@ -317,6 +317,7 @@ Approved: yes (2026-11-23)
   - The CSV formula guard missed values with leading whitespace or full-width = + - @ — `fix: guard CSV cells that start with spaces or full-width formula characters`
   - A re-seen job never stored its changed title, description or salary, so score invalidation by content hash could never trigger — `fix: store the current content of a job seen again so changed postings are re-scored`
   - A packaged app honoured the fixture base URL whenever JOB_FINDER_E2E was set — `fix: never honour the fixture base URL in a packaged app`
+  - Page loader and PDF windows shared one partition, so concurrent renders overwrote each other's handlers and request filter, listeners piled up, and dispose cleared a render still in use — `fix: give every page loader and PDF render its own in-memory partition`
 
 ### Decisions
 - Single-user, local-only app; published as open source on GitHub, each user runs it on their own machine.

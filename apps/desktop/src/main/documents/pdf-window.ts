@@ -1,5 +1,5 @@
-import { BrowserWindow, session } from "electron";
-import { pdfWindowOptions, PDF_PARTITION } from "./pdf-options";
+import { BrowserWindow } from "electron";
+import { pdfWindowOptions } from "./pdf-options";
 import type { PdfWindow } from "./pdf";
 
 /**
@@ -10,7 +10,7 @@ import type { PdfWindow } from "./pdf";
 export function openPdfWindow(): PdfWindow {
   const window = new BrowserWindow(pdfWindowOptions());
   const { webContents } = window;
-  const pdfSession = session.fromPartition(PDF_PARTITION);
+  const pdfSession = webContents.session;
 
   pdfSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
   pdfSession.setPermissionCheckHandler(() => false);

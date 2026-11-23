@@ -1,12 +1,13 @@
-import { BrowserWindow, session } from "electron";
+import { BrowserWindow } from "electron";
 import { PageLoadError, type PageWindow } from "./loader";
-import { hardenPageWindow, PAGE_LOADER_PARTITION, pageWindowOptions } from "./hardening";
+import { hardenPageWindow, pageWindowOptions } from "./hardening";
 
 /** Opens a hidden, hardened window for one page load. Only main creates these. */
 export function openPageWindow(origin: string): PageWindow {
   const window = new BrowserWindow(pageWindowOptions());
   hardenPageWindow(window, origin);
   const { webContents } = window;
+  const ownSession = webContents.session;
 
   return {
     load(url) {
@@ -56,10 +57,7 @@ export function openPageWindow(origin: string): PageWindow {
       if (!window.isDestroyed()) {
         window.destroy();
       }
-      void session
-        .fromPartition(PAGE_LOADER_PARTITION)
-        .clearStorageData()
-        .catch(() => {});
+      void ownSession.clearStorageData().catch(() => {});
     },
   };
 }
