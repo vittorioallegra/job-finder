@@ -289,7 +289,7 @@ Approved: yes (2026-11-23)
 - [x] 13. Matching and ranking — `docs: record step 13 decisions and tick the step`
 - [x] 14. Search and filters UI — `feat: filter, sort and flag jobs, with saved searches`
 - [x] 15. Application tracker — `feat: add the applications screen, bookmarks and the hide-applied filter`
-- [ ] 16. CV and cover letter
+- [x] 16. CV and cover letter — `feat: add the CV and cover letter panel to application details`
 - [ ] 17. Autofill core and ATS adapters
 - [ ] 18. Autofill AI fallback
 - [ ] 19. Scheduler, notifications, tray, updates
@@ -489,7 +489,21 @@ Approved: yes (2026-11-23)
 - Step 15: preparing does not open documents or the apply window; those are steps 16 and 17. `applications:start` only records the state.
 - Step 15: not exercised: the CSV file opened in Excel or Numbers; the screens in a real browser for layout, phone width and keyboard order (jsdom tests only); the board with real data; the packaged app (the desktop E2E covers the window and engine start only); the duplicate guard on real postings from two sources.
 
+- Step 16: the plan says the CV "references profile item ids", but profile items have no ids. The model refers to an item by its index in the profile list (`source`). The validator checks the item at that index: company, title, location, dates, institution, degree and field must equal the profile verbatim, and one profile item may appear once per list.
+- Step 16: validator scope: a bullet may not add a number its source bullet lacks; the summary and cover letter paragraphs may not add a number the profile lacks; a skill name must be the profile's name or one of its aliases. Free prose is not checked beyond numbers, so an employer named in a sentence is not caught. Not an acceptance criterion gap for the structured fields, but a known limit of the prose.
+- Step 16: the text follows the UI language (the step's instruction, as affinity explanations do since step 14). Spec #6 says "the posting's language"; the UI language was chosen instead.
+- Step 16: one AI call per attempt; an answer that breaks a validator rule is sent back once with the rule paths and codes. A second broken answer is `invalid-output`, never stored. Provider failures keep their AI codes.
+- Step 16: a cloud provider needs the CV import's consent, enforced in main. Only the profile's content fields (no contact details, links, application defaults or standard answers) and the posting's title, company and description are sent.
+- Step 16: storage: table `application_documents`, one row per application and kind, with the editable JSON content and `exported_at`. An edit after the last export shows that the PDF is out of date. The PDF is written to `<userData>/applications/<application id>/<kind>.pdf`; the id is checked before it becomes a path.
+- Step 16: PDF: the stored HTML is printed by a hidden Electron window with `printToPDF`. The window has no preload and no JavaScript, an in-memory partition, denied permissions and downloads, and loads only its own `data:` document. The rendered HTML is plain single-column markup (real headings and lists, no tables) for ATS reading.
+- Step 16: the AI-written cover letter has no greeting or sign-off in its text; the template adds the greeting from main's i18n. The HTML is escaped; every value passes through `escapeHtml`.
+- Step 16: edits are limited to the summary, bullet text and paragraph text. Employers, titles, dates, education and skills are read-only in the editor. A save runs the same validator as generation, so an edit cannot add a fact either.
+- Step 16: document actions do not change the application's status. Moving `preparing` to `ready` stays a user move (the status screen); no automatic move on export.
+- Step 16: the in-memory bridge (web dev page) reports the engine as unavailable for generation and export; it stores no documents.
+- Step 16: `/verify` could not run: `origin/main` is not resolvable and fetching it is a GitHub call, which the step forbids. The same checks were run by hand: full unit suite, typecheck, lint, `pnpm format:check` and `pnpm test:e2e:desktop`, all green.
+- Step 16: not exercised: real provider output quality (scripted doubles only); the exported PDF's layout and print output in a real window (no test renders a PDF); the packaged app; the panel in a real browser for keyboard order, focus and phone width (jsdom tests only); a generated document on a real job with a real profile.
+
 ### Open questions
 
 ### Next
-Step 16: CV and cover letter (AI returns a structured CV that references profile item ids; validator: employers, titles, dates and degrees must match the profile verbatim, skills match the profile including aliases, numbers in bullets must appear in the source bullet; HTML templates (ATS-readable), in-app editor, PDF via hidden window `printToPDF`, files stored per application).
+Step 17: Autofill core and ATS adapters (apply window with its own session partition, sandboxed, no preload, permissions denied, downloads blocked except user-initiated; filling through `webContents.debugger` (CDP) with native value setters and input/change events for React-controlled inputs, iframes and open shadow roots, `DOM.setFileInputFiles` for uploads; hidden and honeypot fields skipped; never sends Enter and never submits; deterministic adapters for Greenhouse, Lever and Ashby; unfilled fields highlighted; "I submitted it" moves to `applied`, closing without confirming keeps `ready`).
