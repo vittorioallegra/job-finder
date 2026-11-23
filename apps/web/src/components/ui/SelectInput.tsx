@@ -9,15 +9,27 @@ export interface SelectInputProps extends SelectHTMLAttributes<HTMLSelectElement
   label: string;
   options: readonly SelectOption[];
   hint?: string;
+  /** Keeps the label for screen readers only, when the context already names the field. */
+  hideLabel?: boolean;
 }
 
-export function SelectInput({ label, options, hint, id, ...rest }: SelectInputProps) {
+export function SelectInput({
+  label,
+  options,
+  hint,
+  hideLabel = false,
+  id,
+  ...rest
+}: SelectInputProps) {
   const generatedId = useId();
   const selectId = id ?? generatedId;
   const hintId = `${selectId}-hint`;
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={selectId} className="text-[13px] font-medium text-app-fg">
+      <label
+        htmlFor={selectId}
+        className={hideLabel ? "sr-only" : "text-[13px] font-medium text-app-fg"}
+      >
         {label}
       </label>
       <select

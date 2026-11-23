@@ -263,6 +263,64 @@ export function CompaniesScreen() {
 
       {load.status === "ready" ? (
         <>
+          <section aria-labelledby="companies-list-title" className="flex flex-col gap-4">
+            <h2 id="companies-list-title" className="sr-only">
+              {t("companies.list.heading")}
+            </h2>
+            {load.companies.length === 0 ? (
+              <EmptyState
+                icon={<Building2 className="size-5" strokeWidth={1.8} aria-hidden="true" />}
+                title={t("companies.list.empty")}
+              />
+            ) : (
+              <ul className="grid gap-3 md:grid-cols-2">
+                {load.companies.map((company) => (
+                  <Card as="li" key={company.id} className="flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-display text-lg font-semibold text-app-fg">
+                        {company.name}
+                      </p>
+                      <Badge tone={company.ats ? "neutral" : "accent"}>
+                        {company.ats
+                          ? t("companies.list.board", { ats: company.ats })
+                          : t("companies.list.careersPage")}
+                      </Badge>
+                    </div>
+                    <p className="text-xs break-all text-app-muted">{company.careersUrl}</p>
+                    <p
+                      className={`text-sm ${company.lastScan?.outcome === "failed" && company.lastScan.code !== "no-parseable-jobs" ? "text-app-danger" : "text-app-fg"}`}
+                    >
+                      {scanSummary(company.lastScan)}
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => void retryScan(company.id)}
+                      >
+                        {t("companies.scan.retry")}
+                      </Button>
+                      {scanNotice?.companyId === company.id ? (
+                        scanNotice.status === "started" ? (
+                          <p role="status" className="text-sm text-app-good">
+                            {t("companies.scan.started")}
+                          </p>
+                        ) : (
+                          <p role="alert" className="text-sm text-app-danger">
+                            {t(
+                              scanNotice.code === "already-running"
+                                ? "companies.scan.alreadyRunning"
+                                : "companies.scan.engineUnavailable",
+                            )}
+                          </p>
+                        )
+                      ) : null}
+                    </div>
+                  </Card>
+                ))}
+              </ul>
+            )}
+          </section>
           <Card
             as="section"
             aria-labelledby="companies-discover-title"
@@ -406,65 +464,6 @@ export function CompaniesScreen() {
               </div>
             </form>
           </Card>
-
-          <section aria-labelledby="companies-list-title" className="flex flex-col gap-4">
-            <h2 id="companies-list-title" className="text-2xl font-semibold text-app-fg">
-              {t("companies.list.heading")}
-            </h2>
-            {load.companies.length === 0 ? (
-              <EmptyState
-                icon={<Building2 className="size-5" strokeWidth={1.8} aria-hidden="true" />}
-                title={t("companies.list.empty")}
-              />
-            ) : (
-              <ul className="grid gap-3 md:grid-cols-2">
-                {load.companies.map((company) => (
-                  <Card as="li" key={company.id} className="flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="font-display text-lg font-semibold text-app-fg">
-                        {company.name}
-                      </p>
-                      <Badge tone={company.ats ? "neutral" : "accent"}>
-                        {company.ats
-                          ? t("companies.list.board", { ats: company.ats })
-                          : t("companies.list.careersPage")}
-                      </Badge>
-                    </div>
-                    <p className="text-xs break-all text-app-muted">{company.careersUrl}</p>
-                    <p
-                      className={`text-sm ${company.lastScan?.outcome === "failed" && company.lastScan.code !== "no-parseable-jobs" ? "text-app-danger" : "text-app-fg"}`}
-                    >
-                      {scanSummary(company.lastScan)}
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => void retryScan(company.id)}
-                      >
-                        {t("companies.scan.retry")}
-                      </Button>
-                      {scanNotice?.companyId === company.id ? (
-                        scanNotice.status === "started" ? (
-                          <p role="status" className="text-sm text-app-good">
-                            {t("companies.scan.started")}
-                          </p>
-                        ) : (
-                          <p role="alert" className="text-sm text-app-danger">
-                            {t(
-                              scanNotice.code === "already-running"
-                                ? "companies.scan.alreadyRunning"
-                                : "companies.scan.engineUnavailable",
-                            )}
-                          </p>
-                        )
-                      ) : null}
-                    </div>
-                  </Card>
-                ))}
-              </ul>
-            )}
-          </section>
         </>
       ) : null}
     </main>

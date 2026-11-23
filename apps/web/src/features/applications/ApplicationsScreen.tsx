@@ -157,6 +157,7 @@ export function ApplicationsScreen() {
         </div>
         <SelectInput
           label={t("applications.cardStatus", { title: application.jobTitle })}
+          hideLabel
           options={options}
           value={application.status}
           disabled={options.length === 1}

@@ -218,17 +218,23 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
               ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge>{t(`jobs.results.workMode.${state.job.workMode}`)}</Badge>
-              <Badge>
-                {t(`jobs.filters.values.employment.${state.job.employmentType}`, {
-                  defaultValue: notStated,
-                })}
-              </Badge>
-              <Badge>
-                {t(`jobs.filters.values.seniority.${state.job.seniority}`, {
-                  defaultValue: notStated,
-                })}
-              </Badge>
+              {state.job.workMode !== "unknown" ? (
+                <Badge>{t(`jobs.results.workMode.${state.job.workMode}`)}</Badge>
+              ) : null}
+              {state.job.employmentType !== "unknown" ? (
+                <Badge>
+                  {t(`jobs.filters.values.employment.${state.job.employmentType}`, {
+                    defaultValue: state.job.employmentType,
+                  })}
+                </Badge>
+              ) : null}
+              {state.job.seniority !== "unknown" ? (
+                <Badge>
+                  {t(`jobs.filters.values.seniority.${state.job.seniority}`, {
+                    defaultValue: state.job.seniority,
+                  })}
+                </Badge>
+              ) : null}
             </div>
           </div>
 
@@ -264,7 +270,9 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
               <dt className="text-app-muted">{t("jobs.detail.visa")}</dt>
               <dd className="text-app-fg">{t(`jobs.filters.visa.${state.job.visaSponsorship}`)}</dd>
               <dt className="text-app-muted">{t("jobs.detail.language")}</dt>
-              <dd className="text-app-fg">{state.job.language ?? notStated}</dd>
+              <dd className="text-app-fg">
+                {languageName(state.job.language, i18n.language) ?? notStated}
+              </dd>
               <dt className="text-app-muted">{t("jobs.detail.salary")}</dt>
               <dd className="text-app-fg">{salaryText}</dd>
             </dl>
@@ -415,4 +423,14 @@ function PreparePanel({
       ) : null}
     </div>
   );
+}
+
+/** "en" as "English" (or "inglese") in the UI language; the code itself when the runtime has no name. */
+function languageName(code: string | null, uiLanguage: string): string | null {
+  if (code === null) return null;
+  try {
+    return new Intl.DisplayNames([uiLanguage], { type: "language" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
 }
