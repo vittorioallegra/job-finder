@@ -281,7 +281,7 @@ Approved: yes (2026-11-23)
 - [x] 5. AI layer — `feat: test the AI connection from the settings screen through the engine`
 - [x] 6. Onboarding and profile — `feat: add onboarding and profile editor screens`
 - [x] 7. Fetch infrastructure and page loader — `feat: render JavaScript pages in a hidden loader for the engine`
-- [ ] 8. Normalization and ATS adapters
+- [x] 8. Normalization and ATS adapters — `docs: add ATS adapter guide and record step 8 decisions`
 - [ ] 9. Ingestion pipeline vertical slice
 - [ ] 10. Discovery A: web search and companies
 - [ ] 11. Discovery B: Common Crawl and keyed providers
@@ -381,7 +381,20 @@ Approved: yes (2026-11-23)
 - Step 7: no UI, no table, no user-facing strings. Job HTML is not shown anywhere yet; the sanitized-text rule applies when the first screen shows it (step 9 or 12).
 - Step 7: not exercised: a real hidden window rendering a real JavaScript page (no automated test reaches Electron's window), real sites and their robots.txt, and the 1 s spacing under real timers in production (tests use 60 ms).
 
+- Step 8: `cheerio` 1.2.0 (exact, the Architecture version, released 2026-01-23) in core, for HTML to text and the Personio and Teamtailor XML. No `allowBuilds` change.
+- Step 8: the normalized model is `packages/core/src/normalize` (subpath `@job-finder/core/normalize`). Identity is `(source, sourceJobId)`, with `source` the ATS id. Cross-source duplicates are found by `fingerprint` (SHA-256 of company without legal suffixes, title without gender markers, and the sorted location set). `groupByFingerprint` only groups; choosing the ATS URL as `apply_url` is left to step 9.
+- Step 8: work mode comes from a structured field first, then the title, then the location text. Never from the description, where "remote" appears in unrelated sentences. Remote scope is the text after "remote" in the location.
+- Step 8: countries are matched by name in English, Italian and German (CLDR). Two-letter codes are never read from free text ("CA" is Canada and California). "Georgia" is never read as a country (US state in Lever data). Deprecated codes such as UK and FX are excluded. Structured fields carry their code.
+- Step 8: seniority and visa come from stated text only (title, level label, the description for visa). Nothing is inferred; AI-based inference is for the scoring step.
+- Step 8: salary needs a currency symbol or code and at least one amount; the period is optional. Language is a stop-word heuristic for en, it, de, fr, es and pl, and returns nothing for short text.
+- Step 8: ATS adapters read public APIs: Greenhouse, Lever, Ashby, Workable (account widget, undocumented, shape checked on every read), SmartRecruiters (paged, 100 per page, capped at 20 pages), Personio (XML feed), Recruitee (offers API). Teamtailor's API needs a key, so the adapter reads the public career-site feed `https://<slug>.teamtailor.com/jobs.rss`.
+- Step 8: a failed page returns a failure with no jobs, so a partial read can never close jobs. A slug must match the pattern `^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$`, so it cannot change the URL.
+- Step 8: fixtures were recorded from the public endpoints on 2026-11-23 and trimmed (first postings, descriptions cut to 900 characters, unused fields removed). They are not byte-identical to live responses. Lever's API has no company name and SmartRecruiters' list has no description, so those come from the board's company name and an empty description.
+- Step 8: ATS detection checks the careers URL first, then the links and embed URLs in the page. Pages with an ATS script but no link (no board token) are reported as unknown.
+- Step 8: `docs/adding-an-ats-adapter.md` is the guide; CLAUDE.md lists the new folders.
+- Step 8: not exercised: no test reaches a live provider; the fixtures came from one manual check of each public endpoint, so a format change at a provider is found only by re-recording. Workable's widget shape is undocumented. Teamtailor custom domains and Personio's `.com` tenants are not tested. Greenhouse multi-city location strings keep their raw text as one location.
+
 ### Open questions
 
 ### Next
-Step 8: Normalization and ATS adapters (normalized job model and helpers: country codes, work mode, remote scope, employment type, seniority, salary, language, visa; identity keyed by (source, source_job_id) with a fingerprint for cross-source dedupe; adapters for Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Personio, Recruitee and Teamtailor against sanitized recorded fixtures; ATS detection from URL and page markers; `docs/adding-an-ats-adapter.md`).
+Step 9: Ingestion pipeline vertical slice (tables `companies`, `jobs`, `job_sources`, `run_events`; engine run orchestration for a list of companies via the ATS adapters, dedupe, batched persistence; `closed_at` only after a complete scan; per-source failure isolation; run log, progress events, cancel via `AbortSignal`; minimal results list in the UI).
