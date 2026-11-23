@@ -15,6 +15,7 @@
     "./profile": "./src/profile/schema.ts",
     "./ranking": "./src/ranking/index.ts",
     "./ats": "./src/ats/index.ts",
+    "./ats/autofill": "./src/ats/autofill/index.ts",
     "./careers": "./src/careers/index.ts",
     "./ingest": "./src/ingest/index.ts",
     "./ingest/events": "./src/ingest/events.ts",
