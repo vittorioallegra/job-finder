@@ -665,6 +665,50 @@
         }
       },
       "writtenIn": "Written in {{language}}."
+    },
+    "form": {
+      "heading": "Application form",
+      "intro": "Opens the application's form in its own window and fills what your profile covers. You review, edit and submit it there. The app never submits.",
+      "open": "Open form and autofill",
+      "opening": "Opening the form…",
+      "opened": "The form is open in its own window. Review it there.",
+      "provider": "Recognised as: {{provider}}.",
+      "providers": {
+        "greenhouse": "Greenhouse",
+        "lever": "Lever",
+        "ashby": "Ashby",
+        "generic": "a form the app does not know (common fields matched by label)"
+      },
+      "noFields": "No form fields were found on the page.",
+      "nothingFilled": "Nothing could be filled from your profile.",
+      "filled": "Filled: {{list}}.",
+      "leftHeading": "Left for you (highlighted in the form)",
+      "leftItem": "{{label}}: {{reason}}",
+      "reasons": {
+        "unmapped": "no profile field matches it",
+        "no-value": "your profile has no value for it",
+        "no-option": "no matching choice",
+        "not-exported": "the PDF is not exported yet",
+        "unsupported": "autofill does not fill this kind of control",
+        "rejected": "the form did not accept the value"
+      },
+      "reviewNote": "Nothing is submitted. Submit the form in its window when it is right.",
+      "submitted": "I submitted it",
+      "confirming": "Saving…",
+      "confirmed": "Marked as applied.",
+      "confirmFailed": "The status could not be changed.",
+      "readyFirst": "Mark the application ready before you confirm a submission.",
+      "inactive": "Autofill is available while the application is being prepared or ready.",
+      "failures": {
+        "not-found": "The application no longer exists.",
+        "invalid-status": "Autofill is available while the application is being prepared or ready.",
+        "invalid-url": "The posting has no web link to apply on.",
+        "no-profile": "Save your profile first.",
+        "load-failed": "The application form did not load.",
+        "debugger-failed": "The form window could not be controlled.",
+        "autofill-failed": "Autofill stopped before it finished.",
+        "unknown": "Autofill stopped before it finished."
+      }
     }
   }
 }

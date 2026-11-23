@@ -665,6 +665,50 @@
         }
       },
       "writtenIn": "Scritto in {{language}}."
+    },
+    "form": {
+      "heading": "Modulo di candidatura",
+      "intro": "Apre il modulo della candidatura in una sua finestra e compila ciò che il profilo copre. Lo controlli, lo modifichi e lo invii lì. L'app non invia mai nulla.",
+      "open": "Apri il modulo e compila",
+      "opening": "Apertura del modulo…",
+      "opened": "Il modulo è aperto nella sua finestra. Controllalo lì.",
+      "provider": "Riconosciuto come: {{provider}}.",
+      "providers": {
+        "greenhouse": "Greenhouse",
+        "lever": "Lever",
+        "ashby": "Ashby",
+        "generic": "un modulo non riconosciuto (campi comuni riconosciuti dall'etichetta)"
+      },
+      "noFields": "Nella pagina non ci sono campi del modulo.",
+      "nothingFilled": "Nessun campo è stato compilato dal profilo.",
+      "filled": "Compilati: {{list}}.",
+      "leftHeading": "Da completare a mano (evidenziati nel modulo)",
+      "leftItem": "{{label}}: {{reason}}",
+      "reasons": {
+        "unmapped": "nessun campo del profilo corrisponde",
+        "no-value": "nel profilo manca il valore",
+        "no-option": "nessuna scelta corrispondente",
+        "not-exported": "il PDF non è ancora esportato",
+        "unsupported": "la compilazione automatica non gestisce questo tipo di controllo",
+        "rejected": "il modulo non ha accettato il valore"
+      },
+      "reviewNote": "Non viene inviato nulla. Invia il modulo dalla sua finestra quando è corretto.",
+      "submitted": "Ho inviato la candidatura",
+      "confirming": "Salvataggio…",
+      "confirmed": "Segnata come candidatura inviata.",
+      "confirmFailed": "Lo stato non è stato cambiato.",
+      "readyFirst": "Segna la candidatura come pronta prima di confermare l'invio.",
+      "inactive": "La compilazione automatica è disponibile mentre la candidatura è in preparazione o pronta.",
+      "failures": {
+        "not-found": "La candidatura non esiste più.",
+        "invalid-status": "La compilazione automatica è disponibile mentre la candidatura è in preparazione o pronta.",
+        "invalid-url": "L'annuncio non ha un link web per candidarsi.",
+        "no-profile": "Salva prima il tuo profilo.",
+        "load-failed": "Il modulo della candidatura non si è caricato.",
+        "debugger-failed": "Non è stato possibile controllare la finestra del modulo.",
+        "autofill-failed": "La compilazione si è interrotta prima della fine.",
+        "unknown": "La compilazione si è interrotta prima della fine."
+      }
     }
   }
 }

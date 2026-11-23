@@ -5,6 +5,7 @@ import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Button } from "../../components/ui/Button";
 import { TextArea } from "../../components/ui/TextArea";
 import { ApplicationDocuments } from "./ApplicationDocuments";
+import { ApplicationForm } from "./ApplicationForm";
 
 type DetailState =
   | { status: "loading" }
@@ -126,6 +127,13 @@ export function ApplicationDetail({ applicationId, onChanged, onClose }: Applica
             )}
           </div>
           <ApplicationDocuments applicationId={state.application.id} />
+          <ApplicationForm
+            application={state.application}
+            onChanged={(application) => {
+              setState({ status: "ready", application });
+              onChanged(application);
+            }}
+          />
           <form onSubmit={(event) => void addNote(event)} className="flex flex-col gap-2">
             <TextArea
               label={t("applications.detail.noteLabel")}
