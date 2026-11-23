@@ -37,6 +37,8 @@ function yesNoOption(field: FormField, yes: boolean): string | undefined {
 function firstAndLast(fullName: string): { first: string; last: string } {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
   if (parts.length < 2) return { first: parts[0] ?? "", last: "" };
+  // "Maria De Luca" or "Anna Maria Rossi" cannot be split reliably: leave both for the user.
+  if (parts.length > 2) return { first: "", last: "" };
   return { first: parts[0] ?? "", last: parts[parts.length - 1] ?? "" };
 }
 

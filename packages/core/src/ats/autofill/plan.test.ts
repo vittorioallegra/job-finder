@@ -84,6 +84,22 @@ describe("planAutofill", () => {
     expect(plan.unfilled).toEqual([]);
   });
 
+  it("leaves first and last name to the user when the full name has more than two parts", () => {
+    // protects=a multi-part name is never split into a wrong first or last name; fails_when=Maria De Luca is typed with the last name Luca; no_claim=names with two parts, covered above;
+    const fields = [
+      field({ id: "1", name: "job_application[first_name]", label: "First Name *" }),
+      field({ id: "2", name: "job_application[last_name]", label: "Last Name *" }),
+    ];
+    const multi = profile({
+      contact: { ...profile().contact, fullName: "Maria De Luca" },
+    });
+
+    const plan = planAutofill(fields, { profile: multi, documents: ALL_DOCUMENTS }, "greenhouse");
+
+    expect(plan.actions).toEqual([]);
+    expect(plan.unfilled.map((item) => item.reason)).toEqual(["no-value", "no-value"]);
+  });
+
   it("fills a Lever form by its field names, including its link fields", () => {
     const fields = [
       field({ id: "1", name: "name", label: "Full name" }),
