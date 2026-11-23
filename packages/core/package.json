@@ -29,7 +29,9 @@
     "./documents/generate": "./src/documents/generate.ts",
     "./filters": "./src/filters/schema.ts",
     "./filters/sql": "./src/filters/sql.ts",
-    "./normalize/job": "./src/normalize/job.ts"
+    "./normalize/job": "./src/normalize/job.ts",
+    "./updates": "./src/updates/release.ts",
+    "./updates/version": "./src/updates/version.ts"
   },
   "scripts": {
     "typecheck": "node ../../node_modules/typescript7/bin/tsc --noEmit -p tsconfig.json"

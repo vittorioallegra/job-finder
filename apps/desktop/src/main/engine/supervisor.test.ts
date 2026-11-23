@@ -1,4 +1,4 @@
-// protects=the engine answers pings and database batches served by main, page renders and ingestion and scoring requests are answered under their request ids, and after a crash the supervisor logs the exit,
+// protects=the engine answers pings and database batches served by main, page renders, ingestion, scoring and update-check requests are answered under their request ids, state changes reach the owner once each, and after a crash the supervisor logs the exit,
 // fails_when=a ping or a batch returns the wrong results, a page render gets no answer or another request's answer, an ingestion answer or progress is lost or sent to another run, a run stays running after its engine crashed, the exit reason is not logged, the owner is not told about a crash, no restart happens (including when reconciling runs fails), or a call hangs instead of rejecting;
 // no_claim=utility-process spawning, the real MessageChannelMain wiring and the bundled engine entry are covered by the desktop E2E smoke, not here.
 import { mkdtempSync } from "node:fs";
@@ -70,6 +70,8 @@ interface Harness {
     engineLosses: number;
     discoveries: string[];
     scorings: Array<{ jobIds: string[]; apiKey: string | null }>;
+    updateChecks: string[];
+    stateChanges: string[];
   };
 }
 
@@ -99,11 +101,17 @@ async function startHarness(): Promise<Harness> {
     engineLosses: 0,
     discoveries: [],
     scorings: [],
+    updateChecks: [],
+    stateChanges: [],
   };
   const launch = (): EngineHandle => {
     const { port1, port2 } = new MessageChannel();
     const runtime = createEngineRuntime(toPortLike(port2), {
       net: fakeNet(),
+      checkForUpdate: async (currentVersion) => {
+        control.updateChecks.push(currentVersion);
+        return { ok: true, release: { version: "9.0.0", url: "https://example.test/release" } };
+      },
       generateDocument: async () => ({ ok: false as const, code: "unknown" as const }),
       mapFormFields: async () => ({ ok: false as const, code: "unknown" as const }),
       createScoring: () => ({
@@ -186,6 +194,9 @@ async function startHarness(): Promise<Harness> {
     onIngestEvent: (event) => control.ingestEvents.push(event),
     onEngineLost: () => {
       control.engineLosses += 1;
+    },
+    onStateChange: (state) => {
+      control.stateChanges.push(state);
     },
   });
   const harness = { supervisor, launches, logs, database, control };
@@ -320,6 +331,22 @@ describe("engine supervisor", () => {
     launches[1]?.crash();
     await waitFor(() => supervisor.state === "failed");
     expect(launches).toHaveLength(5);
+    // The owner hears each change once: restarting, running again, then restarting per crash and failed last.
+    expect(control.stateChanges.at(0)).toBe("restarting");
+    expect(control.stateChanges.at(-1)).toBe("failed");
+    expect(control.stateChanges).toEqual(
+      control.stateChanges.filter((state, index, all) => index === 0 || all[index - 1] !== state),
+    );
+  });
+
+  it("checks for an update in the engine and answers under its request id", async () => {
+    const { supervisor, control } = await startHarness();
+    const outcome = await supervisor.checkForUpdate("0.2.0");
+    expect(control.updateChecks).toEqual(["0.2.0"]);
+    expect(outcome).toEqual({
+      ok: true,
+      release: { version: "9.0.0", url: "https://example.test/release" },
+    });
   });
 
   it("runs an AI connection test in the engine and hands it the key only there", async () => {

@@ -68,6 +68,7 @@ describe("engine runtime", () => {
     const port = fakePort();
     const services: EngineServices = {
       createIngest: noIngest,
+      checkForUpdate: async () => ({ ok: false as const, code: "unavailable" as const }),
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
@@ -90,6 +91,7 @@ describe("engine runtime", () => {
     const port = fakePort();
     const services: EngineServices = {
       createIngest: noIngest,
+      checkForUpdate: async () => ({ ok: false as const, code: "unavailable" as const }),
       createScoring: noScoring,
       mapFormFields: async () => ({ ok: true, answers: [] }),
       generateDocument: noDocuments,
@@ -121,6 +123,7 @@ describe("engine runtime", () => {
     const port = fakePort();
     const services: EngineServices = {
       createIngest: noIngest,
+      checkForUpdate: async () => ({ ok: false as const, code: "unavailable" as const }),
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
@@ -145,6 +148,7 @@ describe("engine runtime", () => {
     const port = fakePort();
     const services: EngineServices = {
       createIngest: noIngest,
+      checkForUpdate: async () => ({ ok: false as const, code: "unavailable" as const }),
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
@@ -175,6 +179,7 @@ describe("engine runtime", () => {
     const seen: string[] = [];
     const services: EngineServices = {
       createIngest: noIngest,
+      checkForUpdate: async () => ({ ok: false as const, code: "unavailable" as const }),
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: async (request) => {
@@ -211,6 +216,7 @@ describe("engine runtime", () => {
     const port = fakePort();
     const services: EngineServices = {
       createIngest: noIngest,
+      checkForUpdate: async () => ({ ok: false as const, code: "unavailable" as const }),
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: async () => {
@@ -245,6 +251,7 @@ describe("engine runtime", () => {
     const port = fakePort();
     const services: EngineServices = {
       createIngest: noIngest,
+      checkForUpdate: async () => ({ ok: false as const, code: "unavailable" as const }),
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
@@ -273,6 +280,7 @@ describe("engine runtime", () => {
     const port = fakePort();
     createEngineRuntime(port, {
       createIngest: noIngest,
+      checkForUpdate: async () => ({ ok: false as const, code: "unavailable" as const }),
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
@@ -292,6 +300,7 @@ describe("engine runtime", () => {
       return {
         net,
         createIngest: noIngest,
+        checkForUpdate: async () => ({ ok: false as const, code: "unavailable" as const }),
         createScoring: noScoring,
         mapFormFields: noMapping,
         generateDocument: noDocuments,
@@ -380,6 +389,7 @@ describe("engine runtime", () => {
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
       discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
+      checkForUpdate: async () => ({ ok: false as const, code: "unavailable" as const }),
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
@@ -407,6 +417,7 @@ describe("engine runtime", () => {
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
       discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
+      checkForUpdate: async () => ({ ok: false as const, code: "unavailable" as const }),
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
@@ -442,6 +453,7 @@ describe("engine runtime", () => {
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
       createIngest: noIngest,
+      checkForUpdate: async () => ({ ok: false as const, code: "unavailable" as const }),
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
@@ -477,6 +489,7 @@ describe("engine runtime", () => {
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
       createIngest: noIngest,
+      checkForUpdate: async () => ({ ok: false as const, code: "unavailable" as const }),
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
@@ -507,6 +520,7 @@ describe("engine runtime", () => {
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
       discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
+      checkForUpdate: async () => ({ ok: false as const, code: "unavailable" as const }),
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,

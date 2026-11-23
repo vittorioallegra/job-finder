@@ -17,6 +17,7 @@ import type { GenerateDocumentOutcome } from "@job-finder/core/documents/generat
 import type { FormField } from "@job-finder/core/ats/autofill";
 import type { AutofillMapOutcome } from "@job-finder/core/ats/autofill/ai";
 import type { DocumentLanguage } from "@job-finder/core/documents/language";
+import type { UpdateCheckOutcome } from "@job-finder/core/updates";
 
 /**
  * Database operations the engine may request. Main owns the database and executes these in
@@ -122,6 +123,11 @@ export type MainToEngineMessage =
   /** Maps the fields the rules left with the AI; the answer is `map-form-fields-result`. */
   | { type: "map-form-fields"; id: number; request: MapFormFieldsRequest }
   /**
+   * Asks GitHub for the latest release. The engine makes the request through its HTTP client (fixture
+   * override and robots.txt apply); the answer is `check-update-result`.
+   */
+  | { type: "check-update"; id: number; currentVersion: string }
+  /**
    * Web search for ATS boards. The engine makes the requests; main relays the criteria, the enabled
    * sources and, for keyed providers, their keys (the only path a search key takes out of main).
    */
@@ -145,5 +151,7 @@ export type EngineToMainMessage =
   | { type: "score-jobs-result"; id: number; outcome: ScoreJobsOutcome }
   | { type: "generate-document-result"; id: number; outcome: GenerateDocumentOutcome }
   | { type: "map-form-fields-result"; id: number; outcome: AutofillMapOutcome }
+  /** The answer to a `check-update` request. */
+  | { type: "check-update-result"; id: number; outcome: UpdateCheckOutcome }
   /** A run's progress and log entries. The final `run-finished` is sent after the run row is closed. */
   | { type: "ingest-progress"; event: IngestEvent };

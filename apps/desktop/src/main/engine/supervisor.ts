@@ -9,6 +9,7 @@ import type {
 } from "@job-finder/core/discovery/types";
 import type { IngestEvent } from "@job-finder/core/ingest/events";
 import type { PageRenderResult } from "@job-finder/core/net";
+import type { UpdateCheckOutcome } from "@job-finder/core/updates";
 import type {
   DbCall,
   DbResult,
@@ -58,6 +59,8 @@ export interface EngineSupervisorOptions {
   onIngestEvent?: (event: IngestEvent) => void;
   /** Called when the current engine dies unexpectedly (not when the supervisor is stopped). */
   onEngineLost?: () => void;
+  /** Called whenever the state changes (not for the initial `running`). */
+  onStateChange?: (state: EngineSupervisorState) => void;
 }
 
 /**
@@ -123,6 +126,8 @@ export interface EngineSupervisor {
   generateDocument(request: GenerateDocumentRequest): Promise<GenerateDocumentOutcome>;
   /** Maps the fields the rules left with the AI. Rejects with `EngineUnavailableError` when the engine is gone. */
   mapFormFields(request: MapFormFieldsRequest): Promise<AutofillMapOutcome>;
+  /** Asks the engine for the latest release. Rejects with EngineUnavailableError when the engine is gone. */
+  checkForUpdate(currentVersion: string): Promise<UpdateCheckOutcome>;
   /** Asks the engine to stop a run. Ignored when no engine is running. */
   cancelIngestion(runId: string): void;
   readonly state: EngineSupervisorState;
@@ -169,6 +174,11 @@ interface PendingFormMap {
   reject: (error: Error) => void;
 }
 
+interface PendingUpdateCheck {
+  resolve: (outcome: UpdateCheckOutcome) => void;
+  reject: (error: Error) => void;
+}
+
 interface Current {
   handle: EngineHandle;
   ready: boolean;
@@ -180,6 +190,7 @@ interface Current {
   pendingScorings: Map<number, PendingScoring>;
   pendingDocuments: Map<number, PendingDocument>;
   pendingFormMaps: Map<number, PendingFormMap>;
+  pendingUpdateChecks: Map<number, PendingUpdateCheck>;
 }
 
 /**
@@ -199,6 +210,12 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
   let nextRequestId = 1;
   let readyWaiters: Pending[] = [];
 
+  function setPhase(next: EngineSupervisorState): void {
+    if (phase === next) return;
+    phase = next;
+    options.onStateChange?.(next);
+  }
+
   function spawn(): void {
     if (stopped) {
       return;
@@ -215,9 +232,10 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pendingScorings: new Map(),
       pendingDocuments: new Map(),
       pendingFormMaps: new Map(),
+      pendingUpdateChecks: new Map(),
     };
     current = state;
-    phase = "running";
+    setPhase("running");
     handle.port.on("message", (data) => onMessage(state, data as EngineToMainMessage));
     handle.port.start();
     handle.onExit((code) => onExit(state, code));
@@ -275,6 +293,10 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pending.reject(new EngineUnavailableError(reason));
     }
     state.pendingScorings.clear();
+    for (const pending of state.pendingUpdateChecks.values()) {
+      pending.reject(new EngineUnavailableError(reason));
+    }
+    state.pendingUpdateChecks.clear();
   }
 
   function rejectReadyWaiters(reason: EngineUnavailableReason): void {
@@ -331,6 +353,12 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pending?.resolve(message.outcome);
       return;
     }
+    if (message.type === "check-update-result") {
+      const pending = state.pendingUpdateChecks.get(message.id);
+      state.pendingUpdateChecks.delete(message.id);
+      pending?.resolve(message.outcome);
+      return;
+    }
     if (message.type === "score-jobs-result") {
       const pending = state.pendingScorings.get(message.id);
       state.pendingScorings.delete(message.id);
@@ -372,7 +400,7 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
     }
     options.onEngineLost?.();
     consecutiveCrashes += 1;
-    phase = "restarting";
+    setPhase("restarting");
     // A reconcile failure is logged and must not block recovery: restart or give-up still runs.
     const reconciled = options.database.reconcileInterruptedRuns().then(
       (count) => `${count} run(s) marked interrupted`,
@@ -384,7 +412,7 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
         return;
       }
       if (consecutiveCrashes > maxRestarts) {
-        phase = "failed";
+        setPhase("failed");
         options.log("error", `engine crashed ${consecutiveCrashes} times in a row; not restarting`);
         rejectReadyWaiters("gave_up");
         return;
@@ -471,6 +499,15 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       return new Promise<GenerateDocumentOutcome>((resolve, reject) => {
         ready.pendingDocuments.set(id, { resolve, reject });
         ready.handle.port.postMessage({ type: "generate-document", id, request });
+      });
+    },
+    async checkForUpdate(currentVersion) {
+      const ready = current?.ready ? current : await waitUntilReady();
+      const id = nextRequestId;
+      nextRequestId += 1;
+      return new Promise<UpdateCheckOutcome>((resolve, reject) => {
+        ready.pendingUpdateChecks.set(id, { resolve, reject });
+        ready.handle.port.postMessage({ type: "check-update", id, currentVersion });
       });
     },
     async mapFormFields(request) {

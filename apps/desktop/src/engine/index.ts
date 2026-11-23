@@ -4,6 +4,7 @@ import { createHttpClient } from "@job-finder/core/net";
 import { createIngestController } from "./ingest";
 import { generateDocument } from "@job-finder/core/documents/generate";
 import { mapFormFields } from "@job-finder/core/ats/autofill/ai";
+import { checkLatestRelease, RELEASES_REPOSITORY } from "@job-finder/core/updates";
 import { createScoringRunner } from "./scoring";
 import { fromElectronPort } from "./port";
 import { createEngineRuntime } from "./runtime";
@@ -19,6 +20,9 @@ const DOCUMENT_TIMEOUT_MS = 180_000;
 
 /** Mapping a form is one AI call on the form's fields and the profile; the apply window waits meanwhile. */
 const AUTOFILL_AI_TIMEOUT_MS = 120_000;
+
+/** The update check is one request; a slow GitHub answer is treated as no answer. */
+const UPDATE_CHECK_TIMEOUT_MS = 15_000;
 
 /** A discovery run makes one request per query, one second apart; it returns what it found by the deadline. */
 const DISCOVERY_TIMEOUT_MS = 120_000;
@@ -69,6 +73,18 @@ if (parentPort) {
             },
             { abortSignal: AbortSignal.timeout(AUTOFILL_AI_TIMEOUT_MS) },
           ),
+        checkForUpdate: (currentVersion) => {
+          // Without a configured repository there is nothing to ask, so no request is made.
+          if (RELEASES_REPOSITORY === null) {
+            return Promise.resolve({ ok: true, release: null });
+          }
+          return checkLatestRelease({
+            http: net,
+            repository: RELEASES_REPOSITORY,
+            currentVersion,
+            signal: AbortSignal.timeout(UPDATE_CHECK_TIMEOUT_MS),
+          });
+        },
         importCv: async (request) => {
           // Loaded on first use: the CV readers pull in PDF and DOCX parsers the app does not need until a CV is imported.
           const { importCv } = await import("@job-finder/core/cv");

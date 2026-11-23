@@ -8,6 +8,7 @@ import type {
 import { guardPageRender, type HttpClient, type PageRenderResult } from "@job-finder/core/net";
 import type { GenerateDocumentOutcome } from "@job-finder/core/documents/generate";
 import type { AutofillMapOutcome } from "@job-finder/core/ats/autofill/ai";
+import type { UpdateCheckOutcome } from "@job-finder/core/updates";
 import type {
   DbCall,
   DbResult,
@@ -59,6 +60,8 @@ export interface EngineServices {
   generateDocument(request: GenerateDocumentRequest): Promise<GenerateDocumentOutcome>;
   /** Maps the fields the rules left with the AI; the answer is checked against the form by main. */
   mapFormFields(request: MapFormFieldsRequest): Promise<AutofillMapOutcome>;
+  /** Asks GitHub for the latest release through the engine's HTTP path. */
+  checkForUpdate(currentVersion: string): Promise<UpdateCheckOutcome>;
 }
 
 /**
@@ -151,6 +154,14 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
         .mapFormFields(request)
         .catch((): AutofillMapOutcome => ({ ok: false, code: "unknown" }))
         .then((outcome) => post(port, { type: "map-form-fields-result", id, outcome }));
+      return;
+    }
+    if (message.type === "check-update") {
+      const { id, currentVersion } = message;
+      void services
+        .checkForUpdate(currentVersion)
+        .catch((): UpdateCheckOutcome => ({ ok: false, code: "unavailable" }))
+        .then((outcome) => post(port, { type: "check-update-result", id, outcome }));
       return;
     }
     if (message.type === "ingest-cancel") {
