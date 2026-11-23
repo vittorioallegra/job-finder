@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { IngestEvent, IngestRunOutcome } from "@job-finder/core/ingest/events";
+import type { ApplicationStatus } from "@job-finder/core/applications";
 
 /** Main pushes run progress on this channel; the renderer receives it through `ingest.onProgress`. */
 export const INGEST_PROGRESS_CHANNEL = "ingest:progress";
@@ -88,6 +89,8 @@ export interface JobListItem {
   dismissed: boolean;
   /** The user has not opened the job yet. */
   isNew: boolean;
+  /** The status of the job's latest application, or null when it has none (a bookmark is "bookmarked"). */
+  applicationStatus: ApplicationStatus | null;
 }
 
 export interface RunSummary {

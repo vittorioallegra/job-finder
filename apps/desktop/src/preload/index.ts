@@ -54,6 +54,15 @@ const api: JobFinderBridge = {
     detail: (request) => invoke("jobs:detail", request),
     flag: (request) => invoke("jobs:flag", request),
   },
+  applications: {
+    list: () => invoke("applications:list"),
+    detail: (request) => invoke("applications:detail", request),
+    bookmark: (request) => invoke("applications:bookmark", request),
+    check: (request) => invoke("applications:check", request),
+    start: (request) => invoke("applications:start", request),
+    update: (request) => invoke("applications:update", request),
+    exportCsv: () => invoke("applications:export"),
+  },
   savedSearches: {
     list: () => invoke("saved-searches:list"),
     save: (request) => invoke("saved-searches:save", request),

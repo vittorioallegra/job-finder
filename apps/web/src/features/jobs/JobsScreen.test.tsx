@@ -35,6 +35,7 @@ const posting: JobListItem = {
   explanation: null,
   dismissed: false,
   isNew: false,
+  applicationStatus: null,
 };
 
 function button(container: HTMLElement, text: string): HTMLButtonElement {

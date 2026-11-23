@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, safeStorage, net, protocol, sessio
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { writeFile } from "node:fs/promises";
 import { openAppDatabase, resolveMigrationsFolder, type AppDatabase } from "./db/database";
 import { executeDbCalls, reconcileInterruptedRuns } from "./db/operations";
 import { scoringCandidateIds } from "./db/scoring-operations";
@@ -14,6 +15,8 @@ import { createDiscoveryService } from "./discovery/service";
 import { createProfileRepository } from "./profile/repository";
 import { createScoringService } from "./scoring/service";
 import { createSavedSearchRepository } from "./saved-searches/repository";
+import { createApplicationRepository } from "./applications/repository";
+import { createApplicationExport } from "./applications/export";
 import { createUtilityProcessLauncher } from "./engine/launcher";
 import { engineEnvironment } from "./engine/fixture-env";
 import { createPageLoader } from "./page-loader/loader";
@@ -194,6 +197,19 @@ if (gotSingleInstanceLock) {
         scoringCandidateIds(database.db, filter, preferredIds, Date.now(), limit),
       systemLocale: () => app.getLocale(),
     });
+    const applicationRepository = createApplicationRepository(database.db);
+    const applicationExport = createApplicationExport({
+      repository: applicationRepository,
+      chooseFile: async (defaultName) => {
+        const result = await dialog.showSaveDialog({
+          title: t("applications.export.dialogTitle"),
+          defaultPath: defaultName,
+          filters: [{ name: t("applications.export.filterName"), extensions: ["csv"] }],
+        });
+        return result.canceled || result.filePath === undefined ? null : result.filePath;
+      },
+      writeFile: (path, content) => writeFile(path, content, "utf8"),
+    });
     const discovery = createDiscoveryService({
       engine: () => supervisor,
       settings: settingsRepository,
@@ -212,6 +228,8 @@ if (gotSingleInstanceLock) {
         discovery,
         scoring,
         savedSearches: createSavedSearchRepository(database.db),
+        applications: applicationRepository,
+        applicationExport,
       },
       originOf(rendererUrl) ?? rendererUrl,
     );

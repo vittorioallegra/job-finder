@@ -140,6 +140,27 @@ function spyServices() {
       save: async () => null,
       delete: async () => {},
     },
+    applications: {
+      list: async () => {
+        calls.push("applications.list");
+        return [];
+      },
+      listDetails: async () => [],
+      detail: async () => null,
+      bookmark: async ({ jobId, bookmarked }) => {
+        calls.push(`applications.bookmark:${jobId}:${String(bookmarked)}`);
+        return true;
+      },
+      check: async () => ({ sameJob: [], sameCompany: [], requiredConfirmations: 0 as const }),
+      start: async () => ({ ok: false as const, code: "job-not-found" as const }),
+      update: async () => ({ ok: false as const, code: "not-found" as const }),
+    },
+    applicationExport: {
+      exportCsv: async () => {
+        calls.push("applicationExport.exportCsv");
+        return { ok: false as const, code: "cancelled" as const };
+      },
+    },
   };
   return { services, calls };
 }
@@ -231,6 +252,13 @@ describe("IPC sender and payload guard", () => {
     expect(registered.sort()).toEqual(
       [
         "ai:test-connection",
+        "applications:bookmark",
+        "applications:check",
+        "applications:detail",
+        "applications:export",
+        "applications:list",
+        "applications:start",
+        "applications:update",
         "companies:add",
         "companies:list",
         "discovery:search",
@@ -278,6 +306,14 @@ describe("IPC sender and payload guard", () => {
     await handleInvoke("ingest:latest", services, topFrame(), undefined, APP_ORIGIN);
     await handleInvoke("ingest:start", services, topFrame(), undefined, APP_ORIGIN);
     await handleInvoke("ingest:cancel", services, topFrame(), { runId: "run-7" }, APP_ORIGIN);
+    await handleInvoke(
+      "applications:bookmark",
+      services,
+      topFrame(),
+      { jobId: "j2", bookmarked: true },
+      APP_ORIGIN,
+    );
+    await handleInvoke("applications:export", services, topFrame(), undefined, APP_ORIGIN);
     expect(calls).toEqual([
       "repository.listCompanies",
       "repository.listJobs",
@@ -287,6 +323,8 @@ describe("IPC sender and payload guard", () => {
       "repository.latestRun",
       "ingestion.start",
       "ingestion.cancel:run-7",
+      "applications.bookmark:j2:true",
+      "applicationExport.exportCsv",
     ]);
   });
 

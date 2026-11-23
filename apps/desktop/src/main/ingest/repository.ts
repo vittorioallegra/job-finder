@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
+  applications,
   companies,
   jobFlags,
   jobScores,
@@ -13,6 +14,7 @@ import { detectAts } from "@job-finder/core/ats";
 import { INGEST_RUN_KIND, type IngestEvent } from "@job-finder/core/ingest/events";
 import { JobFilterSchema } from "@job-finder/core/filters";
 import { jobFilterCondition } from "@job-finder/core/filters/sql";
+import type { ApplicationStatus } from "@job-finder/core/applications";
 import type { Salary } from "@job-finder/core/normalize";
 import type {
   CompanyAddResult,
@@ -50,6 +52,9 @@ export interface IngestRepository {
   /** The latest ingestion run with its log, or null when none has run. */
   latestRun(): Promise<LatestRun | null>;
 }
+
+/** The status of a job's latest application (by its last status change), or null when it has none. */
+const LATEST_APPLICATION_STATUS = sql<ApplicationStatus | null>`(select ${applications.status} from ${applications} where ${applications.jobId} = ${jobs.id} order by ${applications.statusChangedAt} desc limit 1)`;
 
 /** The newest first key of a job: its posting date, or when the job was first seen. */
 const NEWEST = sql`coalesce(${jobs.postedAt}, ${jobs.firstSeenAt})`;
@@ -169,6 +174,7 @@ export function createIngestRepository(db: AppDb): IngestRepository {
           explanation: jobScores.explanation,
           dismissedAt: jobFlags.dismissedAt,
           viewedAt: jobFlags.viewedAt,
+          applicationStatus: LATEST_APPLICATION_STATUS,
         })
         .from(jobs)
         .innerJoin(companies, eq(jobs.companyId, companies.id))
@@ -198,6 +204,7 @@ export function createIngestRepository(db: AppDb): IngestRepository {
         explanation: row.explanation,
         dismissed: row.dismissedAt !== null,
         isNew: row.viewedAt === null,
+        applicationStatus: row.applicationStatus,
       }));
     },
 
@@ -226,6 +233,7 @@ export function createIngestRepository(db: AppDb): IngestRepository {
           explanation: jobScores.explanation,
           dismissedAt: jobFlags.dismissedAt,
           viewedAt: jobFlags.viewedAt,
+          applicationStatus: LATEST_APPLICATION_STATUS,
         })
         .from(jobs)
         .innerJoin(companies, eq(jobs.companyId, companies.id))
@@ -257,6 +265,7 @@ export function createIngestRepository(db: AppDb): IngestRepository {
         explanation: row.explanation,
         dismissed: row.dismissedAt !== null,
         isNew: row.viewedAt === null,
+        applicationStatus: row.applicationStatus,
         description: row.description,
         employmentType: row.employmentType,
         seniority: row.seniority,

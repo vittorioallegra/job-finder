@@ -35,6 +35,7 @@ const posting: JobListItem = {
   explanation: "Strong backend match.",
   dismissed: false,
   isNew: false,
+  applicationStatus: null,
 };
 
 function button(container: HTMLElement, text: string): HTMLButtonElement {

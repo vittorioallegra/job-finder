@@ -1,5 +1,11 @@
 import {
   IPC_REQUEST_SCHEMAS,
+  type ApplicationBookmarkRequest,
+  type ApplicationCheckRequest,
+  type ApplicationDetailRequest,
+  type ApplicationExportResult,
+  type ApplicationStartRequest,
+  type ApplicationUpdateRequest,
   type AppSettingsPatch,
   type CompanyAddRequest,
   type CvImportRequest,
@@ -22,6 +28,7 @@ import type { CvImportService } from "../profile/cv-import";
 import type { DiscoveryService } from "../discovery/service";
 import type { ScoringService } from "../scoring/service";
 import type { SavedSearchRepository } from "../saved-searches/repository";
+import type { ApplicationRepository } from "../applications/repository";
 import type { ProfileRepository } from "../profile/repository";
 import { originOf } from "../security/origin";
 import type { SecretStore } from "../secrets/store";
@@ -38,6 +45,8 @@ export interface IpcServices {
   discovery: DiscoveryService;
   scoring: ScoringService;
   savedSearches: SavedSearchRepository;
+  applications: ApplicationRepository;
+  applicationExport: { exportCsv(): Promise<ApplicationExportResult> };
 }
 
 /** The parts of an Electron invoke event that the sender check reads. */
@@ -113,6 +122,20 @@ export async function handleInvoke(
       return services.repository.jobDetail((payload as JobDetailRequest).jobId);
     case "jobs:flag":
       return services.repository.setJobFlag(payload as JobFlagRequest);
+    case "applications:list":
+      return services.applications.list();
+    case "applications:detail":
+      return services.applications.detail((payload as ApplicationDetailRequest).applicationId);
+    case "applications:bookmark":
+      return services.applications.bookmark(payload as ApplicationBookmarkRequest);
+    case "applications:check":
+      return services.applications.check((payload as ApplicationCheckRequest).jobId);
+    case "applications:start":
+      return services.applications.start(payload as ApplicationStartRequest);
+    case "applications:update":
+      return services.applications.update(payload as ApplicationUpdateRequest);
+    case "applications:export":
+      return services.applicationExport.exportCsv();
     case "saved-searches:list":
       return services.savedSearches.list();
     case "saved-searches:save":

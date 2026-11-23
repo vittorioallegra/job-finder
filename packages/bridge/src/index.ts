@@ -1,4 +1,17 @@
 import type { AiTestResult } from "./ai";
+import type {
+  ApplicationBookmarkRequest,
+  ApplicationCheckRequest,
+  ApplicationDetail,
+  ApplicationDetailRequest,
+  ApplicationExportResult,
+  ApplicationStartRequest,
+  ApplicationStartResult,
+  ApplicationSummary,
+  ApplicationUpdateRequest,
+  ApplicationUpdateResult,
+  DuplicateCheck,
+} from "./applications";
 import type { AppSettings, AppSettingsPatch } from "./settings";
 import type { SecretName, SecretsStatus } from "./secrets";
 import type { CvImportRequest, CvImportResult, Profile, ProfileRecord } from "./profile";
@@ -32,6 +45,7 @@ export * from "./ipc";
 export * from "./profile";
 export * from "./scoring";
 export * from "./jobs";
+export * from "./applications";
 
 /** Shape of the API the preload script exposes as `window.jobFinder`. Values never include secrets. */
 export interface JobFinderBridge {
@@ -75,6 +89,22 @@ export interface JobFinderBridge {
     /** Creates a saved search, or replaces the one with the given id. Resolves null when that id is unknown. */
     save(request: SavedSearchSaveRequest): Promise<SavedSearch | null>;
     delete(request: SavedSearchDeleteRequest): Promise<void>;
+  };
+  readonly applications: {
+    /** Every application, newest status change first. The renderer filters and groups them. */
+    list(): Promise<ApplicationSummary[]>;
+    /** One application with its timeline, or null when it does not exist. */
+    detail(request: ApplicationDetailRequest): Promise<ApplicationDetail | null>;
+    /** Bookmarks a job (an application with status bookmarked) or removes that bookmark. Resolves false when the job does not exist. */
+    bookmark(request: ApplicationBookmarkRequest): Promise<boolean>;
+    /** The duplicate warning for a job: applications for the same job and for the same company. */
+    check(request: ApplicationCheckRequest): Promise<DuplicateCheck>;
+    /** Starts preparing a job. Refused with the warning until the confirmations it needs are given. */
+    start(request: ApplicationStartRequest): Promise<ApplicationStartResult>;
+    /** Moves an application to a status the status machine allows, and/or adds a note. */
+    update(request: ApplicationUpdateRequest): Promise<ApplicationUpdateResult>;
+    /** Asks for a file with a native dialog and writes every application to it as CSV. */
+    exportCsv(): Promise<ApplicationExportResult>;
   };
   readonly scores: {
     /**

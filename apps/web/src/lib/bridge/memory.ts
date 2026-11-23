@@ -1,5 +1,9 @@
 import {
   applySettingsPatch,
+  canTransition,
+  type ApplicationDetail,
+  type ApplicationStatus,
+  type ApplicationSummary,
   DEFAULT_APP_SETTINGS,
   SECRET_NAMES,
   type AiTestResult,
@@ -63,6 +67,8 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
   const companies: CompanyRecord[] = structuredClone(options.companies ?? []);
   const jobs: JobListItem[] = structuredClone(options.jobs ?? []);
   const savedSearches: SavedSearch[] = structuredClone(options.savedSearches ?? []);
+  // Applications live only in this page: a bookmark, a preparation and status moves, no engine involved.
+  const applicationList: ApplicationSummary[] = [];
   const progressListeners = new Set<(event: IngestEvent) => void>();
   let profile: ProfileRecord | null = options.profile
     ? { profile: options.profile, version: 1, updatedAt: 0 }
@@ -151,6 +157,58 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
         return true;
       },
     },
+    applications: {
+      list: async () => structuredClone(applicationList),
+      detail: async ({ applicationId }) => {
+        const found = applicationList.find((item) => item.id === applicationId);
+        if (!found) return null;
+        const detail: ApplicationDetail = { ...structuredClone(found), events: [] };
+        return detail;
+      },
+      bookmark: async ({ jobId, bookmarked }) => {
+        const job = jobs.find((item) => item.id === jobId);
+        if (!job) return false;
+        const at = applicationList.findIndex(
+          (item) => item.jobId === jobId && item.status === "bookmarked",
+        );
+        if (bookmarked && at < 0 && !applicationList.some((item) => item.jobId === jobId)) {
+          applicationList.push(summaryFor(job, "bookmarked"));
+        } else if (!bookmarked && at >= 0) {
+          applicationList.splice(at, 1);
+        }
+        return true;
+      },
+      check: async () => ({ sameJob: [], sameCompany: [], requiredConfirmations: 0 as const }),
+      start: async ({ jobId }) => {
+        const job = jobs.find((item) => item.id === jobId);
+        if (!job) return { ok: false as const, code: "job-not-found" as const };
+        const existing = applicationList.find((item) => item.jobId === jobId);
+        const summary = existing ?? summaryFor(job, "preparing");
+        if (existing && existing.status === "bookmarked") {
+          existing.status = "preparing";
+          existing.statusChangedAt = Date.now();
+        } else if (!existing) {
+          applicationList.push(summary);
+        }
+        return {
+          ok: true as const,
+          application: { ...structuredClone(summary), events: [] },
+        };
+      },
+      update: async ({ applicationId, status }) => {
+        const found = applicationList.find((item) => item.id === applicationId);
+        if (!found) return { ok: false as const, code: "not-found" as const };
+        if (status !== undefined && status !== found.status) {
+          if (!canTransition(found.status, status as ApplicationStatus)) {
+            return { ok: false as const, code: "invalid-transition" as const };
+          }
+          found.status = status as ApplicationStatus;
+          found.statusChangedAt = Date.now();
+        }
+        return { ok: true as const, application: { ...structuredClone(found), events: [] } };
+      },
+      exportCsv: async () => ({ ok: false as const, code: "cancelled" as const }),
+    },
     savedSearches: {
       list: async () => structuredClone(savedSearches),
       save: async (request) => {
@@ -197,5 +255,21 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
         };
       },
     },
+  };
+}
+
+function summaryFor(job: JobListItem, status: ApplicationStatus): ApplicationSummary {
+  const now = Date.now();
+  return {
+    id: `memory-application-${now}-${Math.random().toString(36).slice(2, 8)}`,
+    jobId: job.id,
+    jobTitle: job.title,
+    companyId: "",
+    companyName: job.companyName,
+    status,
+    createdAt: now,
+    statusChangedAt: now,
+    jobUrl: job.url,
+    applyUrl: job.applyUrl,
   };
 }

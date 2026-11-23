@@ -22,6 +22,21 @@ import type { DiscoverySearchResult } from "./discovery";
 import { DiscoverySearchRequestSchema } from "./discovery";
 import type { ScoreStartResult } from "./scoring";
 import { ScoreStartRequestSchema } from "./scoring";
+import type {
+  ApplicationDetail,
+  ApplicationExportResult,
+  ApplicationStartResult,
+  ApplicationSummary,
+  ApplicationUpdateResult,
+  DuplicateCheck,
+} from "./applications";
+import {
+  ApplicationBookmarkRequestSchema,
+  ApplicationCheckRequestSchema,
+  ApplicationDetailRequestSchema,
+  ApplicationStartRequestSchema,
+  ApplicationUpdateRequestSchema,
+} from "./applications";
 import type { JobDetail, SavedSearch } from "./jobs";
 import {
   JobDetailRequestSchema,
@@ -50,6 +65,13 @@ export const IPC_REQUEST_SCHEMAS = {
   "jobs:list": JobsListRequestSchema,
   "jobs:detail": JobDetailRequestSchema,
   "jobs:flag": JobFlagRequestSchema,
+  "applications:list": z.undefined(),
+  "applications:detail": ApplicationDetailRequestSchema,
+  "applications:bookmark": ApplicationBookmarkRequestSchema,
+  "applications:check": ApplicationCheckRequestSchema,
+  "applications:start": ApplicationStartRequestSchema,
+  "applications:update": ApplicationUpdateRequestSchema,
+  "applications:export": z.undefined(),
   "saved-searches:list": z.undefined(),
   "saved-searches:save": SavedSearchSaveRequestSchema,
   "saved-searches:delete": SavedSearchDeleteRequestSchema,
@@ -79,6 +101,13 @@ export interface IpcResponses {
   "jobs:list": JobListItem[];
   "jobs:detail": JobDetail | null;
   "jobs:flag": boolean;
+  "applications:list": ApplicationSummary[];
+  "applications:detail": ApplicationDetail | null;
+  "applications:bookmark": boolean;
+  "applications:check": DuplicateCheck;
+  "applications:start": ApplicationStartResult;
+  "applications:update": ApplicationUpdateResult;
+  "applications:export": ApplicationExportResult;
   "saved-searches:list": SavedSearch[];
   "saved-searches:save": SavedSearch | null;
   "saved-searches:delete": void;
