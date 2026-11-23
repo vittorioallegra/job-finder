@@ -1,4 +1,4 @@
-// protects=the companies screen finds boards through the bridge and adds only the ones the user picks, adds a company by its link and shows why one is refused, shows each company's last scan, retries a scan for one company, and shows an error with a retry when the list cannot be read;
+// protects=the companies screen finds boards through the bridge and adds only the ones the user picks, adds a company by its link and shows why one is refused, shows each company's last scan, retries a scan for one company, shows an error with a retry when the list cannot be read, and points to Settings for a free-tier search key when no key is saved or keyless search is blocked;
 // fails_when=a found board is added without a click, a board already in the list is offered again, a refused company is shown as added, a last scan is missing or wrong, a retry scans all companies or starts with no message, or a failed read shows a blank page;
 // no_claim=layout, keyboard focus order and the real search provider are not checked here; the core discovery tests and the engine runtime tests cover the search.
 import { act } from "react";
@@ -192,6 +192,43 @@ describe("companies screen", () => {
       "The search provider blocked the request",
     );
     expect(container.textContent).not.toContain("Boards found");
+  });
+
+  it("points to Settings when no search key is saved", async () => {
+    await render(createMemoryBridge());
+
+    expect(container.textContent).toContain("Keyless search is best-effort");
+    expect(container.querySelector('a[href="/settings"]')?.textContent).toBe("Open settings");
+  });
+
+  it("hides that hint once a search key is saved", async () => {
+    const bridge = createMemoryBridge();
+    await bridge.secrets.set("search.brave", "test-key");
+    await render(bridge);
+
+    expect(container.textContent).not.toContain("Keyless search is best-effort");
+  });
+
+  it("points to Settings when keyless search was blocked, and keeps the boards that were found", async () => {
+    const bridge = createMemoryBridge();
+    bridge.discovery.search = async () => ({
+      ok: true,
+      searchBlocked: true,
+      candidates: [{ ats: "lever", slug: "globex", careersUrl: "https://jobs.lever.co/globex", name: "globex" }],
+    });
+    await render(bridge);
+
+    await act(async () => {
+      setInputValue(field(container, "Keywords"), "engineer");
+    });
+    await act(async () => {
+      button(container, "Search job boards").click();
+    });
+    await act(async () => {});
+
+    expect(container.textContent).toContain("The search provider blocked keyless search");
+    expect(container.querySelector('a[href="/settings"]')).not.toBeNull();
+    expect(container.textContent).toContain("Boards found: 1.");
   });
 
   it("adds a company by its link through the bridge and shows it in the list", async () => {

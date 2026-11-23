@@ -71,7 +71,7 @@
       "brave": "Brave Search",
       "tavily": "Tavily",
       "serper": "Serper",
-      "keyHint": "Optional. Used only while this provider is enabled."
+      "keyHint": "Recommended: a free-tier key. Used only while this provider is enabled."
     },
     "language": {
       "label": "Interface language",
@@ -357,7 +357,10 @@
         "search-blocked": "The search provider blocked the request, so no boards were searched. Add companies by their careers link below.",
         "search-failed": "The search failed. Try again later.",
         "engine-unavailable": "The background engine is not available. Try again in a moment."
-      }
+      },
+      "keyHint": "Keyless search is best-effort and can be blocked. For reliable results, add a free-tier search key in Settings.",
+      "blockedHint": "The search provider blocked keyless search. Add a free-tier search key in Settings and search again.",
+      "openSettings": "Open settings"
     },
     "add": {
       "heading": "Add by link",

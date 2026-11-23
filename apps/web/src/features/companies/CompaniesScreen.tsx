@@ -8,6 +8,7 @@ import type {
   DiscoveryCandidate,
   DiscoverySearchFailureCode,
   IngestStartFailureCode,
+  SecretName,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Button } from "../../components/ui/Button";
@@ -19,8 +20,11 @@ type LoadState =
 type SearchState =
   | { status: "idle" }
   | { status: "searching" }
-  | { status: "done"; candidates: DiscoveryCandidate[] }
+  | { status: "done"; candidates: DiscoveryCandidate[]; searchBlocked: boolean }
   | { status: "failed"; code: DiscoverySearchFailureCode };
+
+/** The keyed search providers. Reliable discovery needs one of their keys (Settings). */
+const SEARCH_KEY_NAMES: readonly SecretName[] = ["search.brave", "search.tavily", "search.serper"];
 
 type ScanNotice =
   | { companyId: string; status: "started" }
@@ -33,6 +37,19 @@ export function splitTerms(value: string): string[] {
     .map((term) => term.trim())
     .filter((term) => term !== "")
     .slice(0, 5);
+}
+
+/** Points to Settings, where the free-tier search keys are saved. */
+function SettingsLinkHint() {
+  const { t } = useTranslation();
+  return (
+    <p className="text-sm text-app-muted">
+      {t("companies.discover.blockedHint")}{" "}
+      <Link to="/settings" className="text-app-accent underline">
+        {t("companies.discover.openSettings")}
+      </Link>
+    </p>
+  );
 }
 
 /**
@@ -55,6 +72,21 @@ export function CompaniesScreen() {
   const [added, setAdded] = useState(false);
   const [addFailure, setAddFailure] = useState<CompanyAddFailureCode | "unknown" | null>(null);
   const [scanNotice, setScanNotice] = useState<ScanNotice | null>(null);
+  // Null until the key status is read; the hint to Settings is shown only once it says no key is set.
+  const [hasSearchKey, setHasSearchKey] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    bridge.secrets.status().then(
+      (status) => {
+        if (active) setHasSearchKey(SEARCH_KEY_NAMES.some((name) => status.keys[name]));
+      },
+      () => {},
+    );
+    return () => {
+      active = false;
+    };
+  }, [bridge]);
 
   useEffect(() => {
     let active = true;
@@ -114,7 +146,11 @@ export function CompaniesScreen() {
       });
       setSearch(
         result.ok
-          ? { status: "done", candidates: result.candidates }
+          ? {
+              status: "done",
+              candidates: result.candidates,
+              searchBlocked: result.searchBlocked === true,
+            }
           : { status: "failed", code: result.code },
       );
     } catch {
@@ -226,6 +262,14 @@ export function CompaniesScreen() {
               {t("companies.discover.heading")}
             </h2>
             <p className="text-sm text-app-muted">{t("companies.discover.intro")}</p>
+            {hasSearchKey === false ? (
+              <p className="text-sm text-app-muted">
+                {t("companies.discover.keyHint")}{" "}
+                <Link to="/settings" className="text-app-accent underline">
+                  {t("companies.discover.openSettings")}
+                </Link>
+              </p>
+            ) : null}
             <form onSubmit={searchBoards} className="flex flex-col gap-3">
               <TextInput
                 label={t("companies.discover.keywords")}
@@ -258,13 +302,17 @@ export function CompaniesScreen() {
               </p>
             ) : null}
             {search.status === "failed" ? (
-              <p role="alert" className="text-sm text-app-fg">
-                {t(`companies.discover.failure.${search.code}`)}
-              </p>
+              <>
+                <p role="alert" className="text-sm text-app-fg">
+                  {t(`companies.discover.failure.${search.code}`)}
+                </p>
+                {search.code === "search-blocked" ? <SettingsLinkHint /> : null}
+              </>
             ) : null}
             {search.status === "done" && search.candidates.length === 0 ? (
               <p className="text-sm text-app-muted">{t("companies.discover.none")}</p>
             ) : null}
+            {search.status === "done" && search.searchBlocked ? <SettingsLinkHint /> : null}
             {search.status === "done" && search.candidates.length > 0 ? (
               <>
                 <p role="status" className="text-sm text-app-muted">

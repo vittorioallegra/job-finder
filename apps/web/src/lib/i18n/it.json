@@ -71,7 +71,7 @@
       "brave": "Brave Search",
       "tavily": "Tavily",
       "serper": "Serper",
-      "keyHint": "Facoltativa. Usata solo mentre questo provider è attivo."
+      "keyHint": "Consigliato: una chiave del piano gratuito. Usata solo mentre il fornitore è attivo."
     },
     "language": {
       "label": "Lingua dell'interfaccia",
@@ -357,7 +357,10 @@
         "search-blocked": "Il servizio di ricerca ha bloccato la richiesta, quindi non è stato possibile cercare. Aggiungi le aziende con il link alla pagina di lavoro qui sotto.",
         "search-failed": "La ricerca non è riuscita. Riprova più tardi.",
         "engine-unavailable": "Il motore in background non è disponibile. Riprova tra poco."
-      }
+      },
+      "keyHint": "La ricerca senza chiave non è sempre disponibile e può essere bloccata. Per risultati affidabili, aggiungi nelle Impostazioni una chiave di ricerca del piano gratuito.",
+      "blockedHint": "Il fornitore di ricerca ha bloccato la ricerca senza chiave. Aggiungi nelle Impostazioni una chiave di ricerca del piano gratuito e cerca di nuovo.",
+      "openSettings": "Apri le impostazioni"
     },
     "add": {
       "heading": "Aggiungi con un link",
