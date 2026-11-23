@@ -282,7 +282,7 @@ Approved: yes (2026-11-23)
 - [x] 6. Onboarding and profile — `feat: add onboarding and profile editor screens`
 - [x] 7. Fetch infrastructure and page loader — `feat: render JavaScript pages in a hidden loader for the engine`
 - [x] 8. Normalization and ATS adapters — `docs: add ATS adapter guide and record step 8 decisions`
-- [ ] 9. Ingestion pipeline vertical slice
+- [x] 9. Ingestion pipeline vertical slice — `docs: record step 9 decisions and tick the step`
 - [ ] 10. Discovery A: web search and companies
 - [ ] 11. Discovery B: Common Crawl and keyed providers
 - [ ] 12. Generic careers page adapter
@@ -394,7 +394,18 @@ Approved: yes (2026-11-23)
 - Step 8: `docs/adding-an-ats-adapter.md` is the guide; CLAUDE.md lists the new folders.
 - Step 8: not exercised: no test reaches a live provider; the fixtures came from one manual check of each public endpoint, so a format change at a provider is found only by re-recording. Workable's widget shape is undocumented. Teamtailor custom domains and Personio's `.com` tenants are not tested. Greenhouse multi-city location strings keep their raw text as one location.
 
+- Step 9: tables `companies`, `jobs`, `job_sources` and `run_events` in migrations 0003 to 0006, one per table, each with a migration test on a populated database of the previous schema. `companies.careers_url` is unique; `ats` and `slug` stay null when no supported board is detected, and such a company is not scanned.
+- Step 9: identity is (source, source_job_id). A posting from a new source joins an existing job with the same fingerprint only when that job has no posting from the same source, so two openings of one source with the same title and place stay two jobs.
+- Step 9: `jobs` keeps the apply URL of the first source that stored it. Every source in this step is an ATS, so the ATS preference of the spec waits for step 10's non-ATS sources.
+- Step 9: closing. A complete, successful scan closes the source rows of its company that the run did not see; a job closes when none of its sources is open and reopens when one is seen again. An empty complete scan closes every posting of that company. A failed, cancelled or storage-broken scan closes nothing.
+- Step 9: run outcome: `succeeded` when the run completes, even if some companies failed (their failures are in the log); `failed` only when the run itself breaks; `cancelled` after an abort; `interrupted` from startup reconcile, or from main when the engine dies during a run.
+- Step 9: one run at a time. The engine answers a start with `accepted` or `already-running`, and sends the final `run-finished` event only after the run row is closed, so a new run can start as soon as the renderer sees the end of the last one.
+- Step 9: engine writes per company: one lookup and one persist call per batch of 50 postings, then one close call; one `run-events.append` call per log entry. The run log stores codes and counts only, and the renderer words them through i18n.
+- Step 9: manual company entry is a form on the jobs screen (`/jobs`). It takes a name and a careers URL, detects the board from the URL alone (no request), and refuses a board already stored (same ATS and board token). Step 10 moves it into the Companies screen.
+- Step 9: `runs.kind` is `ingest`. Progress reaches the renderer on the `ingest:progress` channel through `ingest.onProgress`.
+- Step 9: not exercised: a scan against a live Greenhouse board (the adapter tests read recorded fixtures, and no test runs a scan end to end through the fixture server); a scan inside the packaged app (the desktop E2E run covers the window and the engine start, and its packaged smoke test was skipped without `JOB_FINDER_PACKAGED_APP`); a real HTTP request cancelled in flight (the core test uses a scripted abort).
+
 ### Open questions
 
 ### Next
-Step 9: Ingestion pipeline vertical slice (tables `companies`, `jobs`, `job_sources`, `run_events`; engine run orchestration for a list of companies via the ATS adapters, dedupe, batched persistence; `closed_at` only after a complete scan; per-source failure isolation; run log, progress events, cancel via `AbortSignal`; minimal results list in the UI).
+Step 10: Discovery A: web search and companies (first verify DuckDuckGo's `robots.txt` and terms for the HTML endpoint and record the outcome in Decisions; if disallowed, keep it best-effort and document a free-tier key as the default; source interface; DuckDuckGo HTML client with cheerio; query builder from saved-search criteria; company registry storing careers URL and detected ATS; manual company entry, moved from the jobs screen to a Companies screen with add by URL, detected ATS, last scan, "no parseable jobs" and retry).
