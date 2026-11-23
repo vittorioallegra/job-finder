@@ -1,6 +1,10 @@
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
 import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
-import type { DiscoveryCriteria, DiscoveryOutcome } from "@job-finder/core/discovery/types";
+import type {
+  DiscoveryCriteria,
+  DiscoveryOutcome,
+  SearchSourceConfig,
+} from "@job-finder/core/discovery/types";
 import { guardPageRender, type HttpClient, type PageRenderResult } from "@job-finder/core/net";
 import type { DbCall, DbResult, EngineToMainMessage, MainToEngineMessage } from "./protocol";
 import type { PortLike } from "./port";
@@ -28,7 +32,7 @@ export interface EngineServices {
   testAiConnection(config: AiProviderConfig): Promise<AiConnectionResult>;
   importCv(request: CvImportRequest): Promise<CvImportOutcome>;
   /** Searches for ATS boards through the engine's HTTP path. */
-  discoverCompanies(criteria: DiscoveryCriteria): Promise<DiscoveryOutcome>;
+  discoverCompanies(criteria: DiscoveryCriteria, config: SearchSourceConfig): Promise<DiscoveryOutcome>;
   /** The engine's HTTP path: fixture override, robots.txt and the per-host queue. */
   net: HttpClient;
   /** Builds the ingestion controller over the runtime's database and message channel. */
@@ -82,9 +86,9 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
       return;
     }
     if (message.type === "discover-companies") {
-      const { id, criteria } = message;
+      const { id, criteria, config } = message;
       void services
-        .discoverCompanies(criteria)
+        .discoverCompanies(criteria, config)
         .catch((): DiscoveryOutcome => ({ ok: false, code: "search-failed" }))
         .then((outcome) => post(port, { type: "discover-companies-result", id, outcome }));
       return;

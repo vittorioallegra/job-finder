@@ -169,7 +169,11 @@ if (gotSingleInstanceLock) {
       secrets: secretStore,
       engine: supervisor,
     });
-    const discovery = createDiscoveryService(() => supervisor);
+    const discovery = createDiscoveryService({
+      engine: () => supervisor,
+      settings: settingsRepository,
+      secrets: secretStore,
+    });
     registerIpcHandlers(
       ipcMain,
       {

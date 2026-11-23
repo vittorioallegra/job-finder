@@ -16,5 +16,7 @@ export type DiscoverySearchRequest = z.input<typeof DiscoverySearchRequestSchema
 /** Why a search gave no result: the provider blocked it, it failed, or the engine was unreachable. */
 export type DiscoverySearchFailureCode = DiscoveryFailureCode | "engine-unavailable";
 
+/** `searchBlocked`: keyless search was refused, but the other sources still gave boards. */
 export type DiscoverySearchResult =
-  { ok: true; candidates: DiscoveryCandidate[] } | { ok: false; code: DiscoverySearchFailureCode };
+  | { ok: true; candidates: DiscoveryCandidate[]; searchBlocked?: true }
+  | { ok: false; code: DiscoverySearchFailureCode };

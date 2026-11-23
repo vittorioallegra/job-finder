@@ -1,7 +1,11 @@
 import type { RunStatus } from "@job-finder/core";
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
 import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
-import type { DiscoveryCriteria, DiscoveryOutcome } from "@job-finder/core/discovery/types";
+import type {
+  DiscoveryCriteria,
+  DiscoveryOutcome,
+  SearchSourceConfig,
+} from "@job-finder/core/discovery/types";
 import type { BatchPlan, LookupRequest } from "@job-finder/core/ingest";
 import type { IngestEvent } from "@job-finder/core/ingest/events";
 import type { PageRenderResult } from "@job-finder/core/net";
@@ -45,8 +49,11 @@ export type MainToEngineMessage =
   /** `companyId` limits the run to one company (a retry); omitted: every company. */
   | { type: "ingest-start"; id: number; runId: string; companyId?: string }
   | { type: "ingest-cancel"; runId: string }
-  /** Web search for ATS boards. The engine makes the requests; main only relays the criteria and the result. */
-  | { type: "discover-companies"; id: number; criteria: DiscoveryCriteria };
+  /**
+   * Web search for ATS boards. The engine makes the requests; main relays the criteria, the enabled
+   * sources and, for keyed providers, their keys (the only path a search key takes out of main).
+   */
+  | { type: "discover-companies"; id: number; criteria: DiscoveryCriteria; config: SearchSourceConfig };
 
 /** Messages sent by the engine to main over the message port. */
 export type EngineToMainMessage =

@@ -30,9 +30,10 @@ if (parentPort) {
         createIngest: (api) => createIngestController({ ...api, http: net }),
         testAiConnection: (config) =>
           testAiConnection(config, { abortSignal: AbortSignal.timeout(AI_TEST_TIMEOUT_MS) }),
-        discoverCompanies: (criteria) =>
+        discoverCompanies: (criteria, config) =>
           discoverCompanies(criteria, {
             http: net,
+            config,
             signal: AbortSignal.timeout(DISCOVERY_TIMEOUT_MS),
           }),
         importCv: async (request) => {

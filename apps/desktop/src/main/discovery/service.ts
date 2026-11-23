@@ -1,10 +1,12 @@
-import type { DiscoveryCriteria, DiscoveryOutcome } from "@job-finder/core/discovery/types";
-import type { DiscoverySearchRequest, DiscoverySearchResult } from "@job-finder/bridge";
+import type { DiscoveryCriteria, DiscoveryOutcome, KeyedSearchConfig, SearchSourceConfig } from "@job-finder/core/discovery/types";
+import type { DiscoverySearchRequest, DiscoverySearchResult, SecretName } from "@job-finder/bridge";
 import { EngineUnavailableError } from "../engine/supervisor";
+import type { SecretStore } from "../secrets/store";
+import type { SettingsRepository } from "../settings/repository";
 
 /** The engine side of a discovery search, as seen from main. */
 export interface DiscoveryEngine {
-  discoverCompanies(criteria: DiscoveryCriteria): Promise<DiscoveryOutcome>;
+  discoverCompanies(criteria: DiscoveryCriteria, config: SearchSourceConfig): Promise<DiscoveryOutcome>;
 }
 
 export interface DiscoveryService {
@@ -12,22 +14,46 @@ export interface DiscoveryService {
   search(request: DiscoverySearchRequest): Promise<DiscoverySearchResult>;
 }
 
-/** Relays a search to the engine, which makes the requests. No key is needed: the search is keyless. */
-export function createDiscoveryService(engine: () => DiscoveryEngine | null): DiscoveryService {
+export interface DiscoveryServiceOptions {
+  engine: () => DiscoveryEngine | null;
+  settings: Pick<SettingsRepository, "get">;
+  secrets: Pick<SecretStore, "read">;
+}
+
+/** Each keyed provider reads its own secret; the name is fixed here, never taken from the renderer. */
+const KEYED_SECRETS: Record<KeyedSearchConfig["provider"], SecretName> = {
+  brave: "search.brave",
+  tavily: "search.tavily",
+  serper: "search.serper",
+};
+
+/**
+ * Relays a search to the engine. The enabled sources come from settings; a keyed provider runs only
+ * when its toggle is on and its key is saved. Keys are read here and handed only to the engine.
+ */
+export function createDiscoveryService(options: DiscoveryServiceOptions): DiscoveryService {
   return {
     async search(request) {
-      const current = engine();
+      const current = options.engine();
       if (!current) {
         return { ok: false, code: "engine-unavailable" };
       }
       try {
-        const outcome = await current.discoverCompanies({
-          keywords: request.keywords,
-          locations: request.locations,
-        });
-        return outcome.ok
-          ? { ok: true, candidates: outcome.candidates }
-          : { ok: false, code: outcome.code };
+        const { search } = await options.settings.get();
+        const keyed: KeyedSearchConfig[] = [];
+        for (const provider of Object.keys(KEYED_SECRETS) as KeyedSearchConfig["provider"][]) {
+          if (!search[provider]) continue;
+          const apiKey = await options.secrets.read(KEYED_SECRETS[provider]);
+          if (apiKey) keyed.push({ provider, apiKey });
+        }
+        const outcome = await current.discoverCompanies(
+          { keywords: request.keywords, locations: request.locations },
+          { duckduckgo: search.duckduckgo, keyed },
+        );
+        if (!outcome.ok) return { ok: false, code: outcome.code };
+        return outcome.searchBlocked
+          ? { ok: true, candidates: outcome.candidates, searchBlocked: true }
+          : { ok: true, candidates: outcome.candidates };
       } catch (error) {
         if (error instanceof EngineUnavailableError) {
           return { ok: false, code: "engine-unavailable" };

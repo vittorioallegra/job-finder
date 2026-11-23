@@ -409,7 +409,10 @@ describe("engine supervisor", () => {
     const { supervisor, control } = await startHarness();
 
     await expect(
-      supervisor.discoverCompanies({ keywords: ["data", "ml"], locations: [] }),
+      supervisor.discoverCompanies(
+        { keywords: ["data", "ml"], locations: [] },
+        { duckduckgo: true, keyed: [] },
+      ),
     ).resolves.toEqual({ ok: true, candidates: [] });
     expect(control.discoveries).toEqual(["data,ml"]);
   });

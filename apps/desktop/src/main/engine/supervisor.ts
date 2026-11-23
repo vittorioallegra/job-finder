@@ -1,6 +1,10 @@
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
 import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
-import type { DiscoveryCriteria, DiscoveryOutcome } from "@job-finder/core/discovery/types";
+import type {
+  DiscoveryCriteria,
+  DiscoveryOutcome,
+  SearchSourceConfig,
+} from "@job-finder/core/discovery/types";
 import type { IngestEvent } from "@job-finder/core/ingest/events";
 import type { PageRenderResult } from "@job-finder/core/net";
 import type { DbCall, DbResult, EngineToMainMessage, IngestStartCode } from "../../engine/protocol";
@@ -89,7 +93,7 @@ export interface EngineSupervisor {
    * Searches for ATS boards in the engine. Resolves with the outcome; rejects with
    * EngineUnavailableError when the engine is gone.
    */
-  discoverCompanies(criteria: DiscoveryCriteria): Promise<DiscoveryOutcome>;
+  discoverCompanies(criteria: DiscoveryCriteria, config: SearchSourceConfig): Promise<DiscoveryOutcome>;
   /** Asks the engine to stop a run. Ignored when no engine is running. */
   cancelIngestion(runId: string): void;
   readonly state: EngineSupervisorState;
@@ -362,13 +366,13 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
         ready.handle.port.postMessage({ type: "ingest-start", id, runId, companyId });
       });
     },
-    async discoverCompanies(criteria) {
+    async discoverCompanies(criteria, config) {
       const ready = current?.ready ? current : await waitUntilReady();
       const id = nextRequestId;
       nextRequestId += 1;
       return new Promise<DiscoveryOutcome>((resolve, reject) => {
         ready.pendingDiscoveries.set(id, { resolve, reject });
-        ready.handle.port.postMessage({ type: "discover-companies", id, criteria });
+        ready.handle.port.postMessage({ type: "discover-companies", id, criteria, config });
       });
     },
     cancelIngestion(runId) {

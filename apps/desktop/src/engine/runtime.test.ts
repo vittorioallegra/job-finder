@@ -268,14 +268,14 @@ describe("engine runtime", () => {
 
   it("answers a company search with the discovery outcome under its request id", async () => {
     const port = fakePort();
-    const asked: DiscoveryCriteria[] = [];
+    const asked: { criteria: DiscoveryCriteria; config: unknown }[] = [];
     createEngineRuntime(port, {
       net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
       createIngest: noIngest,
-      discoverCompanies: async (criteria) => {
-        asked.push(criteria);
+      discoverCompanies: async (criteria, config) => {
+        asked.push({ criteria, config });
         return { ok: false, code: "search-blocked" };
       },
     });
@@ -284,10 +284,16 @@ describe("engine runtime", () => {
       type: "discover-companies",
       id: 12,
       criteria: { keywords: ["data"], locations: ["Milan"] },
+      config: { duckduckgo: false, keyed: [{ provider: "brave", apiKey: "k" }] },
     });
     await settle();
 
-    expect(asked).toEqual([{ keywords: ["data"], locations: ["Milan"] }]);
+    expect(asked).toEqual([
+      {
+        criteria: { keywords: ["data"], locations: ["Milan"] },
+        config: { duckduckgo: false, keyed: [{ provider: "brave", apiKey: "k" }] },
+      },
+    ]);
     expect(port.sent).toEqual([
       { type: "discover-companies-result", id: 12, outcome: { ok: false, code: "search-blocked" } },
     ]);
@@ -309,6 +315,7 @@ describe("engine runtime", () => {
       type: "discover-companies",
       id: 13,
       criteria: { keywords: ["x"], locations: [] },
+      config: { duckduckgo: true, keyed: [] },
     });
     await settle();
 
