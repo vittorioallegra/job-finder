@@ -267,7 +267,8 @@ bottleneck (decision deferred, not planned).
 
 ## Progress
 
-Phase: verification
+Phase: done
+Next: Closing: summary and publish decision
 Branch: main
 Base: 08b4fe9
 Spec: docs/specs/job-finder.md
@@ -300,7 +301,7 @@ Approved: yes (2026-11-23)
 - qa: done
   - Autofill filled a field hidden by a zero-height or zero-width ancestor with clipped overflow, a common honeypot trap — `fix: treat fields inside a zero-size clipped block as autofill honeypots`
   - SmartRecruiters adapter ended a scan as complete on an empty page while totalFound was higher, so a partial read could close jobs — `fix: fail a SmartRecruiters scan whose page is empty while more postings are announced`
-- review: pending
+- review: done
   - ApplicationForm swallowed a failed settings load, leaving the AI fallback state unset with no error or retry — `fix: show an error with a retry when the application form cannot load the AI settings`
   - A base URL left from an OpenAI-compatible setup redirected the Anthropic or OpenAI API key and prompts to that host — `fix: ignore the stored base URL for hosted AI providers so their key only goes to the vendor`
   - Turning off the Linux basic_text opt-in left the API keys in the database while the UI reported them as not set — `fix: delete stored keys when the Linux no-keyring opt-in is withdrawn`
