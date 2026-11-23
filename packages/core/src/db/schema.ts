@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { check, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { EXPLANATION_LANGUAGES } from "../ranking/prompt";
 import { APPLICATION_STATUSES } from "../applications/status";
+import { DOCUMENT_KINDS } from "../documents/schema";
 
 /** Run states. `interrupted` marks runs left `running` when the engine or app crashed. */
 export const RUN_STATUSES = ["running", "succeeded", "failed", "cancelled", "interrupted"] as const;
@@ -223,4 +224,26 @@ export const applicationEvents = sqliteTable(
     at: integer("at").notNull(),
   },
   (table) => [index("application_events_application_idx").on(table.applicationId)],
+);
+
+/**
+ * The editable source of an application's CV or cover letter (one row per application and kind).
+ * `content` is the JSON of the document; `exported_at` is the time of the last PDF export, so an
+ * edit after it (`updated_at` later) shows that the PDF is out of date.
+ */
+export const applicationDocuments = sqliteTable(
+  "application_documents",
+  {
+    applicationId: text("application_id")
+      .notNull()
+      .references(() => applications.id),
+    kind: text("kind", { enum: DOCUMENT_KINDS }).notNull(),
+    content: text("content").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    exportedAt: integer("exported_at"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.applicationId, table.kind] }),
+    check("application_documents_kind", sql`${table.kind} in ('cv', 'cover-letter')`),
+  ],
 );
