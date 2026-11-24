@@ -21,7 +21,21 @@ export interface AiProviderConfig {
 }
 
 const OLLAMA_PORT = "11434";
+
+/** Ollama through its native API honours a JSON schema, unlike most OpenAI-compatible servers. */
+const OLLAMA_CAPABILITIES: AiCapabilities = { nativeStructuredOutput: true };
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/** True when an OpenAI-compatible server runs on this computer (a loopback host). */
+export function isLocalAiEndpoint(config: Pick<AiProviderConfig, "provider" | "baseUrl">): boolean {
+  if (config.provider !== "openai-compatible") return false;
+  try {
+    const host = new URL(config.baseUrl.trim()).hostname;
+    return LOOPBACK_HOSTS.has(host) || host.endsWith(".localhost");
+  } catch {
+    return false;
+  }
+}
 
 /**
  * True when an OpenAI-compatible base URL is Ollama on this computer: a loopback host on Ollama's
@@ -29,9 +43,10 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
  */
 export function isOllamaEndpoint(baseUrl: string): boolean {
   try {
-    const url = new URL(baseUrl.trim());
-    const host = url.hostname;
-    return (LOOPBACK_HOSTS.has(host) || host.endsWith(".localhost")) && url.port === OLLAMA_PORT;
+    return (
+      isLocalAiEndpoint({ provider: "openai-compatible", baseUrl }) &&
+      new URL(baseUrl.trim()).port === OLLAMA_PORT
+    );
   } catch {
     return false;
   }
@@ -85,9 +100,11 @@ export function createAiModel(
         throw new AiError("not-configured", "The OpenAI-compatible provider needs a base URL");
       }
       if (isOllamaEndpoint(baseURL)) {
+        // Ollama's native API constrains the answer to the JSON schema (`format`), so the model
+        // cannot answer with fields of its own the way plain JSON mode lets it.
         return {
           model: ollamaModel(baseURL, modelId, config.contextSize, fetchImpl),
-          capabilities: AI_CAPABILITIES["openai-compatible"],
+          capabilities: OLLAMA_CAPABILITIES,
         };
       }
       const provider = createOpenAICompatible({

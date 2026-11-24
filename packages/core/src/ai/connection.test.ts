@@ -97,7 +97,7 @@ describe("testAiConnection", () => {
     expect(calls).toBe(1);
   });
 
-  it("reports a provider that does not answer in time as unreachable", async () => {
+  it("reports a provider that does not answer in time as a timeout", async () => {
     const fetchImpl: typeof fetch = async () => {
       throw new DOMException("The operation timed out.", "TimeoutError");
     };
@@ -105,7 +105,7 @@ describe("testAiConnection", () => {
       { provider: "openai", model: "gpt-test", baseUrl: "", apiKey: "test-key" },
       { fetch: fetchImpl },
     );
-    expect(result).toEqual({ ok: false, code: "unreachable", detail: "timeout" });
+    expect(result).toEqual({ ok: false, code: "timeout" });
   });
 
   it("reports unreachable when the connection fails", async () => {

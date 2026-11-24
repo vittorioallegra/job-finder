@@ -32,6 +32,7 @@ describe("AI connection test contract", () => {
         "model-not-found",
         "not-configured",
         "rate-limited",
+        "timeout",
         "unknown",
         "unreachable",
       ].sort(),

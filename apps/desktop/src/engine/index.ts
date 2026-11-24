@@ -1,4 +1,9 @@
-import { listAiModels, testAiConnection } from "@job-finder/core/ai";
+import {
+  isLocalAiEndpoint,
+  listAiModels,
+  testAiConnection,
+  type AiProviderConfig,
+} from "@job-finder/core/ai";
 import { discoverCompanies } from "@job-finder/core/discovery";
 import { createHttpClient } from "@job-finder/core/net";
 import { createIngestController } from "./ingest";
@@ -20,6 +25,20 @@ const DOCUMENT_TIMEOUT_MS = 180_000;
 
 /** Mapping a form is one AI call on the form's fields and the profile; the apply window waits meanwhile. */
 const AUTOFILL_AI_TIMEOUT_MS = 120_000;
+
+/**
+ * A model on this computer answers far slower than a hosted one, and its first answer includes
+ * loading it into memory, so every AI deadline stretches to at least this long for it.
+ */
+const LOCAL_AI_TIMEOUT_MS = 600_000;
+
+/** A connection test to a model on this computer waits for it to load. */
+const LOCAL_AI_TEST_TIMEOUT_MS = 120_000;
+
+/** The deadline for one AI task: the hosted one, or the longer one for a model on this computer. */
+function aiDeadline(config: AiProviderConfig, hostedMs: number, localMs = LOCAL_AI_TIMEOUT_MS) {
+  return AbortSignal.timeout(isLocalAiEndpoint(config) ? Math.max(hostedMs, localMs) : hostedMs);
+}
 
 /** The update check is one request; a slow GitHub answer is treated as no answer. */
 const UPDATE_CHECK_TIMEOUT_MS = 15_000;
@@ -45,7 +64,9 @@ if (parentPort) {
         createIngest: (api) => createIngestController({ ...api, http: net }),
         createScoring: (db) => createScoringRunner(db),
         testAiConnection: (config) =>
-          testAiConnection(config, { abortSignal: AbortSignal.timeout(AI_TEST_TIMEOUT_MS) }),
+          testAiConnection(config, {
+            abortSignal: aiDeadline(config, AI_TEST_TIMEOUT_MS, LOCAL_AI_TEST_TIMEOUT_MS),
+          }),
         discoverCompanies: (criteria, config) =>
           discoverCompanies(criteria, {
             http: net,
@@ -62,7 +83,7 @@ if (parentPort) {
               config: request.ai.config,
               contextSize: request.ai.contextSize,
             },
-            { abortSignal: AbortSignal.timeout(DOCUMENT_TIMEOUT_MS) },
+            { abortSignal: aiDeadline(request.ai.config, DOCUMENT_TIMEOUT_MS) },
           ),
         mapFormFields: (request) =>
           mapFormFields(
@@ -73,7 +94,7 @@ if (parentPort) {
               config: request.ai.config,
               contextSize: request.ai.contextSize,
             },
-            { abortSignal: AbortSignal.timeout(AUTOFILL_AI_TIMEOUT_MS) },
+            { abortSignal: aiDeadline(request.ai.config, AUTOFILL_AI_TIMEOUT_MS) },
           ),
         checkForUpdate: (currentVersion) => {
           // Without a configured repository there is nothing to ask, so no request is made.
@@ -92,7 +113,9 @@ if (parentPort) {
         importCv: async (request) => {
           // Loaded on first use: the CV readers pull in PDF and DOCX parsers the app does not need until a CV is imported.
           const { importCv } = await import("@job-finder/core/cv");
-          return importCv(request, { abortSignal: AbortSignal.timeout(CV_IMPORT_TIMEOUT_MS) });
+          return importCv(request, {
+            abortSignal: aiDeadline(request.config, CV_IMPORT_TIMEOUT_MS),
+          });
         },
       });
     }

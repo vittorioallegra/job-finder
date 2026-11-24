@@ -102,6 +102,7 @@ export const DOCUMENT_FAILURE_CODES = [
   "model-not-found",
   "rate-limited",
   "unreachable",
+  "timeout",
   "invalid-output",
   "unknown",
 ] as const;
@@ -114,6 +115,7 @@ export const DOCUMENT_AI_UNAVAILABLE_CODES: readonly DocumentFailureCode[] = [
   "model-not-found",
   "rate-limited",
   "unreachable",
+  "timeout",
   "engine-unavailable",
 ];
 

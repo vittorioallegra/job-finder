@@ -100,6 +100,7 @@
           "model-not-found": "il provider non riconosce questo modello",
           "rate-limited": "il provider sta limitando le richieste o il credito dell'account è esaurito",
           "unreachable": "impossibile raggiungere il provider",
+          "timeout": "il modello non ha risposto in tempo; con un modello su questo computer prova un contesto più piccolo o un modello più leggero",
           "invalid-output": "il provider ha risposto in un formato inatteso",
           "unknown": "errore imprevisto",
           "engine-unavailable": "il processo AI non è in esecuzione"
@@ -735,6 +736,7 @@
         "model-not-found": "AI non disponibile: il fornitore non conosce il modello configurato.",
         "rate-limited": "AI non disponibile: il fornitore limita le richieste. Riprova più tardi.",
         "unreachable": "AI non disponibile: non si riesce a raggiungere il fornitore.",
+        "timeout": "Il modello non ha risposto in tempo. Riprova, oppure scegli nelle Impostazioni un modello più leggero o un contesto più piccolo.",
         "invalid-output": "L'AI non ha restituito un documento coerente con il tuo profilo. Riprova.",
         "export-failed": "Il PDF non si è potuto esportare.",
         "unknown": "Il documento non si è potuto generare."
@@ -824,6 +826,7 @@
           "model-not-found": "il fornitore non conosce il modello impostato",
           "rate-limited": "il fornitore sta limitando le richieste; riprova più tardi",
           "unreachable": "il fornitore non è raggiungibile",
+          "timeout": "il modello non ha risposto in tempo; riprova o usa un modello più leggero",
           "invalid-output": "l'AI non ha restituito una risposta utilizzabile dal modulo",
           "engine-unavailable": "il motore in background non è disponibile",
           "unknown": "la chiamata all'AI non è riuscita"

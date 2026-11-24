@@ -21,6 +21,7 @@ export const CV_IMPORT_FAILURE_CODES = [
   "model-not-found",
   "rate-limited",
   "unreachable",
+  "timeout",
   "invalid-output",
   "unknown",
 ] as const;

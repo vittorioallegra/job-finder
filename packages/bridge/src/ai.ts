@@ -11,6 +11,7 @@ export const AI_TEST_FAILURE_CODES = [
   "model-not-found",
   "rate-limited",
   "unreachable",
+  "timeout",
   "invalid-output",
   "unknown",
   "engine-unavailable",

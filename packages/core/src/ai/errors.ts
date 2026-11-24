@@ -6,6 +6,7 @@ export const AI_ERROR_CODES = [
   "model-not-found",
   "rate-limited",
   "unreachable",
+  "timeout",
   "invalid-output",
   "unknown",
 ] as const;
@@ -96,7 +97,7 @@ export function toAiError(error: unknown): AiError {
     return new AiError("unknown", `The provider answered with HTTP ${status}`, detail);
   }
   if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
-    return new AiError("unreachable", "The provider did not answer in time", "timeout");
+    return new AiError("timeout", "The provider did not answer in time");
   }
   if (error instanceof TypeError) {
     // The fetch implementation throws a TypeError when the connection fails.

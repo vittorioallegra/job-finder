@@ -100,6 +100,7 @@
           "model-not-found": "the provider does not know this model",
           "rate-limited": "the provider is rate limiting requests or the account is out of credit",
           "unreachable": "the provider could not be reached",
+          "timeout": "the model did not answer in time; a model on this computer may need a smaller context or a lighter model",
           "invalid-output": "the provider answered in an unexpected format",
           "unknown": "unexpected error",
           "engine-unavailable": "the AI worker is not running"
@@ -735,6 +736,7 @@
         "model-not-found": "AI unavailable: the provider does not know the configured model.",
         "rate-limited": "AI unavailable: the provider is rate limiting requests. Try again later.",
         "unreachable": "AI unavailable: the provider could not be reached.",
+        "timeout": "The model did not answer in time. Try again, or pick a lighter model or a smaller context in Settings.",
         "invalid-output": "The AI did not return a document that matches your profile. Try again.",
         "export-failed": "The PDF could not be exported.",
         "unknown": "The document could not be generated."
@@ -824,6 +826,7 @@
           "model-not-found": "the provider does not know the configured model",
           "rate-limited": "the provider is rate limiting requests; try again later",
           "unreachable": "the provider could not be reached",
+          "timeout": "the model did not answer in time; try again or use a lighter model",
           "invalid-output": "the AI did not return an answer the form can use",
           "engine-unavailable": "the background engine is not available",
           "unknown": "the AI call failed"

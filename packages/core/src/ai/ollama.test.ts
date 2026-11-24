@@ -1,9 +1,9 @@
-// protects=Ollama on this computer is called through its own chat API with the context size the user chose, so that choice holds whatever Ollama was started with; other OpenAI-compatible servers keep the OpenAI wire format;
+// protects=Ollama on this computer is called through its own chat API with the context size the user chose, so that choice holds whatever Ollama was started with, and with the JSON schema enforced; other OpenAI-compatible servers keep the OpenAI wire format;
 // fails_when=Ollama is called through /v1 (which ignores the context size), the chosen size is not sent as num_ctx, or another server is sent to Ollama's API;
 // no_claim=a scripted fetch stands in for Ollama, so the model's answer and its memory use are not checked here.
 import { generateText } from "ai";
 import { describe, expect, it } from "vitest";
-import { createAiModel, isOllamaEndpoint } from "./provider";
+import { createAiModel, isLocalAiEndpoint, isOllamaEndpoint } from "./provider";
 
 function recording(answer: unknown) {
   const calls: { url: string; body: Record<string, unknown> }[] = [];
@@ -51,6 +51,41 @@ describe("Ollama", () => {
     expect(result.text).toBe("ok");
     expect(calls[0]?.url).toBe("http://localhost:11434/api/chat");
     expect(calls[0]?.body.options).toMatchObject({ num_ctx: 16384 });
+  });
+
+  it("asks Ollama to follow the JSON schema, so the model cannot use fields of its own", async () => {
+    const { fetch } = recording(ollamaAnswer);
+    const handle = createAiModel(
+      {
+        provider: "openai-compatible",
+        model: "gemma4:12b",
+        baseUrl: "http://localhost:11434/v1",
+        apiKey: null,
+      },
+      { fetch },
+    );
+    expect(handle.capabilities.nativeStructuredOutput).toBe(true);
+    expect(
+      createAiModel(
+        {
+          provider: "openai-compatible",
+          model: "local",
+          baseUrl: "http://localhost:1234/v1",
+          apiKey: null,
+        },
+        { fetch },
+      ).capabilities.nativeStructuredOutput,
+    ).toBe(false);
+  });
+
+  it("tells a server on this computer from a remote one", () => {
+    expect(
+      isLocalAiEndpoint({ provider: "openai-compatible", baseUrl: "http://localhost:1234/v1" }),
+    ).toBe(true);
+    expect(
+      isLocalAiEndpoint({ provider: "openai-compatible", baseUrl: "https://llm.example.com/v1" }),
+    ).toBe(false);
+    expect(isLocalAiEndpoint({ provider: "anthropic", baseUrl: "" })).toBe(false);
   });
 
   it("keeps the OpenAI wire format for another local server", async () => {
