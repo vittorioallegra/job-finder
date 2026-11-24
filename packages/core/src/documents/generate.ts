@@ -42,6 +42,9 @@ export interface GenerateDocumentOptions {
 export type GenerateDocumentOutcome =
   { ok: true; content: DocumentContent; warnings: AiWarning[] } | { ok: false; code: AiErrorCode };
 
+/** A tailored CV is about as long as the profile's JSON; hosted providers stop at this limit. */
+const DOCUMENT_MAX_OUTPUT_TOKENS = 8192;
+
 /**
  * Generates a tailored CV or a cover letter with one structured AI call per attempt. An answer that
  * breaks a rule of the validator (see `schema.ts`) is sent back once with the rules it broke; an
@@ -73,6 +76,7 @@ export async function generateDocument(
         system,
         prompt,
         contextSize: input.contextSize,
+        maxOutputTokens: DOCUMENT_MAX_OUTPUT_TOKENS,
         abortSignal: options.abortSignal,
       };
       let content: DocumentContent;

@@ -11,14 +11,14 @@
       "body": "{\"id\":\"chatcmpl-hand-made\",\"object\":\"chat.completion\",\"created\":1767225600,\"model\":\"fixture-replay-model\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"ok\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":100,\"completion_tokens\":50,\"total_tokens\":150}}"
     },
     {
-      "key": "e7433f3846cf1f1056610cb3aeb58afcb009467248b5de0dfd33b87b72bfe029",
+      "key": "560ed090524917495b28ed0a347a873c43c200f7c2e2dbfcd0400b524d76c068",
       "method": "POST",
       "path": "/v1/chat/completions",
       "status": 200,
       "body": "{\"id\":\"chatcmpl-hand-made\",\"object\":\"chat.completion\",\"created\":1767225600,\"model\":\"fixture-replay-model\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"summary\\\":\\\"Backend engineer who builds payment services in TypeScript.\\\",\\\"experience\\\":[{\\\"source\\\":0,\\\"company\\\":\\\"Northwind\\\",\\\"title\\\":\\\"Backend Engineer\\\",\\\"location\\\":\\\"Milano\\\",\\\"startDate\\\":\\\"2021\\\",\\\"endDate\\\":\\\"Present\\\",\\\"bullets\\\":[{\\\"source\\\":0,\\\"text\\\":\\\"Reduced checkout latency by 35 percent\\\"}]}],\\\"education\\\":[{\\\"source\\\":0,\\\"institution\\\":\\\"Politecnico di Milano\\\",\\\"degree\\\":\\\"BSc\\\",\\\"field\\\":\\\"Computer Engineering\\\",\\\"startDate\\\":\\\"2014\\\",\\\"endDate\\\":\\\"2017\\\"}],\\\"skills\\\":[{\\\"source\\\":0,\\\"name\\\":\\\"TypeScript\\\"},{\\\"source\\\":1,\\\"name\\\":\\\"PostgreSQL\\\"}]}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":100,\"completion_tokens\":50,\"total_tokens\":150}}"
     },
     {
-      "key": "b31e4135e02dc79537eb49c89976135ec575a87244f96fe104942cb9b4092ab3",
+      "key": "813a93201d211d68141a16860494d1571a1b5c0272a58c80e01c0327d48988ec",
       "method": "POST",
       "path": "/v1/chat/completions",
       "status": 200,

@@ -212,3 +212,186 @@ export type CvExtraction = z.output<typeof CvExtractionSchema>;
 export function applyCvExtraction(profile: Profile, extraction: CvExtraction): Profile {
   return { ...profile, ...extraction };
 }
+
+const looseText = z.string();
+const looseList = <T extends z.ZodType>(item: T) => z.array(item);
+
+/**
+ * An object whose missing keys get their empty value before validation. The JSON schema still
+ * lists every key as required, so a schema-constrained model fills each one in, while a model in
+ * plain JSON mode that leaves a section out still yields a valid draft.
+ */
+function withEmptyDefaults<S extends z.ZodRawShape>(defaults: Record<keyof S, unknown>, shape: S) {
+  return z.preprocess(
+    (value) =>
+      typeof value === "object" && value !== null && !Array.isArray(value)
+        ? { ...defaults, ...value }
+        : value,
+    z.object(shape),
+  );
+}
+
+const EMPTY_DATES = { startDate: "", endDate: "" };
+
+/**
+ * What the AI is asked to return for a CV: the same shape as `CvExtractionSchema`, without the
+ * length limits, the email and URL checks or non-empty names. A model copies the CV as written
+ * (a link as `linkedin.com/in/x`, an over-long bullet), and one such value must not throw away
+ * the whole CV: `normalizeCvExtraction` repairs or drops it instead.
+ */
+export const CvExtractionDraftSchema = withEmptyDefaults(
+  {
+    contact: { fullName: "", email: "", phone: "", location: "" },
+    headline: "",
+    summary: "",
+    experience: [],
+    education: [],
+    skills: [],
+    languages: [],
+    certifications: [],
+    links: [],
+  },
+  {
+    contact: withEmptyDefaults(
+      { fullName: "", email: "", phone: "", location: "" },
+      { fullName: looseText, email: looseText, phone: looseText, location: looseText },
+    ),
+    headline: looseText,
+    summary: looseText,
+    experience: looseList(
+      withEmptyDefaults(
+        { company: "", title: "", location: "", ...EMPTY_DATES, bullets: [] },
+        {
+          company: looseText,
+          title: looseText,
+          location: looseText,
+          startDate: looseText,
+          endDate: looseText,
+          bullets: looseList(z.string()),
+        },
+      ),
+    ),
+    education: looseList(
+      withEmptyDefaults(
+        { institution: "", degree: "", field: "", ...EMPTY_DATES },
+        {
+          institution: looseText,
+          degree: looseText,
+          field: looseText,
+          startDate: looseText,
+          endDate: looseText,
+        },
+      ),
+    ),
+    skills: looseList(
+      withEmptyDefaults(
+        { name: "", level: "", aliases: [] },
+        { name: looseText, level: looseText, aliases: looseList(z.string()) },
+      ),
+    ),
+    languages: looseList(
+      withEmptyDefaults({ name: "", level: "" }, { name: looseText, level: looseText }),
+    ),
+    certifications: looseList(
+      withEmptyDefaults(
+        { name: "", issuer: "", date: "" },
+        { name: looseText, issuer: looseText, date: looseText },
+      ),
+    ),
+    links: looseList(
+      withEmptyDefaults({ label: "", url: "" }, { label: looseText, url: looseText }),
+    ),
+  },
+);
+
+export type CvExtractionDraft = z.output<typeof CvExtractionDraftSchema>;
+
+/** Trims a value and cuts it to the limit, so an over-long one is kept shortened, not refused. */
+function fit(value: string, limit: number): string {
+  return value.trim().slice(0, limit).trim();
+}
+
+/**
+ * A link as a CV writes it, as an http or https URL: `linkedin.com/in/x` and `www.site.dev` gain
+ * `https://`. Null when it is not a web address at all (an email, a handle, plain words).
+ */
+export function normalizeCvLink(value: string): string | null {
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  if (!isHttpUrl(withScheme)) return null;
+  const host = new URL(withScheme).hostname;
+  // A bare word ("GitHub") parses as a host; a web address has a dot in its host.
+  if (!host.includes(".") || withScheme.length > PROFILE_LIMITS.url) return null;
+  return withScheme;
+}
+
+/**
+ * Turns what the model returned into a valid extraction: values are trimmed and cut to their
+ * limits, links gain `https://` when they lack it, an invalid email is left empty, and entries that
+ * stay invalid (a skill without a name, a link that is no address) are dropped. Always valid.
+ */
+export function normalizeCvExtraction(draft: CvExtractionDraft): CvExtraction {
+  const short = (value: string) => fit(value, PROFILE_LIMITS.shortText);
+  const date = (value: string) => fit(value, PROFILE_LIMITS.dateText);
+  const email = fit(draft.contact.email, PROFILE_LIMITS.email);
+  const extraction: CvExtraction = {
+    contact: {
+      fullName: short(draft.contact.fullName),
+      email: EMAIL_PATTERN.test(email) ? email : "",
+      phone: short(draft.contact.phone),
+      location: short(draft.contact.location),
+    },
+    headline: short(draft.headline),
+    summary: fit(draft.summary, PROFILE_LIMITS.longText),
+    experience: draft.experience.slice(0, PROFILE_LIMITS.listItems).map((item) => ({
+      company: short(item.company),
+      title: short(item.title),
+      location: short(item.location),
+      startDate: date(item.startDate),
+      endDate: date(item.endDate),
+      bullets: item.bullets
+        .map((bullet) => fit(bullet, PROFILE_LIMITS.bulletText))
+        .filter((bullet) => bullet !== "")
+        .slice(0, PROFILE_LIMITS.bullets),
+    })),
+    education: draft.education.slice(0, 20).map((item) => ({
+      institution: short(item.institution),
+      degree: short(item.degree),
+      field: short(item.field),
+      startDate: date(item.startDate),
+      endDate: date(item.endDate),
+    })),
+    skills: draft.skills
+      .map((item) => ({
+        name: short(item.name),
+        level: short(item.level),
+        aliases: item.aliases
+          .map(short)
+          .filter((alias) => alias !== "")
+          .slice(0, PROFILE_LIMITS.aliases),
+      }))
+      .filter((item) => item.name !== "")
+      .slice(0, PROFILE_LIMITS.skills),
+    languages: draft.languages
+      .map((item) => ({ name: short(item.name), level: short(item.level) }))
+      .filter((item) => item.name !== "")
+      .slice(0, 20),
+    certifications: draft.certifications
+      .map((item) => ({
+        name: short(item.name),
+        issuer: short(item.issuer),
+        date: date(item.date),
+      }))
+      .filter((item) => item.name !== "")
+      .slice(0, 30),
+    links: draft.links
+      .flatMap((item) => {
+        const url = normalizeCvLink(item.url);
+        return url === null ? [] : [{ label: short(item.label), url }];
+      })
+      .slice(0, 10),
+  };
+  // The repairs above keep every value inside the strict schema; parsing proves it.
+  return CvExtractionSchema.parse(extraction);
+}
