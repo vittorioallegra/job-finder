@@ -52,7 +52,7 @@ function settingsFor(
         ai: {
           provider: cloud ? "anthropic" : "openai-compatible",
           model: "model-x",
-          baseUrl: cloud ? "" : "http://localhost:11434/v1",
+          baseUrl: cloud ? "" : "http://localhost:1234/v1",
           contextSize: 8192,
         },
         ui: { language: uiLanguage },

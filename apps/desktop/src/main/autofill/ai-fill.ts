@@ -12,6 +12,7 @@ import type { MapFormFieldsRequest } from "../../engine/protocol";
 import { EngineUnavailableError } from "../engine/supervisor";
 import type { SecretStore } from "../secrets/store";
 import type { SettingsRepository } from "../settings/repository";
+import { readAiKey } from "../ai/keys";
 
 /** The engine side of the form mapping, as seen from main. */
 export interface AutofillAiEngine {
@@ -72,7 +73,7 @@ export function createAutofillAi(options: AiFillOptions): AiFill {
       if (!hasAiConsent(ai, { consent, consentTarget })) {
         return { ok: false, code: "not-configured" };
       }
-      const apiKey = await options.secrets.read("ai.apiKey");
+      const apiKey = await readAiKey(options.secrets, ai);
       const language = await options.language(applicationId);
       try {
         const outcome = await options.engine.mapFormFields({

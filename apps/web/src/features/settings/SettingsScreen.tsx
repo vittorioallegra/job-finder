@@ -182,16 +182,17 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
           bridge={bridge}
           value={aiFields}
           onChange={changeAi}
-          keySet={secrets.keys["ai.apiKey"]}
-          keyField={
+          isKeySet={(name) => secrets.keys[name]}
+          keyField={(name) => (
             <SecretField
+              key={name}
               bridge={bridge}
-              name="ai.apiKey"
+              name={name}
               label={t("settings.ai.apiKey")}
               secrets={secrets}
               onStatus={setSecrets}
             />
-          }
+          )}
         />
         <TextInput
           label={t("settings.ai.contextSize")}

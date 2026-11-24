@@ -22,6 +22,7 @@ import type { SecretStore } from "../secrets/store";
 import type { SettingsRepository } from "../settings/repository";
 import { explanationLanguage } from "../scoring/service";
 import type { DocumentRepository } from "./repository";
+import { readAiKey } from "../ai/keys";
 
 /** The engine side of document generation, as seen from main. */
 export interface DocumentEngine {
@@ -115,7 +116,7 @@ export function createDocumentService(options: DocumentServiceOptions): Document
       }
       const language: DocumentLanguage =
         request.language ?? documentLanguageFor(postingLanguage, await uiLanguage()).language;
-      const apiKey = await options.secrets.read("ai.apiKey");
+      const apiKey = await readAiKey(options.secrets, ai);
       let outcome: GenerateDocumentOutcome;
       try {
         outcome = await options.engine.generateDocument({

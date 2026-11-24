@@ -1,8 +1,8 @@
-// protects=the connection test reads the saved AI settings and the key in main, hands the key only to the engine, and returns a code (never the key) for every outcome including an unreachable engine; the model list sends the saved key only to the provider it was saved for and asks Ollama only on loopback;
+// protects=the connection test reads the saved AI settings and the key in main, hands the key only to the engine, and returns a code (never the key) for every outcome including an unreachable engine; each provider gets only its own key (Ollama none), and the model list sends the OpenAI-compatible key only to the saved server and asks Ollama only on loopback;
 // fails_when=the key is returned or logged in the result, the wrong provider or model is sent, an unreachable engine is reported as a generic failure, or the key reaches another address through the model list;
 // no_claim=the provider request itself and the keychain are not exercised; the engine round trip is covered by the supervisor test.
 import { describe, expect, it } from "vitest";
-import { DEFAULT_APP_SETTINGS, type AppSettings } from "@job-finder/bridge";
+import { DEFAULT_APP_SETTINGS, type AppSettings, type SecretName } from "@job-finder/bridge";
 import type {
   AiConnectionResult,
   AiModelsOutcome,
@@ -43,7 +43,7 @@ describe("AI connection service", () => {
       settings: settingsWith({
         provider: "openai-compatible",
         model: "llama",
-        baseUrl: "http://localhost:11434/v1",
+        baseUrl: "http://localhost:1234/v1",
       }),
       secrets: secretsReturning(KEY),
       engine: {
@@ -61,7 +61,7 @@ describe("AI connection service", () => {
       {
         provider: "openai-compatible",
         model: "llama",
-        baseUrl: "http://localhost:11434/v1",
+        baseUrl: "http://localhost:1234/v1",
         apiKey: KEY,
       },
     ]);
@@ -122,14 +122,19 @@ describe("AI connection service", () => {
     expect(seen).toEqual([null]);
   });
 
-  it("sends the saved key only to the provider it was saved for", async () => {
+  it("sends each provider only its own key, and the OpenAI-compatible key only to the saved server", async () => {
     const asked: AiModelsRequest[] = [];
+    const keys: Partial<Record<SecretName, string>> = {
+      "ai.apiKey.anthropic": "sk-ant",
+      "ai.apiKey.gemini": "gemini-key",
+      "ai.apiKey.openai-compatible": "server-key",
+    };
     const service = createAiConnectionService({
       settings: settingsWith({
         provider: "openai-compatible",
         baseUrl: "https://llm.example.com/v1",
       }),
-      secrets: secretsReturning(KEY),
+      secrets: { read: async (name: SecretName) => keys[name] ?? null } as unknown as SecretStore,
       engine: {
         testAiConnection: async () => ({ ok: true, model: "unused" }),
         listModels: async (request) => {
@@ -150,18 +155,45 @@ describe("AI connection service", () => {
       baseUrl: "https://other.example.com/v1",
     });
     await service.listModels({ source: "ollama", baseUrl: " http://localhost:11434/v1 " });
+    await expect(service.listModels({ source: "openai", baseUrl: "" })).resolves.toEqual({
+      ok: false,
+      code: "no-key",
+    });
 
     expect(asked).toEqual([
-      { source: "anthropic", baseUrl: "", apiKey: KEY },
+      { source: "anthropic", baseUrl: "", apiKey: "sk-ant" },
       {
         source: "gemini",
         baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai/",
-        apiKey: KEY,
+        apiKey: "gemini-key",
       },
-      { source: "openai-compatible", baseUrl: "https://llm.example.com/v1/", apiKey: KEY },
+      { source: "openai-compatible", baseUrl: "https://llm.example.com/v1/", apiKey: "server-key" },
       { source: "openai-compatible", baseUrl: "https://other.example.com/v1", apiKey: null },
       { source: "ollama", baseUrl: "http://localhost:11434/v1", apiKey: null },
     ]);
+  });
+
+  it("tests the saved provider with its own key, and Ollama with none", async () => {
+    const seen: Array<string | null> = [];
+    const read = async (name: SecretName) => (name === "ai.apiKey.gemini" ? "gemini-key" : "other");
+    for (const baseUrl of [
+      "https://generativelanguage.googleapis.com/v1beta/openai/",
+      "http://localhost:11434/v1",
+    ]) {
+      const service = createAiConnectionService({
+        settings: settingsWith({ provider: "openai-compatible", model: "m", baseUrl }),
+        secrets: { read } as unknown as SecretStore,
+        engine: {
+          listModels: noModels,
+          testAiConnection: async (config) => {
+            seen.push(config.apiKey);
+            return { ok: true, model: "m" };
+          },
+        },
+      });
+      await service.testConnection();
+    }
+    expect(seen).toEqual(["gemini-key", null]);
   });
 
   it("asks nothing without a key or for a remote Ollama, and reports a missing engine", async () => {

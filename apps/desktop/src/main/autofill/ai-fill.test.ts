@@ -14,7 +14,7 @@ function settingsWith(ai: Partial<{ provider: string; model: string; baseUrl: st
     ai: {
       provider: "openai-compatible",
       model: "local-model",
-      baseUrl: "http://localhost:11434/v1",
+      baseUrl: "http://localhost:1234/v1",
       contextSize: 8192,
       ...ai,
     },
@@ -54,7 +54,7 @@ describe("createAutofillAi", () => {
       language: async () => "en",
     });
     const local = createAutofillAi({
-      settings: settingsWith({ baseUrl: "http://localhost:11434/v1" }),
+      settings: settingsWith({ baseUrl: "http://localhost:1234/v1" }),
       secrets,
       engine,
       language: async () => "en",

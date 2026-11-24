@@ -245,12 +245,13 @@ function AiStep({ bridge, settings, onSaved, onContinue }: AiStepProps) {
           bridge={bridge}
           value={fields}
           onChange={changeFields}
-          keySet={secrets?.keys["ai.apiKey"] ?? false}
-          keyField={
+          isKeySet={(name) => secrets?.keys[name] ?? false}
+          keyField={(name) =>
             secrets !== null ? (
               <SecretField
+                key={name}
                 bridge={bridge}
-                name="ai.apiKey"
+                name={name}
                 label={t("settings.ai.apiKey")}
                 secrets={secrets}
                 onStatus={setSecrets}

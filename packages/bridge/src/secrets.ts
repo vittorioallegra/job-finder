@@ -1,8 +1,14 @@
 import { z } from "zod";
 
-/** Every secret the app stores. Names are fixed here; the renderer never sends arbitrary keys. */
+/**
+ * Every secret the app stores. Names are fixed here; the renderer never sends arbitrary keys. Each
+ * AI provider has its own key, so a key saved for one never reaches another (`aiKeyNameFor`).
+ */
 export const SECRET_NAMES = [
-  "ai.apiKey",
+  "ai.apiKey.anthropic",
+  "ai.apiKey.openai",
+  "ai.apiKey.gemini",
+  "ai.apiKey.openai-compatible",
   "search.brave",
   "search.tavily",
   "search.serper",
@@ -36,3 +42,6 @@ export const SecretSetRequestSchema = z.strictObject({
 export const SecretClearRequestSchema = z.strictObject({
   name: z.enum(SECRET_NAMES),
 });
+
+/** The single AI key of earlier versions; main moves it to the saved provider's own key once. */
+export const LEGACY_AI_KEY_ROW = "secret.ai.apiKey";

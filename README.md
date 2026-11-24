@@ -69,6 +69,11 @@ For every provider the **Model** menu lists the provider's own models: for Anthr
 and Gemini save the key first, then pick the model. When a list cannot be read, the model name
 can be typed instead.
 
+Each provider keeps its own key, so you can switch between them without typing a key again, and
+a key saved for one provider is never sent to another. Ollama needs no key. The OpenAI-compatible
+key goes only to the server saved in Settings. **Test connection** saves your changes first,
+then tries the provider; a failure names the provider's HTTP status and error code.
+
 ### Ollama (free, local)
 
 1. Install Ollama from `https://ollama.com` and open it.

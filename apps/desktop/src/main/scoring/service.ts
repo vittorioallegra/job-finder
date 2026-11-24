@@ -8,6 +8,7 @@ import { EngineUnavailableError } from "../engine/supervisor";
 import type { ProfileRepository } from "../profile/repository";
 import type { SecretStore } from "../secrets/store";
 import type { SettingsRepository } from "../settings/repository";
+import { readAiKey } from "../ai/keys";
 
 /** Open jobs scored per run, newest first. Cached scores do not count against the AI budget in the engine. */
 export const MAX_SCORED_JOBS = 500;
@@ -71,7 +72,7 @@ export function createScoringService(options: ScoringServiceOptions): ScoringSer
     if (jobIds.length === 0) {
       return { ok: true, scored: 0, cached: 0, failed: 0, skipped: 0 };
     }
-    const apiKey = await options.secrets.read("ai.apiKey");
+    const apiKey = await readAiKey(options.secrets, ai);
     const outcome = await options.engine.scoreJobs({
       profile: scoringFields(saved.profile),
       profileVersion: saved.version,

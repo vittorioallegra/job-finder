@@ -1,7 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
-import { SETTING_LIMITS, type AiModelsResult, type JobFinderBridge } from "@job-finder/bridge";
+import {
+  SETTING_LIMITS,
+  aiKeyNameForSource,
+  type AiModelsResult,
+  type JobFinderBridge,
+  type SecretName,
+} from "@job-finder/bridge";
 import { Button } from "../../components/ui/Button";
 import { SelectInput, type SelectOption } from "../../components/ui/SelectInput";
 import { TextInput } from "../../components/ui/TextInput";
@@ -36,10 +42,10 @@ interface AiProviderFieldsProps {
   bridge: JobFinderBridge;
   value: AiChoiceFields;
   onChange: (next: AiChoiceFields) => void;
-  /** The API key field; Ollama needs no key, so it is left out for that choice. */
-  keyField: ReactNode;
+  /** The key field for the chosen provider's own key; Ollama needs none, so it gets no field. */
+  keyField: (name: SecretName) => ReactNode;
   /** Whether a key is saved; saving or removing one reads the model list again. */
-  keySet: boolean;
+  isKeySet: (name: SecretName) => boolean;
 }
 
 /**
@@ -51,9 +57,11 @@ export function AiProviderFields({
   value,
   onChange,
   keyField,
-  keySet,
+  isKeySet,
 }: AiProviderFieldsProps) {
   const { t } = useTranslation();
+  const keyName = aiKeyNameForSource(value.choice);
+  const keySet = keyName !== null && isKeySet(keyName);
   const options: SelectOption[] = AI_CHOICES.map((choice) => ({
     value: choice,
     label: t(CHOICE_LABEL_KEYS[choice]),
@@ -101,7 +109,7 @@ export function AiProviderFields({
               onChange={(event) => onChange({ ...value, baseUrl: event.target.value })}
             />
           ) : null}
-          {keyField}
+          {keyName !== null ? keyField(keyName) : null}
           {modelField}
         </>
       )}
@@ -115,7 +123,14 @@ interface LoadedModels {
   result: AiModelsResult;
 }
 
-function ModelField({ bridge, value, onChange, keySet }: Omit<AiProviderFieldsProps, "keyField">) {
+interface ModelFieldProps {
+  bridge: JobFinderBridge;
+  value: AiChoiceFields;
+  onChange: (next: AiChoiceFields) => void;
+  keySet: boolean;
+}
+
+function ModelField({ bridge, value, onChange, keySet }: ModelFieldProps) {
   const { t } = useTranslation();
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState<LoadedModels | null>(null);

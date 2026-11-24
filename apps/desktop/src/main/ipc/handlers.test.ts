@@ -37,7 +37,10 @@ function spyServices() {
       return {
         storage: { mode: "encrypted" as const, optInRequired: false },
         keys: {
-          "ai.apiKey": false,
+          "ai.apiKey.anthropic": false,
+          "ai.apiKey.openai": false,
+          "ai.apiKey.gemini": false,
+          "ai.apiKey.openai-compatible": false,
           "search.brave": false,
           "search.tavily": false,
           "search.serper": false,

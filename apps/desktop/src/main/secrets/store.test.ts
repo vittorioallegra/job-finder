@@ -42,11 +42,11 @@ function storeWith(options: {
 describe("secret store", () => {
   it("writes an encrypted blob, not the plain key, when encryption is available", async () => {
     const { store, rows } = storeWith({ safeStorage: fakeSafeStorage() });
-    await store.set("ai.apiKey", "sk-test-value");
+    await store.set("ai.apiKey.openai", "sk-test-value");
     const stored = [...rows.rows.values()];
     expect(stored).toHaveLength(1);
     expect(stored[0]).not.toContain("sk-test-value");
-    expect(await store.read("ai.apiKey")).toBe("sk-test-value");
+    expect(await store.read("ai.apiKey.openai")).toBe("sk-test-value");
     expect((await store.status()).storage).toEqual({ mode: "encrypted", optInRequired: false });
   });
 
@@ -55,7 +55,7 @@ describe("secret store", () => {
     await store.set("search.brave", "brave-secret-value");
     const status = await store.status();
     expect(status.keys["search.brave"]).toBe(true);
-    expect(status.keys["ai.apiKey"]).toBe(false);
+    expect(status.keys["ai.apiKey.openai"]).toBe(false);
     expect(JSON.stringify(status)).not.toContain("brave-secret-value");
   });
 
@@ -70,11 +70,11 @@ describe("secret store", () => {
   it("does not write basic_text keys to disk before the Linux opt-in", async () => {
     const safeStorage = fakeSafeStorage({ backend: "basic_text" });
     const { store, rows } = storeWith({ safeStorage, basicTextAllowed: false });
-    await store.set("ai.apiKey", "sk-linux-value");
+    await store.set("ai.apiKey.openai", "sk-linux-value");
     expect(rows.rows.size).toBe(0);
     const status = await store.status();
     expect(status.storage).toEqual({ mode: "session-only", optInRequired: true });
-    expect(status.keys["ai.apiKey"]).toBe(true);
+    expect(status.keys["ai.apiKey.openai"]).toBe(true);
   });
 
   it("moves in-memory keys to disk once the opt-in is granted", async () => {
@@ -86,12 +86,12 @@ describe("secret store", () => {
       rows,
       isBasicTextAllowed: async () => allowed,
     });
-    await store.set("ai.apiKey", "sk-linux-value");
+    await store.set("ai.apiKey.openai", "sk-linux-value");
     expect(rows.rows.size).toBe(0);
     allowed = true;
     await store.onBasicTextAllowedChanged();
     expect(rows.rows.size).toBe(1);
-    expect(await store.read("ai.apiKey")).toBe("sk-linux-value");
+    expect(await store.read("ai.apiKey.openai")).toBe("sk-linux-value");
   });
 
   it("removes the keys from disk when the Linux opt-in is withdrawn", async () => {
@@ -103,24 +103,24 @@ describe("secret store", () => {
       rows,
       isBasicTextAllowed: async () => allowed,
     });
-    await store.set("ai.apiKey", "sk-linux-value");
+    await store.set("ai.apiKey.openai", "sk-linux-value");
     expect(rows.rows.size).toBe(1);
 
     allowed = false;
     await store.onBasicTextAllowedChanged();
 
     expect(rows.rows.size).toBe(0);
-    expect((await store.status()).keys["ai.apiKey"]).toBe(true);
-    expect(await store.read("ai.apiKey")).toBe("sk-linux-value");
+    expect((await store.status()).keys["ai.apiKey.openai"]).toBe(true);
+    expect(await store.read("ai.apiKey.openai")).toBe("sk-linux-value");
   });
 
   it("removes both the memory copy and the disk blob on clear", async () => {
     const { store, rows } = storeWith({ safeStorage: fakeSafeStorage() });
-    await store.set("ai.apiKey", "sk-test-value");
-    const status = await store.clear("ai.apiKey");
-    expect(status.keys["ai.apiKey"]).toBe(false);
+    await store.set("ai.apiKey.openai", "sk-test-value");
+    const status = await store.clear("ai.apiKey.openai");
+    expect(status.keys["ai.apiKey.openai"]).toBe(false);
     expect(rows.rows.size).toBe(0);
-    expect(await store.read("ai.apiKey")).toBeNull();
+    expect(await store.read("ai.apiKey.openai")).toBeNull();
   });
 });
 

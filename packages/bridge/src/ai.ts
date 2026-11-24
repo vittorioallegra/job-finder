@@ -1,3 +1,4 @@
+import type { SecretName } from "./secrets";
 import type { AiProvider } from "./settings";
 
 /**
@@ -135,3 +136,35 @@ export interface AiModelOption {
 /** The models a provider offers, or a code. Never carries the key. */
 export type AiModelsResult =
   { ok: true; models: AiModelOption[] } | { ok: false; code: AiModelsFailureCode };
+
+/**
+ * Which key a model source uses. Ollama runs on this computer and takes none. The OpenAI-compatible
+ * key is for the saved server: main sends it only to the saved address.
+ */
+export function aiKeyNameForSource(source: AiModelSource): SecretName | null {
+  switch (source) {
+    case "anthropic":
+      return "ai.apiKey.anthropic";
+    case "openai":
+      return "ai.apiKey.openai";
+    case "gemini":
+      return "ai.apiKey.gemini";
+    case "openai-compatible":
+      return "ai.apiKey.openai-compatible";
+    case "ollama":
+      return null;
+  }
+}
+
+/** The source saved AI settings stand for: Gemini and Ollama are told apart by their address. */
+export function aiSourceFor(ai: { provider: AiProvider; baseUrl: string }): AiModelSource {
+  if (ai.provider !== "openai-compatible") return ai.provider;
+  if (isGeminiBaseUrl(ai.baseUrl)) return "gemini";
+  if (isOllamaBaseUrl(ai.baseUrl)) return "ollama";
+  return "openai-compatible";
+}
+
+/** The key the saved AI settings use, or null for Ollama. */
+export function aiKeyNameFor(ai: { provider: AiProvider; baseUrl: string }): SecretName | null {
+  return aiKeyNameForSource(aiSourceFor(ai));
+}

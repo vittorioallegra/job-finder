@@ -1,5 +1,7 @@
 import {
   GEMINI_BASE_URL,
+  aiKeyNameForSource,
+  aiSourceFor,
   isCloudAiEndpoint,
   type AiModelSource,
   type AiModelsResult,
@@ -14,6 +16,7 @@ import type {
 import { EngineUnavailableError } from "../engine/supervisor";
 import type { SecretStore } from "../secrets/store";
 import type { SettingsRepository } from "../settings/repository";
+import { readAiKey } from "./keys";
 
 /** The engine side of a connection test, as seen from main. */
 export interface AiEngine {
@@ -31,8 +34,8 @@ export interface AiConnectionService {
   /** Tests the saved AI settings. The key is read here and handed only to the engine. */
   testConnection(): Promise<AiTestResult>;
   /**
-   * The models a provider offers. The saved key goes only to the provider it was saved for:
-   * Anthropic, OpenAI and Gemini at their fixed addresses, or the saved OpenAI-compatible origin.
+   * The models a provider offers. Each provider gets only its own key: Anthropic, OpenAI and
+   * Gemini at their fixed addresses, the OpenAI-compatible key only at the saved server's origin.
    * Ollama is asked only on a loopback host, with no key.
    */
   listModels(request: { source: AiModelSource; baseUrl: string }): Promise<AiModelsResult>;
@@ -49,7 +52,7 @@ export function createAiConnectionService(
   return {
     async testConnection() {
       const { ai } = await options.settings.get();
-      const apiKey = await options.secrets.read("ai.apiKey");
+      const apiKey = await readAiKey(options.secrets, ai);
       try {
         return await options.engine.testAiConnection({
           provider: ai.provider,
@@ -79,12 +82,14 @@ export function createAiConnectionService(
         if (url === "") return { ok: false, code: "unreachable" };
         // A key typed for one server never goes to another address typed later.
         const { ai } = await options.settings.get();
-        if (ai.provider === "openai-compatible" && sameOrigin(ai.baseUrl, url)) {
-          apiKey = await options.secrets.read("ai.apiKey");
+        if (aiSourceFor(ai) === "openai-compatible" && sameOrigin(ai.baseUrl, url)) {
+          apiKey = await options.secrets.read("ai.apiKey.openai-compatible");
         }
       } else {
         if (source === "gemini") url = GEMINI_BASE_URL;
-        apiKey = await options.secrets.read("ai.apiKey");
+        // Each hosted provider has its own key: the one in the menu, not the one in the settings.
+        const name = aiKeyNameForSource(source);
+        apiKey = name === null ? null : await options.secrets.read(name);
         if (apiKey === null || apiKey === "") return { ok: false, code: "no-key" };
       }
       try {

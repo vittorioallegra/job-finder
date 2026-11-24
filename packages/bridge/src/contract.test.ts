@@ -51,15 +51,15 @@ describe("settings contract", () => {
 
 describe("secret and channel contract", () => {
   it("rejects secret names outside the fixed list and empty values", () => {
-    expect(SecretSetRequestSchema.safeParse({ name: "ai.apiKey", value: "sk-test" }).success).toBe(
-      true,
-    );
+    expect(
+      SecretSetRequestSchema.safeParse({ name: "ai.apiKey.openai", value: "sk-test" }).success,
+    ).toBe(true);
     expect(SecretSetRequestSchema.safeParse({ name: "db.password", value: "x" }).success).toBe(
       false,
     );
-    expect(SecretSetRequestSchema.safeParse({ name: "ai.apiKey", value: "   " }).success).toBe(
-      false,
-    );
+    expect(
+      SecretSetRequestSchema.safeParse({ name: "ai.apiKey.openai", value: "   " }).success,
+    ).toBe(false);
   });
 
   it("defines a schema for every channel, with no payload for the read channels", () => {

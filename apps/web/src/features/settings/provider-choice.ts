@@ -1,8 +1,8 @@
 import {
   GEMINI_BASE_URL,
   OLLAMA_BASE_URL,
+  aiSourceFor,
   isGeminiBaseUrl,
-  isOllamaBaseUrl,
   type AiProvider,
 } from "@job-finder/bridge";
 
@@ -29,10 +29,7 @@ export interface AiChoiceFields {
 
 /** The menu entry for saved settings: Gemini or Ollama when the OpenAI-compatible URL is theirs. */
 export function aiChoiceFromSettings(ai: { provider: AiProvider; baseUrl: string }): AiChoice {
-  if (ai.provider !== "openai-compatible") return ai.provider;
-  if (isGeminiBaseUrl(ai.baseUrl)) return "gemini";
-  if (isOllamaBaseUrl(ai.baseUrl)) return "ollama";
-  return ai.provider;
+  return aiSourceFor(ai);
 }
 
 /** The provider and base URL to save for a menu entry. Hosted providers keep no base URL. */

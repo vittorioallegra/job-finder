@@ -1,4 +1,4 @@
-// protects=the settings screen loads the saved values, saves only valid changes through the bridge, retries after a failed read, and never shows a stored key value; Linux shows the keyring opt-in and hides launch at login; the AI connection test saves the changes on screen first, then shows the model or the AI unavailable reason; Ollama is set up from its installed models without a key field;
+// protects=the settings screen loads the saved values, saves only valid changes through the bridge, retries after a failed read, and never shows a stored key value; Linux shows the keyring opt-in and hides launch at login; the AI connection test saves the changes on screen first, then shows the model or the AI unavailable reason; Ollama is set up from its installed models without a key field; each provider keeps its own key;
 // fails_when=a value is sent without validation, a key value is rendered, a failed read shows a blank form, Linux shows launch at login, a failed AI test shows no reason, the test reads settings older than the screen, Ollama asks for a key, saves an unusable provider or hides why its models are missing;
 // no_claim=visual layout, keyboard focus order and the real OS keychain are not checked here.
 import { act } from "react";
@@ -286,6 +286,34 @@ describe("settings screen", () => {
     expect(keyInput.value).toBe("");
     expect(container.textContent).toContain("A key is saved.");
     expect(container.innerHTML).not.toContain("sk-visible-test-value");
+  });
+
+  it("keeps a key for each provider: a key saved for one is not shown as saved for another", async () => {
+    const memory = createMemoryBridge();
+    const set = vi.fn(memory.secrets.set);
+    await render({ ...memory, secrets: { ...memory.secrets, set } });
+    await act(async () => {
+      setInputValue(field(container, "API key"), "sk-anthropic-test");
+    });
+    await act(async () => {
+      button(container, "Save key").click();
+    });
+    await act(async () => {});
+    expect(set).toHaveBeenCalledWith("ai.apiKey.anthropic", "sk-anthropic-test");
+    expect(container.textContent).toContain("A key is saved.");
+
+    await act(async () => {
+      setInputValue(field(container, "Provider"), "openai");
+    });
+    expect(container.textContent).toContain("No key saved.");
+    await act(async () => {
+      setInputValue(field(container, "Provider"), "ollama");
+    });
+    expect(container.textContent).not.toContain("API key");
+    await act(async () => {
+      setInputValue(field(container, "Provider"), "anthropic");
+    });
+    expect(container.textContent).toContain("A key is saved.");
   });
 
   it("shows the Linux keyring opt-in and hides launch at login", async () => {

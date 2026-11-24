@@ -1,4 +1,4 @@
-// protects=the AI test channel takes no payload and the failure code list matches the codes the AI layer and engine can produce, so the renderer can translate every outcome; the model list channel takes a source and an address but never a key, and Ollama is recognised only on a loopback host and its port, Gemini only on Google's API host;
+// protects=the AI test channel takes no payload and the failure code list matches the codes the AI layer and engine can produce, so the renderer can translate every outcome; the model list channel takes a source and an address but never a key, and Ollama is recognised only on a loopback host and its port, Gemini only on Google's API host; each provider maps to its own key and Ollama to none;
 // fails_when=the channel accepts a payload that could carry a key, or a failure code the UI has no message for is added without an entry in this list;
 // no_claim=the result type is not checked against the core error codes at runtime, only as a list here; renderer translations are checked in apps/web.
 import { describe, expect, it } from "vitest";
@@ -6,9 +6,11 @@ import {
   AI_TEST_FAILURE_CODES,
   IPC_REQUEST_SCHEMAS,
   GEMINI_BASE_URL,
+  OLLAMA_BASE_URL,
   aiConsentTarget,
   isCloudAiEndpoint,
   hasAiConsent,
+  aiKeyNameFor,
   isGeminiBaseUrl,
   isOllamaBaseUrl,
 } from "./index";
@@ -96,5 +98,19 @@ describe("Gemini", () => {
     expect(isCloudAiEndpoint({ provider: "openai-compatible", baseUrl: GEMINI_BASE_URL })).toBe(
       true,
     );
+  });
+});
+
+describe("AI keys per provider", () => {
+  it("gives each provider its own key and Ollama none", () => {
+    expect(aiKeyNameFor({ provider: "anthropic", baseUrl: "" })).toBe("ai.apiKey.anthropic");
+    expect(aiKeyNameFor({ provider: "openai", baseUrl: "" })).toBe("ai.apiKey.openai");
+    expect(aiKeyNameFor({ provider: "openai-compatible", baseUrl: GEMINI_BASE_URL })).toBe(
+      "ai.apiKey.gemini",
+    );
+    expect(aiKeyNameFor({ provider: "openai-compatible", baseUrl: OLLAMA_BASE_URL })).toBeNull();
+    expect(
+      aiKeyNameFor({ provider: "openai-compatible", baseUrl: "https://llm.example.com/v1" }),
+    ).toBe("ai.apiKey.openai-compatible");
   });
 });

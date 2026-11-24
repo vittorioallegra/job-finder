@@ -48,6 +48,7 @@ import { startEngineSupervisor, type EngineSupervisor } from "./engine/superviso
 import { createFileLogger } from "./logging/file-logger";
 import { originOf } from "./security/origin";
 import { createSecretStore, createSettingsSecretRows } from "./secrets/store";
+import { migrateLegacyAiKey, readAiKey } from "./ai/keys";
 import { createSettingsRepository } from "./settings/repository";
 import { APP_HOST, APP_SCHEME, resolveAppRequest } from "./protocol/app-protocol";
 import { INGEST_PROGRESS_CHANNEL } from "@job-finder/bridge";
@@ -204,9 +205,11 @@ if (gotSingleInstanceLock) {
     app.on("before-quit", () => {
       quitting = true;
     });
+    const secretRows = createSettingsSecretRows(database.db);
+    await migrateLegacyAiKey(secretRows, (await settingsRepository.get()).ai);
     const secretStore = createSecretStore({
       safeStorage,
-      rows: createSettingsSecretRows(database.db),
+      rows: secretRows,
       isBasicTextAllowed: async () => (await settingsRepository.get()).secrets.allowBasicText,
     });
     let supervisor: EngineSupervisor | null = null;
@@ -228,7 +231,7 @@ if (gotSingleInstanceLock) {
             provider: ai.provider,
             model: ai.model,
             baseUrl: ai.baseUrl,
-            apiKey: await secretStore.read("ai.apiKey"),
+            apiKey: await readAiKey(secretStore, ai),
           },
           contextSize: ai.contextSize,
         };

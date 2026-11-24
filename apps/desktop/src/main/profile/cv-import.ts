@@ -6,6 +6,7 @@ import type {
 import { EngineUnavailableError } from "../engine/supervisor";
 import type { SecretStore } from "../secrets/store";
 import type { SettingsRepository } from "../settings/repository";
+import { readAiKey } from "../ai/keys";
 
 /** The engine side of a CV import, as seen from main. */
 export interface CvEngine {
@@ -35,7 +36,7 @@ export function createCvImportService(options: CvImportServiceOptions): CvImport
       if (!hasAiConsent(ai, request)) {
         return { ok: false, code: "consent-required" };
       }
-      const apiKey = await options.secrets.read("ai.apiKey");
+      const apiKey = await readAiKey(options.secrets, ai);
       try {
         return await options.engine.importCv({
           config: {

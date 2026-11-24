@@ -42,7 +42,9 @@ export interface SecretStore {
   onBasicTextAllowedChanged(): Promise<void>;
 }
 
-const rowKey = (name: SecretName): string => `secret.${name}`;
+/** The settings row that holds a secret's ciphertext. */
+export const secretRowKey = (name: SecretName): string => `secret.${name}`;
+const rowKey = secretRowKey;
 
 /**
  * Chooses how secrets are kept. Linux `basic_text` (no keyring) is stored on disk only after the
