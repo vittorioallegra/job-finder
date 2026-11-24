@@ -16,7 +16,8 @@
       "companies": "Companies",
       "applications": "Applications",
       "profile": "Profile",
-      "settings": "Settings"
+      "settings": "Settings",
+      "exitSetup": "Exit setup"
     },
     "brand": {
       "first": "job",
