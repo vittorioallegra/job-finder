@@ -353,11 +353,18 @@ function ContextSlider({ value, onChange, modelLimit, known }: ContextSliderProp
         value={index}
         aria-valuetext={t("settings.ai.contextTokens", { count: shown, formatted: format(shown) })}
         onChange={(event) => onChange(String(steps[Number(event.target.value)] ?? shown))}
-        className="w-full accent-app-accent"
+        className="range-input w-full"
       />
-      <div className="flex justify-between text-xs tabular-nums text-app-muted" aria-hidden>
-        {steps.map((step) => (
-          <span key={step}>{short(step)}</span>
+      {/* Inset by half the thumb (8px), so each label sits under its stop. */}
+      <div className="relative mx-2 h-4 text-xs tabular-nums text-app-muted" aria-hidden>
+        {steps.map((step, stepIndex) => (
+          <span
+            key={step}
+            className="absolute top-0 -translate-x-1/2"
+            style={{ left: `${(stepIndex / Math.max(steps.length - 1, 1)) * 100}%` }}
+          >
+            {short(step)}
+          </span>
         ))}
       </div>
       <p className="text-xs text-app-muted">

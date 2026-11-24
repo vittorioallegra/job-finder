@@ -86,8 +86,8 @@ then tries the provider; a failure names the provider's HTTP status and error co
 
 The app talks to Ollama through Ollama's own API and sends the context size with every request,
 so Ollama's own context setting does not limit it. Pick it with the **Longest text per request**
-slider in Settings: 16k (the default) is enough for a CV and a posting, more takes more memory
-while the model works, and the slider ends at the chosen model's limit.
+slider in Settings: 32k (the default) fits every request the app sends, including long careers
+pages; more only takes more memory, and the slider ends at the chosen model's limit.
 
 ## Search keys (free tier)
 

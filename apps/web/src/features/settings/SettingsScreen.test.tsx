@@ -157,8 +157,8 @@ describe("settings screen", () => {
     const model = field(container, "Model");
     expect(model).toBeInstanceOf(HTMLSelectElement);
     expect(model.value).toBe("gemma3:4b");
-    // The context slider starts at 16k and ends at the chosen model's limit.
-    expect(container.textContent).toContain("16,384 tokens");
+    // The context slider starts at 32k and ends at the chosen model's limit.
+    expect(container.textContent).toContain("32,768 tokens");
     expect(container.textContent).toContain("128k");
     await act(async () => {
       setInputValue(model, "qwen3:8b");

@@ -72,8 +72,11 @@ export function switchAiChoice(fields: AiChoiceFields, choice: AiChoice): AiChoi
  */
 export const HOSTED_CONTEXT_SIZE = 128_000;
 
-/** The context size Ollama starts from: enough for a CV and a posting, light on memory. */
-export const OLLAMA_CONTEXT_SIZE = 16_384;
+/**
+ * The context size Ollama starts from. The longest request the app sends is a careers page
+ * (up to 60,000 characters, about 15k tokens) plus the answer, so 32k fits every request.
+ */
+export const OLLAMA_CONTEXT_SIZE = 32_768;
 
 /** The value the context size field starts from for another server: a common setup. */
 export const LOCAL_CONTEXT_SIZE = 8192;

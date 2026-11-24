@@ -148,3 +148,46 @@ h2 {
 a {
   text-underline-offset: 3px;
 }
+
+/*
+ * Range slider with a fixed thumb, so tick labels can sit exactly under the thumb's stops: the
+ * thumb's centre travels from half its width to the track's end minus half its width.
+ */
+.range-input {
+  --range-thumb: 16px;
+  appearance: none;
+  height: var(--range-thumb);
+  background: transparent;
+  cursor: pointer;
+}
+
+.range-input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--app-border);
+}
+
+.range-input::-webkit-slider-thumb {
+  appearance: none;
+  width: var(--range-thumb);
+  height: var(--range-thumb);
+  margin-top: calc((4px - var(--range-thumb)) / 2);
+  border-radius: 999px;
+  background: var(--app-accent);
+  border: 2px solid var(--app-surface);
+  box-shadow: 0 0 0 1px var(--app-accent);
+}
+
+.range-input::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--app-border);
+}
+
+.range-input::-moz-range-thumb {
+  width: var(--range-thumb);
+  height: var(--range-thumb);
+  border-radius: 999px;
+  background: var(--app-accent);
+  border: 2px solid var(--app-surface);
+}

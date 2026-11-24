@@ -84,7 +84,7 @@
       "contextSize": "Testo massimo per richiesta (token)",
       "contextTokens_one": "{{formatted}} token",
       "contextTokens_other": "{{formatted}} token",
-      "contextSizeHintOllamaLimit": "Quanto testo l'app chiede a Ollama di leggere in una richiesta. 16k bastano per un CV e un'offerta; di più occupa più memoria mentre il modello lavora. Questo modello arriva a {{limit}} token; l'impostazione del contesto in Ollama non lo limita.",
+      "contextSizeHintOllamaLimit": "Quanto testo l'app chiede a Ollama di leggere in una richiesta. 32k bastano per tutto quello che l'app invia: un CV, un'offerta o una pagina di lavoro, con la risposta. Di più occupa solo più memoria; di meno può lasciare non lette le pagine di lavoro lunghe. Questo modello arriva a {{limit}} token. L'impostazione del contesto in Ollama non lo limita.",
       "contextSizeHint": "Quanti token il server legge in una richiesta: lo dice la sua configurazione. L'app lo usa per riconoscere i testi troppo lunghi: un'offerta più lunga non viene valutata e un CV più lungo viene segnalato, invece di finire tagliato senza avviso.",
       "apiKey": "Chiave API",
       "test": {
@@ -106,7 +106,7 @@
           "engine-unavailable": "il processo AI non è in esecuzione"
         }
       },
-      "contextSizeHintOllama": "Quanto testo l'app chiede a Ollama di leggere in una richiesta. 16k bastano per un CV e un'offerta; di più occupa più memoria mentre il modello lavora. L'impostazione del contesto in Ollama non lo limita.",
+      "contextSizeHintOllama": "Quanto testo l'app chiede a Ollama di leggere in una richiesta. 32k bastano per tutto quello che l'app invia: un CV, un'offerta o una pagina di lavoro, con la risposta. Di più occupa solo più memoria; di meno può lasciare non lette le pagine di lavoro lunghe. L'impostazione del contesto in Ollama non lo limita.",
       "help": {
         "anthropic": "Modelli Claude, nel cloud. Crea una chiave API nella Console di Anthropic e incollala qui sotto. Il CV e i testi delle offerte vengono inviati ad Anthropic.",
         "openai": "Modelli GPT, nel cloud. Crea una chiave API sulla piattaforma OpenAI e incollala qui sotto. Il CV e i testi delle offerte vengono inviati a OpenAI.",

@@ -84,7 +84,7 @@
       "contextSize": "Longest text per request (tokens)",
       "contextTokens_one": "{{formatted}} token",
       "contextTokens_other": "{{formatted}} tokens",
-      "contextSizeHintOllamaLimit": "How much text the app asks Ollama to read in one request. 16k is enough for a CV and a posting; more takes more memory while the model works. This model takes up to {{limit}} tokens; Ollama's own context setting does not limit it.",
+      "contextSizeHintOllamaLimit": "How much text the app asks Ollama to read in one request. 32k fits everything the app sends: a CV, a posting or a careers page with the answer. More only takes more memory; less can leave long careers pages unread. This model takes up to {{limit}} tokens. Ollama's own context setting does not limit it.",
       "contextSizeHint": "How many tokens the server reads in one request; its own settings say so. The app uses it to spot texts that are too long: a longer posting is not scored and a longer CV is flagged, instead of being cut without notice.",
       "apiKey": "API key",
       "test": {
@@ -106,7 +106,7 @@
           "engine-unavailable": "the AI worker is not running"
         }
       },
-      "contextSizeHintOllama": "How much text the app asks Ollama to read in one request. 16k is enough for a CV and a posting; more takes more memory while the model works. Ollama's own context setting does not limit it.",
+      "contextSizeHintOllama": "How much text the app asks Ollama to read in one request. 32k fits everything the app sends: a CV, a posting or a careers page with the answer. More only takes more memory; less can leave long careers pages unread. Ollama's own context setting does not limit it.",
       "help": {
         "anthropic": "Claude models, in the cloud. Create an API key in the Anthropic Console and paste it below. Your CV and job texts are sent to Anthropic.",
         "openai": "GPT models, in the cloud. Create an API key on the OpenAI platform and paste it below. Your CV and job texts are sent to OpenAI.",
