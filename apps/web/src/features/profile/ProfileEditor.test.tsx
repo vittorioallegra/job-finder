@@ -1,4 +1,4 @@
-// protects=the profile editor saves a valid edit through the bridge, refuses an invalid email before any save, adds or removes entries without losing the others, edits dates with month and year pickers (ongoing as present), skills as chips, language levels as a selector and an optional grade, shows no pronouns field, enables Save only with unsaved changes, and groups contracts as employee, freelance and internship;
+// protects=the profile editor saves a valid edit through the bridge, refuses an invalid email before any save, adds or removes entries without losing the others, edits dates with month and year pickers (ongoing as present), skills as chips, language levels as a selector and an optional grade, shows no pronouns field, enables Save only with unsaved changes, lets the saved confirmation fade, and groups contracts as employee, freelance and internship;
 // fails_when=an edited headline is not sent, an invalid email reaches the bridge, the save reports success when it failed, or removing one entry drops another;
 // no_claim=visual layout, keyboard focus order and the stored record's version are not checked here; the bridge is an in-memory double.
 import { act } from "react";
@@ -263,5 +263,22 @@ describe("profile editor", () => {
         }),
       }),
     );
+  });
+
+  it("lets the saved confirmation fade after a few seconds", async () => {
+    vi.useFakeTimers();
+    try {
+      const bridge = createMemoryBridge({ profile: sample() });
+      await render(bridge, sample());
+      await act(async () => setValue(control(container, "Headline"), "Staff Engineer"));
+      await act(async () => button(container, "Save profile").click());
+      expect(container.textContent).toContain("Profile saved.");
+      await act(async () => {
+        vi.advanceTimersByTime(4000);
+      });
+      expect(container.textContent).not.toContain("Profile saved.");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

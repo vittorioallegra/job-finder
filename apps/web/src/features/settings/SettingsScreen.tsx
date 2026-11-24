@@ -8,6 +8,7 @@ import {
   type JobFinderBridge,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
+import { useAutoDismiss } from "../../lib/useAutoDismiss";
 import { i18n, resolveUiLanguage } from "../../lib/i18n";
 import { Button } from "../../components/ui/Button";
 import { Card, CardTitle } from "../../components/ui/Card";
@@ -112,6 +113,7 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
   const unsaved = JSON.stringify(draft) !== JSON.stringify(savedDraft);
   const [secrets, setSecrets] = useState<SecretsStatus>(initialSecrets);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  useAutoDismiss(saveState === "saved", () => setSaveState("idle"));
   const [allowBasicText, setAllowBasicText] = useState(initialSettings.secrets.allowBasicText);
   const isLinux = bridge.platform === "linux";
 

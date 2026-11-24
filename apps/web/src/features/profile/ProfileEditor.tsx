@@ -10,6 +10,7 @@ import {
   type SalaryPeriod,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
+import { useAutoDismiss } from "../../lib/useAutoDismiss";
 import { Button } from "../../components/ui/Button";
 import { CheckboxInput } from "../../components/ui/CheckboxInput";
 import { Card, CardTitle } from "../../components/ui/Card";
@@ -44,6 +45,7 @@ export function ProfileEditor({ initialDraft, stored = true, onSaved }: ProfileE
   // The draft as last stored, or null before the first save of a new profile.
   const [savedDraft, setSavedDraft] = useState<ProfileDraft | null>(stored ? initialDraft : null);
   const unsaved = savedDraft === null || JSON.stringify(draft) !== JSON.stringify(savedDraft);
+  useAutoDismiss(saveState === "saved", () => setSaveState("idle"));
 
   function set<K extends keyof ProfileDraft>(key: K, value: ProfileDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));

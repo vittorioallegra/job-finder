@@ -4,6 +4,7 @@ import type { AiTestResult, JobFinderBridge, SecretName, SecretsStatus } from "@
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { TextInput } from "../../components/ui/TextInput";
+import { useAutoDismiss } from "../../lib/useAutoDismiss";
 
 type AiTestState =
   | { status: "idle" }
@@ -91,6 +92,9 @@ export function SecretField({ bridge, name, label, secrets, onStatus }: SecretFi
   const { t } = useTranslation();
   const [value, setValue] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  // Only a success fades; a failure stays until the next try.
+  const [succeeded, setSucceeded] = useState(false);
+  useAutoDismiss(succeeded && message !== null, () => setMessage(null));
   const isSet = secrets.keys[name];
 
   async function save() {
@@ -98,8 +102,10 @@ export function SecretField({ bridge, name, label, secrets, onStatus }: SecretFi
       onStatus(await bridge.secrets.set(name, value));
       setValue("");
       setMessage(t("settings.secrets.keySaved"));
+      setSucceeded(true);
     } catch {
       setMessage(t("settings.secrets.keyFailed"));
+      setSucceeded(false);
     }
   }
 
@@ -107,8 +113,10 @@ export function SecretField({ bridge, name, label, secrets, onStatus }: SecretFi
     try {
       onStatus(await bridge.secrets.clear(name));
       setMessage(t("settings.secrets.keyRemoved"));
+      setSucceeded(true);
     } catch {
       setMessage(t("settings.secrets.removeFailed"));
+      setSucceeded(false);
     }
   }
 

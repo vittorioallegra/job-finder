@@ -16,6 +16,7 @@ import {
   type SecretsStatus,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
+import { useAutoDismiss } from "../../lib/useAutoDismiss";
 import { Button } from "../../components/ui/Button";
 import { Card, CardTitle } from "../../components/ui/Card";
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -216,6 +217,7 @@ function AiStep({ bridge, settings, onSaved, onContinue }: AiStepProps) {
   const [secrets, setSecrets] = useState<SecretsStatus | null>(null);
   const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState<"idle" | "saving" | "saved" | "error" | "invalid">("idle");
+  useAutoDismiss(message === "saved", () => setMessage("idle"));
 
   useEffect(() => {
     let active = true;
