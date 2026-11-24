@@ -35,13 +35,9 @@
   },
   "notifications": {
     "newJobsTitle": "New matching jobs",
-    "singleSearch": {
-      "one": "1 new job for '{{search}}'",
-      "other": "{{count}} new jobs for '{{search}}'"
-    },
-    "manySearches": {
-      "one": "1 new job from your saved searches",
-      "other": "{{count}} new jobs from {{searches}} saved searches"
+    "newJobs": {
+      "one": "1 new job for your profile",
+      "other": "{{count}} new jobs for your profile"
     },
     "topMatch": ", top match {{score}}"
   },

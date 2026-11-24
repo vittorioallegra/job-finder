@@ -1,19 +1,18 @@
 import { z } from "zod";
-import { JOB_SORTS, JobFilterSchema, type JobFilter } from "@job-finder/core/filters";
+import { JOB_SORTS, JobFilterSchema } from "@job-finder/core/filters";
 import type { Salary } from "@job-finder/core/normalize/job";
 import type { JobListItem } from "./ingest";
 
-// The renderer imports the filter schema and its option lists from here, never from core directly.
+// The renderer imports the filter schema from here, never from core directly.
 export {
   DEFAULT_JOB_FILTER,
+  filterFromPreferences,
   hardFilter,
   JOB_SORTS,
   JobFilterSchema,
-  POSTED_WITHIN_VALUES,
   type JobFilter,
   type JobFilterInput,
   type JobSort,
-  type PostedWithin,
 } from "@job-finder/core/filters";
 export {
   EMPLOYMENT_TYPES,
@@ -27,7 +26,7 @@ export {
   type WorkMode,
 } from "@job-finder/core/normalize/job";
 
-/** The results of the jobs screen: the filter, and the order to list them in. */
+/** The jobs list: the filter, and the order to list them in. */
 export const JobsListRequestSchema = z.strictObject({
   filter: JobFilterSchema,
   sort: z.enum(JOB_SORTS),
@@ -76,25 +75,4 @@ export interface JobDetail extends JobListItem {
   /** Epoch milliseconds, or null when the job is open. */
   closedAt: number | null;
   sources: JobSourceLink[];
-}
-
-export const SavedSearchSaveRequestSchema = z.strictObject({
-  /** Given: replace that search. Omitted: create one. */
-  id: identifier.optional(),
-  name: z.string().trim().min(1).max(100),
-  filter: JobFilterSchema,
-});
-
-export type SavedSearchSaveRequest = z.input<typeof SavedSearchSaveRequestSchema>;
-
-export const SavedSearchDeleteRequestSchema = z.strictObject({ id: identifier });
-
-export type SavedSearchDeleteRequest = z.input<typeof SavedSearchDeleteRequestSchema>;
-
-export interface SavedSearch {
-  id: string;
-  name: string;
-  filter: JobFilter;
-  /** Epoch milliseconds. */
-  updatedAt: number;
 }

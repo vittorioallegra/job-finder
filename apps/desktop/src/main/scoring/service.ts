@@ -62,8 +62,8 @@ export function createScoringService(options: ScoringServiceOptions): ScoringSer
     if (!hasAiConsent(ai, request)) {
       return { ok: false, code: "consent-required" };
     }
-    // The scores of the jobs that pass the hard filters are scored; the minimum score and the new-only
-    // view only narrow the list, so they do not narrow the run.
+    // The jobs that pass the hard filters are scored; the new-only view only narrows the list, so it
+    // does not narrow the run.
     const jobIds = await options.candidateIds(
       hardFilter(JobFilterSchema.parse(request.filter ?? {})),
       request.visibleJobIds ?? [],

@@ -1,6 +1,4 @@
 import { useEffect } from "react";
-import type { OpenNewJobsRequest } from "@job-finder/bridge";
-import { newJobsPath } from "../features/jobs/new-jobs-link";
 import { useBridge } from "../lib/bridge/BridgeContext";
 import { router } from "./router";
 
@@ -11,19 +9,19 @@ import { router } from "./router";
 export function NewJobsNavigation() {
   const bridge = useBridge();
   useEffect(() => {
-    const open = (request: OpenNewJobsRequest) => {
-      void router.navigate(newJobsPath(request));
+    const open = () => {
+      void router.navigate("/jobs?new=1");
     };
     let active = true;
     bridge.app.takePendingOpen().then(
       (request) => {
-        if (active && request) open(request);
+        if (active && request) open();
       },
       () => {},
     );
-    const unsubscribe = bridge.app.onOpenNewJobs((request) => {
+    const unsubscribe = bridge.app.onOpenNewJobs(() => {
       void bridge.app.takePendingOpen().catch(() => null);
-      open(request);
+      open();
     });
     return () => {
       active = false;

@@ -320,6 +320,7 @@ Approved: yes (2026-11-23)
   - Cloud consent was a bare boolean, so it carried over after the provider or base URL changed — `fix: tie cloud AI consent to the provider and host it was given for`
 
 ### Decisions
+- The jobs list has no filter form and there are no saved searches: the list follows the profile's preferences (`filterFromPreferences`), and the scheduler and the new-job notification read the same preferences. Migration `0016_drop-saved-searches` drops the table; the filter keeps only roles, places, work modes, contracts, dismissed, applied and new-only.
 - Single-user, local-only app; published as open source on GitHub, each user runs it on their own machine.
 - No market/role restriction: sources and filters must be market-neutral.
 - Discovery via automatic web search with free, keyless sources and no extra software (no Docker); paid search APIs optional.

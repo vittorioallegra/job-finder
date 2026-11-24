@@ -172,15 +172,6 @@ export const jobScores = sqliteTable(
   ],
 );
 
-/** A saved search: a name and the typed job filter as JSON. The scheduler reads these later. */
-export const savedSearches = sqliteTable("saved_searches", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  filters: text("filters").notNull(),
-  createdAt: integer("created_at").notNull(),
-  updatedAt: integer("updated_at").notNull(),
-});
-
 /**
  * The user's flags on a job: `dismissed_at` hides it from the results, `viewed_at` ends its "new"
  * badge. A job without a row is neither dismissed nor viewed.

@@ -11,7 +11,6 @@ import {
   profileVersions,
   runEvents,
   runs,
-  savedSearches,
 } from "@job-finder/core";
 import { scoringSnapshot } from "@job-finder/core/profile";
 import { sql } from "drizzle-orm";
@@ -184,16 +183,6 @@ export async function seedDemoDatabase(db: AppDb, now: number = Date.now()): Pro
         at: event.at,
       });
     }
-  }
-
-  for (const search of data.savedSearches) {
-    await db.insert(savedSearches).values({
-      id: search.id,
-      name: search.name,
-      filters: JSON.stringify(search.filter),
-      createdAt: search.updatedAt,
-      updatedAt: search.updatedAt,
-    });
   }
 
   // One finished scan, so each company shows its last result.

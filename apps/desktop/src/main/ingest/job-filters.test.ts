@@ -1,6 +1,6 @@
 // protects=roles match the title without level words or hyphens, each job filter includes and excludes the expected jobs over a fixed fixture set in SQLite, the combinations narrow the results, the affinity order puts unscored jobs last and the newest order uses the posting date when there is one, and dismissed, closed and unknown jobs stay out;
-// fails_when=a filter includes a job it should exclude or drops one it should keep, a LIKE wildcard in a keyword matches everything, a salary is compared across currencies or periods, a job without a posting date is dated wrongly, a dismissed or closed job is listed, or the score order is wrong;
-// no_claim=the screen's filter form and the scoring run are not covered here; the core filter schema tests and the scoring service tests cover them, and the fixture set is small, not a sample of real postings;
+// fails_when=a filter includes a job it should exclude or drops one it should keep, a LIKE wildcard in a place matches everything, a dismissed or closed job is listed, or the score order is wrong;
+// no_claim=the scoring run is not covered here; the core filter schema tests and the scoring service tests cover them, and the fixture set is small, not a sample of real postings;
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -246,7 +246,7 @@ describe("job filters over the fixture set", () => {
 
   /** The titles listed for a filter, sorted, so the expectation does not depend on the order. */
   async function titles(filter: JobFilterInput = {}, sort: "affinity" | "newest" = "affinity") {
-    const listed = await repository.listJobs({ filter: JobFilterSchema.parse(filter), sort }, NOW);
+    const listed = await repository.listJobs({ filter: JobFilterSchema.parse(filter), sort });
     return listed.map((job) => job.title).sort();
   }
 
@@ -264,20 +264,6 @@ describe("job filters over the fixture set", () => {
     expect(await titles({ hideDismissed: false })).not.toContain("Old Backend Role");
   });
 
-  it("matches keywords in the title or the description, and leaves out jobs with an excluded keyword", async () => {
-    expect(await titles({ keywords: ["backend"] })).toEqual(
-      ["Backend Engineer", "Sviluppatore Backend"].sort(),
-    );
-    expect(await titles({ keywords: ["kubernetes"] })).toEqual(
-      ["Data Engineer", "Platform Engineer"].sort(),
-    );
-    expect(await titles({ keywords: ["react", "terraform"] })).toEqual(
-      ["Frontend Developer", "Platform Engineer"].sort(),
-    );
-    expect(await titles({ excludedKeywords: ["terraform"] })).not.toContain("Platform Engineer");
-    expect(await titles({ excludedKeywords: ["kubernetes"] })).not.toContain("Data Engineer");
-  });
-
   it("matches roles against the title, without level words and whatever the hyphens or spaces", async () => {
     expect(await titles({ roles: ["Senior Front-end Developer"] })).toEqual(["Frontend Developer"]);
     expect(await titles({ roles: ["Backend Engineer", "Data Engineer"] })).toEqual(
@@ -287,19 +273,19 @@ describe("job filters over the fixture set", () => {
     expect(await titles({ roles: ["Kubernetes"] })).toEqual([]);
   });
 
-  it("treats LIKE wildcards in a keyword as plain characters", async () => {
-    expect(await titles({ keywords: ["%"] })).toEqual([]);
-    expect(await titles({ keywords: ["_"] })).toEqual([]);
+  it("treats LIKE wildcards in a place as plain characters", async () => {
+    // Only the remote job stays: it has no city to compare.
+    expect(await titles({ places: ["%"] })).toEqual(["Frontend Developer"]);
+    expect(await titles({ places: ["_"] })).toEqual(["Frontend Developer"]);
   });
 
-  it("filters by location text and by country", async () => {
-    expect(await titles({ locationText: "milan" })).toEqual(["Backend Engineer"]);
-    expect(await titles({ locationText: "lombardy", hideDismissed: false })).toEqual([
-      "Backend Engineer",
-    ]);
-    expect(await titles({ countryCode: "DE" })).toEqual(["Sviluppatore Backend"]);
-    expect(await titles({ countryCode: "IT", hideDismissed: false })).toEqual([
-      "Backend Engineer",
+  it("filters by work mode and employment type", async () => {
+    expect(await titles({ workModes: ["remote"] })).toEqual(["Frontend Developer"]);
+    expect(await titles({ workModes: ["onsite", "hybrid"] })).toEqual(
+      ["Backend Engineer", "Data Engineer", "Platform Engineer", "Sviluppatore Backend"].sort(),
+    );
+    expect(await titles({ employmentTypes: ["contract"] })).toEqual(["Frontend Developer"]);
+    expect(await titles({ employmentTypes: ["internship"], hideDismissed: false })).toEqual([
       "Backend Intern",
     ]);
   });
@@ -326,83 +312,10 @@ describe("job filters over the fixture set", () => {
     expect(await titles({ places: ["Stati Uniti"] })).toEqual(["Data Engineer"]);
   });
 
-  it("filters by remote scope text, work mode, employment type and seniority", async () => {
-    expect(await titles({ remoteScope: "eu" })).toEqual(["Frontend Developer"]);
-    expect(await titles({ workModes: ["remote"] })).toEqual(["Frontend Developer"]);
-    expect(await titles({ workModes: ["onsite", "hybrid"] })).toEqual(
-      ["Backend Engineer", "Data Engineer", "Platform Engineer", "Sviluppatore Backend"].sort(),
-    );
-    expect(await titles({ employmentTypes: ["contract"] })).toEqual(["Frontend Developer"]);
-    expect(await titles({ employmentTypes: ["internship"], hideDismissed: false })).toEqual([
-      "Backend Intern",
-    ]);
-    expect(await titles({ seniorities: ["junior"] })).toEqual(["Sviluppatore Backend"]);
-  });
-
-  it("compares a minimum salary only with salaries in the same currency and period", async () => {
-    // Backend Engineer meets 60000 EUR a year; Sviluppatore Backend states 45000 EUR a year and is
-    // left out. Jobs without a comparable salary (none, USD, EUR a month) are kept.
-    const minimum = {
-      min: 60000,
-      currency: "EUR",
-      period: "year",
-      hideWithoutSalary: false,
-    } as const;
-    expect(await titles({ salary: minimum })).toEqual(
-      ["Backend Engineer", "Data Engineer", "Frontend Developer", "Platform Engineer"].sort(),
-    );
-    expect(await titles({ salary: { ...minimum, hideWithoutSalary: true } })).toEqual([
-      "Backend Engineer",
-    ]);
-    expect(
-      await titles({
-        salary: { min: 40000, currency: "EUR", period: "year", hideWithoutSalary: true },
-      }),
-    ).toEqual(["Backend Engineer", "Sviluppatore Backend"].sort());
-    expect(
-      await titles({
-        salary: { min: 51000, currency: "EUR", period: "month", hideWithoutSalary: true },
-      }),
-    ).toEqual(["Platform Engineer"]);
-  });
-
-  it("filters by posted-within windows, falling back to the first-seen date when there is no posting date", async () => {
-    // Sviluppatore Backend and Platform Engineer have no posting date: first seen 2 and 5 days ago.
-    expect(await titles({ postedWithin: "7d" })).toEqual(
-      ["Backend Engineer", "Platform Engineer", "Sviluppatore Backend"].sort(),
-    );
-    expect(await titles({ postedWithin: "24h" })).toEqual(["Backend Engineer"]);
-    expect(await titles({ postedWithin: "any" })).toHaveLength(5);
-  });
-
-  it("filters by posting language, visa sponsorship, companies and sources", async () => {
-    expect(await titles({ language: "it" })).toEqual(["Sviluppatore Backend"]);
-    expect(await titles({ visaSponsorship: "yes" })).toEqual(
-      ["Backend Engineer", "Platform Engineer"].sort(),
-    );
-    expect(await titles({ includedCompanyIds: ["c2"] })).toEqual(
-      ["Data Engineer", "Sviluppatore Backend"].sort(),
-    );
-    expect(await titles({ excludedCompanyIds: ["c2"] })).toEqual(
-      ["Backend Engineer", "Frontend Developer", "Platform Engineer"].sort(),
-    );
-    expect(await titles({ sources: ["lever"] })).toEqual(["Frontend Developer"]);
-    expect(await titles({ sources: ["ashby"] })).toEqual(
-      ["Data Engineer", "Platform Engineer", "Sviluppatore Backend"].sort(),
-    );
-  });
-
-  it("filters by minimum affinity, leaving out unscored jobs", async () => {
-    expect(await titles({ minScore: 60 })).toEqual(["Backend Engineer", "Data Engineer"].sort());
-    expect(await titles({ minScore: 60, hideDismissed: false })).toEqual(
-      ["Backend Engineer", "Backend Intern", "Data Engineer"].sort(),
-    );
-  });
-
   it("shows only jobs the user has not viewed when new-only is set, and the viewed ones again after a flag change", async () => {
     expect(await titles({ newOnly: true })).toHaveLength(5);
 
-    await repository.setJobFlag({ jobId: "j1", viewed: true }, NOW);
+    await repository.setJobFlag({ jobId: "j1", viewed: true });
 
     const after = await titles({ newOnly: true });
     expect(after).not.toContain("Backend Engineer");
@@ -410,11 +323,11 @@ describe("job filters over the fixture set", () => {
   });
 
   it("combines filters: every condition must hold", async () => {
-    expect(await titles({ keywords: ["backend"], workModes: ["hybrid"], minScore: 80 })).toEqual([
+    expect(await titles({ roles: ["backend"], workModes: ["hybrid"] })).toEqual([
       "Backend Engineer",
     ]);
     expect(
-      await titles({ keywords: ["backend"], countryCode: "DE", workModes: ["hybrid"] }),
+      await titles({ roles: ["backend"], places: ["Germania"], workModes: ["hybrid"] }),
     ).toEqual([]);
   });
 

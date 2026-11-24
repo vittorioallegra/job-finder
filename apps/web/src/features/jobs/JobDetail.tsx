@@ -154,7 +154,7 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
     const { min, max, currency, period } = salary;
     const amount =
       min !== undefined && max !== undefined ? `${min}-${max}` : String(min ?? max ?? "");
-    const unit = period ? ` / ${t(`jobs.filters.values.period.${period}`)}` : "";
+    const unit = period ? ` / ${t(`jobs.values.period.${period}`)}` : "";
     return `${currency ? `${currency} ` : ""}${amount}${unit}`;
   })();
 
@@ -223,14 +223,14 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
               ) : null}
               {state.job.employmentType !== "unknown" ? (
                 <Badge>
-                  {t(`jobs.filters.values.employment.${state.job.employmentType}`, {
+                  {t(`jobs.values.employment.${state.job.employmentType}`, {
                     defaultValue: state.job.employmentType,
                   })}
                 </Badge>
               ) : null}
               {state.job.seniority !== "unknown" ? (
                 <Badge>
-                  {t(`jobs.filters.values.seniority.${state.job.seniority}`, {
+                  {t(`jobs.values.seniority.${state.job.seniority}`, {
                     defaultValue: state.job.seniority,
                   })}
                 </Badge>
@@ -268,7 +268,7 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
           <Card as="div" className="bg-app-sunken/40">
             <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
               <dt className="text-app-muted">{t("jobs.detail.visa")}</dt>
-              <dd className="text-app-fg">{t(`jobs.filters.visa.${state.job.visaSponsorship}`)}</dd>
+              <dd className="text-app-fg">{t(`jobs.visa.${state.job.visaSponsorship}`)}</dd>
               <dt className="text-app-muted">{t("jobs.detail.language")}</dt>
               <dd className="text-app-fg">
                 {languageName(state.job.language, i18n.language) ?? notStated}

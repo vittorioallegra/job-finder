@@ -113,6 +113,13 @@
       "when": 1795528458054,
       "tag": "0015_company-exclusion",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1795546184526,
+      "tag": "0016_drop-saved-searches",
+      "breakpoints": true
     }
   ]
 }

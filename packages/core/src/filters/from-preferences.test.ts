@@ -1,9 +1,8 @@
 // protects=the jobs list opens with the profile's roles and places, and a list the person narrowed also keeps jobs that do not say;
 // fails_when=the places are dropped from the opening filter, or a narrowed work mode hides jobs with an unknown mode;
-// no_claim=how the places match jobs in the database is covered by the desktop jobs filter tests;
+// no_claim=how the places match jobs in the database is covered by the desktop jobs list tests;
 import { describe, expect, it } from "vitest";
-import { DEFAULT_JOB_FILTER } from "@job-finder/bridge";
-import { filterFromPreferences } from "./preferences-filter";
+import { DEFAULT_JOB_FILTER, filterFromPreferences } from "./schema";
 
 describe("filterFromPreferences", () => {
   it("starts from the default filter without preferences", () => {

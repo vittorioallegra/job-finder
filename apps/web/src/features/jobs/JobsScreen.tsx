@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 import {
   DEFAULT_JOB_FILTER,
+  filterFromPreferences,
   aiConsentTarget,
   isCloudAiEndpoint,
   type CompanyRecord,
@@ -26,7 +27,6 @@ import { ScoreRing } from "../../components/ui/ScoreRing";
 import { CheckboxInput } from "../../components/ui/CheckboxInput";
 import { JobDetail } from "./JobDetail";
 import { useAiConsent } from "../../lib/useAiConsent";
-import { filterFromPreferences } from "./preferences-filter";
 
 interface Lists {
   companies: CompanyRecord[];

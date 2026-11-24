@@ -21,8 +21,6 @@ import {
   type JobDetail,
   type JobListItem,
   type LatestRun,
-  type SavedSearch,
-  JobFilterSchema,
   type Profile,
   ProfileSchema,
   type ProfileRecord,
@@ -49,7 +47,6 @@ export interface MemoryBridgeOptions {
   jobDetails?: Record<string, Partial<JobDetail>>;
   /** Applications that exist before the page loads, with their history. */
   applications?: ApplicationDetail[];
-  savedSearches?: SavedSearch[];
   latestRun?: LatestRun | null;
   /** Answer to "start a run". Defaults to engine unavailable, since there is no engine here. */
   ingestStart?: IngestStartResult;
@@ -74,7 +71,6 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
   const status = async (): Promise<SecretsStatus> => ({ keys: { ...keys } });
   const companies: CompanyRecord[] = structuredClone(options.companies ?? []);
   const jobs: JobListItem[] = structuredClone(options.jobs ?? []);
-  const savedSearches: SavedSearch[] = structuredClone(options.savedSearches ?? []);
   // Applications live only in this page: a bookmark, a preparation and status moves, no engine involved.
   const applicationList: ApplicationSummary[] = (options.applications ?? []).map(
     ({ events: _events, ...summary }) => structuredClone(summary),
@@ -233,32 +229,6 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
         return { ok: true as const, application: { ...structuredClone(found), events: [] } };
       },
       exportCsv: async () => ({ ok: false as const, code: "cancelled" as const }),
-    },
-    savedSearches: {
-      list: async () => structuredClone(savedSearches),
-      save: async (request) => {
-        const filter = JobFilterSchema.parse(request.filter);
-        if (request.id !== undefined) {
-          const existing = savedSearches.find((item) => item.id === request.id);
-          if (!existing) return null;
-          existing.name = request.name;
-          existing.filter = filter;
-          existing.updatedAt = Date.now();
-          return structuredClone(existing);
-        }
-        const created: SavedSearch = {
-          id: `memory-search-${savedSearches.length + 1}`,
-          name: request.name,
-          filter,
-          updatedAt: Date.now(),
-        };
-        savedSearches.push(created);
-        return structuredClone(created);
-      },
-      delete: async ({ id }) => {
-        const at = savedSearches.findIndex((item) => item.id === id);
-        if (at >= 0) savedSearches.splice(at, 1);
-      },
     },
     autofill: {
       start: async () => ({ ok: false as const, code: "autofill-failed" as const }),

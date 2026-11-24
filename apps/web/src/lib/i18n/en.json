@@ -173,7 +173,7 @@
       "enabled": "Desktop notifications"
     },
     "scheduler": {
-      "intervalHours": "Check saved searches every (hours)",
+      "intervalHours": "Check for new jobs every (hours)",
       "hint": "Between 1 and 168 hours."
     },
     "window": {
@@ -477,40 +477,6 @@
       "noMatch": "No job matches these filters. Change them or reset the filters.",
       "applicationStatus": "Application: {{status}}"
     },
-    "filters": {
-      "visa": {
-        "label": "Visa sponsorship",
-        "any": "Any",
-        "yes": "Offered",
-        "no": "Not offered",
-        "unknown": "Not stated"
-      },
-      "values": {
-        "employment": {
-          "full_time": "Full-time",
-          "part_time": "Part-time",
-          "contract": "Contract",
-          "freelance": "Freelance",
-          "internship": "Internship",
-          "temporary": "Temporary",
-          "unknown": "Not stated"
-        },
-        "seniority": {
-          "intern": "Intern",
-          "junior": "Junior",
-          "mid": "Mid-level",
-          "senior": "Senior",
-          "lead": "Lead"
-        },
-        "period": {
-          "year": "year",
-          "month": "month",
-          "week": "week",
-          "day": "day",
-          "hour": "hour"
-        }
-      }
-    },
     "sort": {
       "label": "Order",
       "affinity": "Best match",
@@ -561,6 +527,38 @@
       "companies_one": "Jobs come from {{count}} company.",
       "companies_other": "Jobs come from {{count}} companies.",
       "manage": "Manage"
+    },
+    "values": {
+      "employment": {
+        "full_time": "Full-time",
+        "part_time": "Part-time",
+        "contract": "Contract",
+        "freelance": "Freelance",
+        "internship": "Internship",
+        "temporary": "Temporary",
+        "unknown": "Not stated"
+      },
+      "seniority": {
+        "intern": "Intern",
+        "junior": "Junior",
+        "mid": "Mid-level",
+        "senior": "Senior",
+        "lead": "Lead"
+      },
+      "period": {
+        "year": "year",
+        "month": "month",
+        "week": "week",
+        "day": "day",
+        "hour": "hour"
+      }
+    },
+    "visa": {
+      "label": "Visa sponsorship",
+      "any": "Any",
+      "yes": "Offered",
+      "no": "Not offered",
+      "unknown": "Not stated"
     }
   },
   "companies": {

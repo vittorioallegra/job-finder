@@ -33,15 +33,7 @@ import type {
   ProfileDiscoveryResult,
 } from "./discovery";
 import type { ScoreStartRequest, ScoreStartResult } from "./scoring";
-import type {
-  JobDetail,
-  JobDetailRequest,
-  JobFlagRequest,
-  JobsListRequest,
-  SavedSearch,
-  SavedSearchDeleteRequest,
-  SavedSearchSaveRequest,
-} from "./jobs";
+import type { JobDetail, JobDetailRequest, JobFlagRequest, JobsListRequest } from "./jobs";
 import type {
   CompanyAddRequest,
   CompanyAddResult,
@@ -114,12 +106,6 @@ export interface JobFinderBridge {
     detail(request: JobDetailRequest): Promise<JobDetail | null>;
     /** Dismisses or restores a job, or marks it viewed. Resolves false when the job does not exist. */
     flag(request: JobFlagRequest): Promise<boolean>;
-  };
-  readonly savedSearches: {
-    list(): Promise<SavedSearch[]>;
-    /** Creates a saved search, or replaces the one with the given id. Resolves null when that id is unknown. */
-    save(request: SavedSearchSaveRequest): Promise<SavedSearch | null>;
-    delete(request: SavedSearchDeleteRequest): Promise<void>;
   };
   readonly applications: {
     /** Every application, newest status change first. The renderer filters and groups them. */

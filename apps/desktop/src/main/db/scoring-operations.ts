@@ -86,7 +86,6 @@ export async function scoringCandidateIds(
   db: AppDb,
   filter: JobFilter,
   preferredIds: string[],
-  now: number,
   limit: number,
 ): Promise<string[]> {
   const newest = sql`coalesce(${jobs.postedAt}, ${jobs.firstSeenAt}) desc`;
@@ -102,7 +101,7 @@ export async function scoringCandidateIds(
   const rows = await db
     .select({ id: jobs.id })
     .from(jobs)
-    .where(and(isNull(jobs.closedAt), jobFilterCondition(filter, now)))
+    .where(and(isNull(jobs.closedAt), jobFilterCondition(filter)))
     .orderBy(...preferredFirst, newest, jobs.title)
     .limit(limit);
   return rows.map((row) => row.id);

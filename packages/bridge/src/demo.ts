@@ -1,6 +1,6 @@
 import type { ApplicationDetail } from "./applications";
 import type { CompanyRecord, JobListItem } from "./ingest";
-import { DEFAULT_JOB_FILTER, type JobDetail, type SavedSearch } from "./jobs";
+import type { JobDetail } from "./jobs";
 import { emptyProfile, type Profile } from "./profile";
 
 /** Everything the demo shows, in the shapes the bridge hands to the renderer. */
@@ -12,7 +12,6 @@ export interface DemoDataset {
   jobDetails: Record<string, Partial<JobDetail>>;
   /** Applications with their history; some point at jobs that are not in `jobs` (older postings). */
   applications: ApplicationDetail[];
-  savedSearches: SavedSearch[];
 }
 
 /**
@@ -166,22 +165,12 @@ export function demoDataset(now: number = Date.now()): DemoDataset {
     ]),
   ];
 
-  const savedSearches: SavedSearch[] = [
-    {
-      id: "s1",
-      name: "Frontend, Milan or remote",
-      filter: { ...DEFAULT_JOB_FILTER, minScore: 70 },
-      updatedAt: now - 3 * day,
-    },
-  ];
-
   return {
     profile: demoProfile(),
     companies,
     jobs,
     jobDetails,
     applications,
-    savedSearches,
   };
 }
 

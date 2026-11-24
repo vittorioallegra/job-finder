@@ -43,9 +43,9 @@ Record the result of each step: pass, or the exact message and screenshot.
     stays applied.
 11. **Duplicate guard.** Prepare the same job again. Expect the duplicate warning, and that it
     needs two confirmations.
-12. **Notifications and tray (macOS, Windows, Linux).** Turn on a saved search with a short
-    interval, run it, and check a desktop notification appears for new matches. Click it and check
-    the results open with the filter. Check the tray menu has Open, Search now and Quit.
+12. **Notifications and tray (macOS, Windows, Linux).** Set a short check interval with a
+    profile that has roles, run it, and check a desktop notification appears for new matches. Click
+    it and check the list opens with only the new jobs. Check the tray menu has Open, Search now and Quit.
 13. **Close prompt.** Close the window with the close behaviour set to ask. Check the prompt offers
     keep running, quit and cancel, and that "remember" changes the setting.
 14. **Update check.** Only once the repository is set (see `docs/release.md`). Check the banner

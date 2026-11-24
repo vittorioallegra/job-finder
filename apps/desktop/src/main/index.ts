@@ -27,7 +27,6 @@ import { createDiscoveryService } from "./discovery/service";
 import { createProfileDiscovery } from "./discovery/from-profile";
 import { createProfileRepository } from "./profile/repository";
 import { createScoringService } from "./scoring/service";
-import { createSavedSearchRepository } from "./saved-searches/repository";
 import { createApplicationRepository } from "./applications/repository";
 import { createApplicationExport } from "./applications/export";
 import { createDocumentRepository } from "./documents/repository";
@@ -61,6 +60,7 @@ import {
   type CloseBehavior,
 } from "@job-finder/bridge";
 import { createScheduler, type Scheduler } from "./scheduler/scheduler";
+import { filterFromPreferences } from "@job-finder/core/filters";
 import { findNewMatches } from "./scheduler/matches";
 import { lastFinishedIngestRunAt } from "./scheduler/store";
 import { createNewJobsNotifier, type NotificationSink } from "./notifications/new-jobs";
@@ -190,7 +190,6 @@ if (gotSingleInstanceLock) {
     // progress to the service, and the service reaches the engine through `supervisor`.
     const settingsRepository = createSettingsRepository(database.db);
     const ingestRepository = createIngestRepository(database.db);
-    const savedSearchRepository = createSavedSearchRepository(database.db);
     let quitting = false;
     let closePromptOpen = false;
     let tray: TrayController | null = null;
@@ -303,7 +302,7 @@ if (gotSingleInstanceLock) {
       settings: settingsRepository,
       secrets: secretStore,
       candidateIds: (filter, preferredIds, limit) =>
-        scoringCandidateIds(database.db, filter, preferredIds, Date.now(), limit),
+        scoringCandidateIds(database.db, filter, preferredIds, limit),
       systemLocale: () => app.getLocale(),
     });
     const applicationRepository = createApplicationRepository(database.db);
@@ -463,7 +462,6 @@ if (gotSingleInstanceLock) {
               notificationsEnabled: stored.notifications.enabled,
             };
           },
-          savedSearches: () => savedSearchRepository.list(),
           hasPreferences: async () =>
             ((await profileRepository.get())?.profile.preferences.roles.length ?? 0) > 0,
           discover: async () => {
@@ -474,9 +472,11 @@ if (gotSingleInstanceLock) {
           },
           lastRunFinishedAt: () => lastFinishedIngestRunAt(database.db),
           startRun: () => ingestion.start(),
-          newMatches: (searches, since) =>
-            findNewMatches(searches, since, (filter) =>
-              ingestRepository.listJobs({ filter, sort: "newest" }, Date.now(), 500),
+          newMatches: async (since) =>
+            findNewMatches(
+              filterFromPreferences((await profileRepository.get())?.profile.preferences ?? null),
+              since,
+              (filter) => ingestRepository.listJobs({ filter, sort: "newest" }, 500),
             ),
           notify: notifyNewJobs,
           log: (level, message) => logger.log(level, message),
@@ -522,7 +522,6 @@ if (gotSingleInstanceLock) {
         discovery,
         profileDiscovery,
         scoring,
-        savedSearches: savedSearchRepository,
         applications: applicationRepository,
         applicationExport,
         documents,
@@ -577,7 +576,7 @@ if (gotSingleInstanceLock) {
       logger.log("error", `tray unavailable: ${String(error)}`);
     }
 
-    // Catch-up at start: a saved search that is due runs once now. The update check runs once a day.
+    // Catch-up at start: a scheduled run that is due runs once now. The update check runs once a day.
     void scheduler?.check();
     void updates.checkIfDue();
 

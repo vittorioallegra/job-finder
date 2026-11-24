@@ -35,13 +35,9 @@
   },
   "notifications": {
     "newJobsTitle": "Nuove offerte compatibili",
-    "singleSearch": {
-      "one": "1 nuova offerta per '{{search}}'",
-      "other": "{{count}} nuove offerte per '{{search}}'"
-    },
-    "manySearches": {
-      "one": "1 nuova offerta tra le tue ricerche salvate",
-      "other": "{{count}} nuove offerte tra {{searches}} ricerche salvate"
+    "newJobs": {
+      "one": "1 nuova offerta per il tuo profilo",
+      "other": "{{count}} nuove offerte per il tuo profilo"
     },
     "topMatch": ", punteggio migliore {{score}}"
   },

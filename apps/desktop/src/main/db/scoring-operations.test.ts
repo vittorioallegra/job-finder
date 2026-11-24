@@ -124,22 +124,21 @@ describe("scoring database calls", () => {
       .values([jobRow("old", 1), jobRow("new", 5), jobRow("gone", 9, 10)]);
 
     const hybrid = JobFilterSchema.parse({ workModes: ["hybrid"] });
-    expect(await scoringCandidateIds(database.db, DEFAULT_JOB_FILTER, [], 10, 10)).toEqual([
+    expect(await scoringCandidateIds(database.db, DEFAULT_JOB_FILTER, [], 10)).toEqual([
       "new",
       "old",
     ]);
-    expect(await scoringCandidateIds(database.db, DEFAULT_JOB_FILTER, ["old"], 10, 10)).toEqual([
+    expect(await scoringCandidateIds(database.db, DEFAULT_JOB_FILTER, ["old"], 10)).toEqual([
       "old",
       "new",
     ]);
-    expect(await scoringCandidateIds(database.db, DEFAULT_JOB_FILTER, [], 10, 1)).toEqual(["new"]);
-    expect(await scoringCandidateIds(database.db, hybrid, [], 10, 10)).toEqual(["new", "old"]);
+    expect(await scoringCandidateIds(database.db, DEFAULT_JOB_FILTER, [], 1)).toEqual(["new"]);
+    expect(await scoringCandidateIds(database.db, hybrid, [], 10)).toEqual(["new", "old"]);
     expect(
       await scoringCandidateIds(
         database.db,
         JobFilterSchema.parse({ workModes: ["remote"] }),
         [],
-        10,
         10,
       ),
     ).toEqual([]);

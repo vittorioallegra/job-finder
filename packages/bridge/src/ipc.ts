@@ -53,14 +53,8 @@ import {
   ApplicationStartRequestSchema,
   ApplicationUpdateRequestSchema,
 } from "./applications";
-import type { JobDetail, SavedSearch } from "./jobs";
-import {
-  JobDetailRequestSchema,
-  JobFlagRequestSchema,
-  JobsListRequestSchema,
-  SavedSearchDeleteRequestSchema,
-  SavedSearchSaveRequestSchema,
-} from "./jobs";
+import type { JobDetail } from "./jobs";
+import { JobDetailRequestSchema, JobFlagRequestSchema, JobsListRequestSchema } from "./jobs";
 
 /**
  * Request payload per channel. Main validates every incoming payload with these schemas before
@@ -98,9 +92,6 @@ export const IPC_REQUEST_SCHEMAS = {
   "applications:start": ApplicationStartRequestSchema,
   "applications:update": ApplicationUpdateRequestSchema,
   "applications:export": z.undefined(),
-  "saved-searches:list": z.undefined(),
-  "saved-searches:save": SavedSearchSaveRequestSchema,
-  "saved-searches:delete": SavedSearchDeleteRequestSchema,
   "ingest:start": IngestStartRequestSchema,
   "ingest:cancel": IngestCancelRequestSchema,
   "ingest:latest": z.undefined(),
@@ -147,9 +138,6 @@ export interface IpcResponses {
   "applications:start": ApplicationStartResult;
   "applications:update": ApplicationUpdateResult;
   "applications:export": ApplicationExportResult;
-  "saved-searches:list": SavedSearch[];
-  "saved-searches:save": SavedSearch | null;
-  "saved-searches:delete": void;
   "ingest:start": IngestStartResult;
   "ingest:cancel": void;
   "ingest:latest": LatestRun | null;

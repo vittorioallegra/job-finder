@@ -155,14 +155,6 @@ function spyServices() {
       },
     },
     scoring: { start: async () => ({ ok: false as const, code: "no-profile" as const }) },
-    savedSearches: {
-      list: async () => {
-        calls.push("savedSearches.list");
-        return [];
-      },
-      save: async () => null,
-      delete: async () => {},
-    },
     applications: {
       list: async () => {
         calls.push("applications.list");
@@ -269,7 +261,7 @@ describe("IPC sender and payload guard", () => {
     services.app = {
       status: () => ({ engine: "failed", update: null }),
       openUpdate: async () => true,
-      takePendingOpen: () => ({ savedSearchId: "s1" }),
+      takePendingOpen: () => ({}),
     };
     services.afterSettingsUpdate = (next) => seen.push(next.app.closeBehavior);
 
@@ -282,7 +274,7 @@ describe("IPC sender and payload guard", () => {
     );
     expect(
       await handleInvoke("app:take-pending-open", services, topFrame(), undefined, APP_ORIGIN),
-    ).toEqual({ savedSearchId: "s1" });
+    ).toEqual({});
     await handleInvoke(
       "settings:update",
       services,
@@ -370,9 +362,6 @@ describe("IPC sender and payload guard", () => {
         "profile:get",
         "profile:import-cv",
         "profile:save",
-        "saved-searches:delete",
-        "saved-searches:list",
-        "saved-searches:save",
         "scores:start",
         "secrets:clear",
         "secrets:set",
@@ -425,7 +414,6 @@ describe("IPC sender and payload guard", () => {
       { jobId: "j1", viewed: true },
       APP_ORIGIN,
     );
-    await handleInvoke("saved-searches:list", services, topFrame(), undefined, APP_ORIGIN);
     await handleInvoke("ingest:latest", services, topFrame(), undefined, APP_ORIGIN);
     await handleInvoke("ingest:start", services, topFrame(), undefined, APP_ORIGIN);
     await handleInvoke("ingest:cancel", services, topFrame(), { runId: "run-7" }, APP_ORIGIN);
@@ -442,7 +430,6 @@ describe("IPC sender and payload guard", () => {
       "repository.listJobs",
       "repository.jobDetail",
       "repository.setJobFlag",
-      "savedSearches.list",
       "repository.latestRun",
       "ingestion.start",
       "ingestion.cancel:run-7",

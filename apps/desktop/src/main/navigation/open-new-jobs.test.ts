@@ -11,9 +11,9 @@ describe("open new jobs relay", () => {
     const relay = createOpenNewJobsRelay((request) => delivered.push(request));
 
     expect(relay.take()).toBeNull();
-    relay.open({ savedSearchId: "s1" });
-    expect(delivered).toEqual([{ savedSearchId: "s1" }]);
-    expect(relay.take()).toEqual({ savedSearchId: "s1" });
+    relay.open({});
+    expect(delivered).toEqual([{}]);
+    expect(relay.take()).toEqual({});
     expect(relay.take()).toBeNull();
   });
 });

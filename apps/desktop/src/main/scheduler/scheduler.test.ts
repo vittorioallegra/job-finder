@@ -1,27 +1,18 @@
-// protects=scheduled runs start only with saved searches or profile preferences (finding new companies first) and once the interval has passed since the last finished run, a run never starts over an active one, and a run the scheduler started notifies once when it has new matches, with the click target of the matching search;
-// fails_when=a run starts with no saved searches or before the interval, a second run starts over an active one, a run without new matches notifies, a run finished twice notifies twice, a run the scheduler did not start notifies, or a failing store throws out of a check;
+// protects=scheduled runs start only with profile preferences (finding new companies first) and once the interval has passed since the last finished run, a run never starts over an active one, and a run the scheduler started notifies once when it has new matches;
+// fails_when=a run starts without preferences or before the interval, a second run starts over an active one, a run without new matches notifies, a run finished twice notifies twice, a run the scheduler did not start notifies, or a failing store throws out of a check;
 // no_claim=the real clock, the powerMonitor wake events, the timer that calls check, and the ingestion run itself are not exercised here; the ingestion service and engine tests cover the run.
 import { describe, expect, it } from "vitest";
-import type { OpenNewJobsRequest, SavedSearch } from "@job-finder/bridge";
 import { createScheduler, MS_PER_HOUR, type SchedulerDeps, type StartOutcome } from "./scheduler";
 import type { NewJobMatches } from "./matches";
-
-const search = (id: string, name: string): SavedSearch => ({
-  id,
-  name,
-  filter: {} as SavedSearch["filter"],
-  updatedAt: 0,
-});
 
 interface Fixture {
   deps: SchedulerDeps;
   clock: { now: number };
-  searches: SavedSearch[];
   lastFinished: { at: number | null };
   starts: number;
   startAnswer: StartOutcome;
   matches: NewJobMatches;
-  notified: Array<{ matches: NewJobMatches; open: OpenNewJobsRequest }>;
+  notified: NewJobMatches[];
   logs: string[];
   preferences: boolean;
   /** What happened, in order: "discover" and "start". */
@@ -35,14 +26,13 @@ function fixture(
   const fx: Fixture = {
     deps: undefined as unknown as SchedulerDeps,
     clock,
-    searches: [search("s1", "Backend Milan")],
     lastFinished: { at: null },
     starts: 0,
     startAnswer: { ok: true, runId: "run-1" },
-    matches: { count: 2, topScore: 88, searchNames: ["Backend Milan"], savedSearchId: "s1" },
+    matches: { count: 2, topScore: 88 },
     notified: [],
     logs: [],
-    preferences: false,
+    preferences: true,
     order: [],
   };
   fx.deps = {
@@ -51,7 +41,6 @@ function fixture(
       intervalHours: overrides.intervalHours ?? 24,
       notificationsEnabled: overrides.notifications ?? true,
     }),
-    savedSearches: async () => fx.searches,
     hasPreferences: async () => fx.preferences,
     discover: async () => {
       fx.order.push("discover");
@@ -63,8 +52,8 @@ function fixture(
       return fx.startAnswer;
     },
     newMatches: async () => fx.matches,
-    notify: (matches, open) => {
-      fx.notified.push({ matches, open });
+    notify: (matches) => {
+      fx.notified.push(matches);
     },
     log: (_level, message) => {
       fx.logs.push(message);
@@ -74,19 +63,14 @@ function fixture(
 }
 
 describe("scheduler", () => {
-  it("runs on profile preferences alone, finding new companies before the scan", async () => {
+  it("runs on the profile's preferences, finding new companies before the scan", async () => {
     const fx = fixture();
-    fx.searches = [];
     const scheduler = createScheduler(fx.deps);
-    await scheduler.check();
-    expect(fx.starts).toBe(0);
-
-    fx.preferences = true;
     await scheduler.check();
     expect(fx.order).toEqual(["discover", "start"]);
   });
 
-  it("runs a due saved search on the first check, and waits for the interval after a finished run", async () => {
+  it("runs a due search on the first check, and waits for the interval after a finished run", async () => {
     const fx = fixture({ intervalHours: 24 });
     const scheduler = createScheduler(fx.deps);
 
@@ -104,9 +88,9 @@ describe("scheduler", () => {
     expect(fx.starts).toBe(2);
   });
 
-  it("does not run without saved searches", async () => {
+  it("does not run without preferences", async () => {
     const fx = fixture();
-    fx.searches = [];
+    fx.preferences = false;
     await createScheduler(fx.deps).check();
     expect(fx.starts).toBe(0);
   });
@@ -131,19 +115,19 @@ describe("scheduler", () => {
     expect(fx.logs).toEqual(["scheduled run not started: engine unavailable"]);
   });
 
-  it("notifies once for a run it started that found new matches, with the saved search as the click target", async () => {
+  it("notifies once for a run it started that found new matches", async () => {
     const fx = fixture();
     const scheduler = createScheduler(fx.deps);
     await scheduler.check();
     await scheduler.handleRunFinished("run-1", "succeeded");
     await scheduler.handleRunFinished("run-1", "succeeded");
 
-    expect(fx.notified).toEqual([{ matches: fx.matches, open: { savedSearchId: "s1" } }]);
+    expect(fx.notified).toEqual([fx.matches]);
   });
 
   it("sends no notification for a run without new matches, a run it did not start, or with notifications off", async () => {
     const empty = fixture();
-    empty.matches = { count: 0, topScore: null, searchNames: [], savedSearchId: null };
+    empty.matches = { count: 0, topScore: null };
     const emptyScheduler = createScheduler(empty.deps);
     await emptyScheduler.check();
     await emptyScheduler.handleRunFinished("run-1", "succeeded");
@@ -170,7 +154,7 @@ describe("scheduler", () => {
 
   it("logs a failing store instead of throwing out of the check", async () => {
     const fx = fixture();
-    fx.deps.savedSearches = async () => {
+    fx.deps.hasPreferences = async () => {
       throw new Error("database closed");
     };
     await expect(createScheduler(fx.deps).check()).resolves.toBeUndefined();

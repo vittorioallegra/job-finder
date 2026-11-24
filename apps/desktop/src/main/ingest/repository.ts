@@ -52,7 +52,7 @@ export interface IngestRepository {
    * Open jobs matching the request. By affinity (the default), highest first, with the jobs
    * without a score for the current profile version last; by newest, the latest posting first.
    */
-  listJobs(request?: JobsListRequest, now?: number, limit?: number): Promise<JobListItem[]>;
+  listJobs(request?: JobsListRequest, limit?: number): Promise<JobListItem[]>;
   /** One job with its source links, open or closed; null when it does not exist. */
   jobDetail(jobId: string, now?: number): Promise<JobDetail | null>;
   /**
@@ -192,10 +192,10 @@ export function createIngestRepository(db: AppDb): IngestRepository {
       return updated.length > 0;
     },
 
-    async listJobs(request = { filter: {}, sort: "affinity" }, now = Date.now(), limit = 200) {
+    async listJobs(request = { filter: {}, sort: "affinity" }, limit = 200) {
       // Scores of the current profile version only: a new version starts unscored until the next run.
       const currentVersion = sql`(select ${profile.version} from ${profile} where ${profile.id} = 1)`;
-      const condition = jobFilterCondition(JobFilterSchema.parse(request.filter), now);
+      const condition = jobFilterCondition(JobFilterSchema.parse(request.filter));
       const rows = await db
         .select({
           id: jobs.id,

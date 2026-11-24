@@ -1,5 +1,5 @@
-// protects=a run with new matches shows one notification whose text names the count, the single saved search or the number of searches, and the top score when one exists, and a click opens the request it was given; an unsupported platform shows nothing;
-// fails_when=the text uses the wrong plural, names a search when several matched, drops the top score, shows on an unsupported platform, or a click opens another request;
+// protects=a run with new matches shows one notification whose text names the count and the top score when one exists, and a click opens the new jobs; an unsupported platform shows nothing;
+// fails_when=the text uses the wrong plural, drops the top score, shows on an unsupported platform, or a click opens nothing;
 // no_claim=the operating system's own delivery and click handling are not exercised; Electron's Notification is wired in the main entry.
 import { describe, expect, it } from "vitest";
 import type { OpenNewJobsRequest } from "@job-finder/bridge";
@@ -13,34 +13,26 @@ const italian = createTranslator("it");
 const matches = (overrides: Partial<NewJobMatches>): NewJobMatches => ({
   count: 2,
   topScore: 88,
-  searchNames: ["Backend Milan"],
-  savedSearchId: "s1",
   ...overrides,
 });
 
 describe("new job notification text", () => {
-  it("names the saved search and the top match when one search matched", () => {
+  it("gives the count and the top match", () => {
     expect(newJobsText(en, matches({}))).toEqual({
       title: "New matching jobs",
-      body: "2 new jobs for 'Backend Milan', top match 88",
+      body: "2 new jobs for your profile, top match 88",
     });
   });
 
   it("uses the singular for one job and leaves out the score when none is scored", () => {
     expect(newJobsText(en, matches({ count: 1, topScore: null })).body).toBe(
-      "1 new job for 'Backend Milan'",
-    );
-  });
-
-  it("counts the searches instead of naming one when several matched", () => {
-    expect(newJobsText(en, matches({ searchNames: ["A", "B"], savedSearchId: null })).body).toBe(
-      "2 new jobs from 2 saved searches, top match 88",
+      "1 new job for your profile",
     );
   });
 
   it("is written in Italian for the Italian language", () => {
     expect(newJobsText(italian, matches({})).body).toBe(
-      "2 nuove offerte per 'Backend Milan', punteggio migliore 88",
+      "2 nuove offerte per il tuo profilo, punteggio migliore 88",
     );
   });
 });
@@ -57,7 +49,7 @@ describe("new job notifier", () => {
     return { fake, shown };
   }
 
-  it("shows one notification, and a click opens the request it was given", () => {
+  it("shows one notification, and a click opens the new jobs", () => {
     const { fake, shown } = sink(true);
     const opened: OpenNewJobsRequest[] = [];
     const notify = createNewJobsNotifier({
@@ -66,16 +58,16 @@ describe("new job notifier", () => {
       open: (r) => opened.push(r),
     });
 
-    notify(matches({}), { savedSearchId: "s1" });
+    notify(matches({}));
     expect(shown).toHaveLength(1);
     shown[0]?.click();
-    expect(opened).toEqual([{ savedSearchId: "s1" }]);
+    expect(opened).toEqual([{}]);
   });
 
   it("shows nothing on a platform without notifications", () => {
     const { fake, shown } = sink(false);
     const notify = createNewJobsNotifier({ translate: en, sink: fake, open: () => {} });
-    notify(matches({}), { savedSearchId: "s1" });
+    notify(matches({}));
     expect(shown).toEqual([]);
   });
 });

@@ -150,19 +150,18 @@ describe("scoring service", () => {
     expect(requests[0]?.jobIds).toHaveLength(MAX_SCORED_JOBS);
   });
 
-  it("scores the jobs that pass the hard filters, with the visible jobs first, and ignores the minimum score and the new-only view", async () => {
+  it("scores the jobs that pass the hard filters, with the visible jobs first, and ignores the new-only view", async () => {
     const { service, candidateCalls } = deps({});
 
     await service.start({
       consent: false,
-      filter: { keywords: ["backend"], minScore: 80, newOnly: true, hideDismissed: true },
+      filter: { roles: ["backend"], newOnly: true, hideDismissed: true },
       visibleJobIds: ["j9", "j3"],
     });
 
     expect(candidateCalls).toHaveLength(1);
     expect(candidateCalls[0]?.filter).toMatchObject({
-      keywords: ["backend"],
-      minScore: null,
+      roles: ["backend"],
       newOnly: false,
       hideDismissed: true,
     });

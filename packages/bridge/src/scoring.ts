@@ -4,7 +4,7 @@ import { JobFilterSchema } from "@job-finder/core/filters";
 /**
  * Scores the open jobs. `consent` must be true when the AI provider is a cloud service, because the
  * profile's ranking fields are sent to it (the same rule as the CV import). The run covers the jobs
- * that pass the hard filters of `filter` (the jobs screen's filter), the jobs listed in
+ * that pass the hard filters of `filter` (the list's filter), the jobs listed in
  * `visibleJobIds` first. Without a filter, every open job is a candidate.
  */
 export const ScoreStartRequestSchema = z.strictObject({

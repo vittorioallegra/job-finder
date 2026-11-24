@@ -90,7 +90,7 @@ describe("settings screen", () => {
     });
     expect(container.textContent).toContain("Loading settings");
     await act(async () => {});
-    expect((field(container, "Check saved searches every") as HTMLInputElement).value).toBe("12");
+    expect((field(container, "Check for new jobs every") as HTMLInputElement).value).toBe("12");
     expect(container.querySelector("h1")?.textContent).toBe("Settings");
   });
 
@@ -275,7 +275,7 @@ describe("settings screen", () => {
     const update = vi.fn(memory.settings.update);
     await render({ ...memory, settings: { ...memory.settings, update } });
     await act(async () => {
-      setInputValue(field(container, "Check saved searches every"), "500");
+      setInputValue(field(container, "Check for new jobs every"), "500");
     });
     await act(async () => {
       button(container, "Save settings").click();
@@ -401,7 +401,7 @@ describe("settings screen", () => {
       ai: { ...memory.ai, testConnection },
     });
     await act(async () => {
-      setInputValue(field(container, "Check saved searches every"), "48");
+      setInputValue(field(container, "Check for new jobs every"), "48");
     });
     expect(container.textContent).toContain("Unsaved changes.");
     await act(async () => {
@@ -424,7 +424,7 @@ describe("settings screen", () => {
     const testConnection = vi.fn(memory.ai.testConnection);
     await render({ ...memory, ai: { ...memory.ai, testConnection } });
     await act(async () => {
-      setInputValue(field(container, "Check saved searches every"), "0");
+      setInputValue(field(container, "Check for new jobs every"), "0");
     });
     await act(async () => {
       button(container, "Test connection").click();

@@ -173,7 +173,7 @@
       "enabled": "Notifiche desktop"
     },
     "scheduler": {
-      "intervalHours": "Controlla le ricerche salvate ogni (ore)",
+      "intervalHours": "Cerca nuove offerte ogni (ore)",
       "hint": "Tra 1 e 168 ore."
     },
     "window": {
@@ -477,40 +477,6 @@
       "noMatch": "Nessun annuncio corrisponde a questi filtri. Cambiali o reimpostali.",
       "applicationStatus": "Candidatura: {{status}}"
     },
-    "filters": {
-      "visa": {
-        "label": "Sponsorizzazione visto",
-        "any": "Qualsiasi",
-        "yes": "Offerta",
-        "no": "Non offerta",
-        "unknown": "Non indicata"
-      },
-      "values": {
-        "employment": {
-          "full_time": "Tempo pieno",
-          "part_time": "Part-time",
-          "contract": "Contratto",
-          "freelance": "Freelance",
-          "internship": "Stage",
-          "temporary": "Tempo determinato",
-          "unknown": "Non indicato"
-        },
-        "seniority": {
-          "intern": "Stagista",
-          "junior": "Junior",
-          "mid": "Intermedio",
-          "senior": "Senior",
-          "lead": "Lead"
-        },
-        "period": {
-          "year": "anno",
-          "month": "mese",
-          "week": "settimana",
-          "day": "giorno",
-          "hour": "ora"
-        }
-      }
-    },
     "sort": {
       "label": "Ordine",
       "affinity": "Migliore corrispondenza",
@@ -561,6 +527,38 @@
       "companies_one": "Le offerte arrivano da {{count}} azienda.",
       "companies_other": "Le offerte arrivano da {{count}} aziende.",
       "manage": "Gestisci"
+    },
+    "values": {
+      "employment": {
+        "full_time": "Tempo pieno",
+        "part_time": "Part-time",
+        "contract": "Contratto",
+        "freelance": "Freelance",
+        "internship": "Stage",
+        "temporary": "Tempo determinato",
+        "unknown": "Non indicato"
+      },
+      "seniority": {
+        "intern": "Stagista",
+        "junior": "Junior",
+        "mid": "Intermedio",
+        "senior": "Senior",
+        "lead": "Lead"
+      },
+      "period": {
+        "year": "anno",
+        "month": "mese",
+        "week": "settimana",
+        "day": "giorno",
+        "hour": "ora"
+      }
+    },
+    "visa": {
+      "label": "Sponsorizzazione visto",
+      "any": "Qualsiasi",
+      "yes": "Offerta",
+      "no": "Non offerta",
+      "unknown": "Non indicata"
     }
   },
   "companies": {

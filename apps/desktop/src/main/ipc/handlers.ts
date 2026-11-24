@@ -24,8 +24,6 @@ import {
   type JobDetailRequest,
   type JobFlagRequest,
   type JobsListRequest,
-  type SavedSearchDeleteRequest,
-  type SavedSearchSaveRequest,
   type ScoreStartRequest,
   type SecretName,
 } from "@job-finder/bridge";
@@ -37,7 +35,6 @@ import type { CvImportService } from "../profile/cv-import";
 import type { DiscoveryService } from "../discovery/service";
 import type { ProfileDiscovery } from "../discovery/from-profile";
 import type { ScoringService } from "../scoring/service";
-import type { SavedSearchRepository } from "../saved-searches/repository";
 import type { ApplicationRepository } from "../applications/repository";
 import type { DocumentService } from "../documents/service";
 import type { AutofillService } from "../autofill/service";
@@ -69,7 +66,6 @@ export interface IpcServices {
   discovery: DiscoveryService;
   profileDiscovery: ProfileDiscovery;
   scoring: ScoringService;
-  savedSearches: SavedSearchRepository;
   applications: ApplicationRepository;
   applicationExport: { exportCsv(): Promise<ApplicationExportResult> };
   documents: DocumentService;
@@ -175,13 +171,6 @@ export async function handleInvoke(
       return services.applications.update(payload as ApplicationUpdateRequest);
     case "applications:export":
       return services.applicationExport.exportCsv();
-    case "saved-searches:list":
-      return services.savedSearches.list();
-    case "saved-searches:save":
-      return services.savedSearches.save(payload as SavedSearchSaveRequest);
-    case "saved-searches:delete":
-      await services.savedSearches.delete((payload as SavedSearchDeleteRequest).id);
-      return undefined;
     case "ingest:start":
       return services.ingestion.start((payload as IngestStartRequest | undefined)?.companyId);
     case "discovery:search":

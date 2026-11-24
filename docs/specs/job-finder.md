@@ -63,7 +63,7 @@ verified 2026-11-23). No code, no dependencies.
 ```
 #1 Profile & settings ──┬─> #3 Matching & ranking ──┐
                         │                            ├─> #6 Application prep & autofill
-#2 Discovery & ingestion ┴─> #4 Search & filters ────┤
+#2 Discovery & ingestion ┴─> #4 Jobs list ────┤
                                                      └─> #5 Application tracker
 #7 Scheduler & notifications (needs #2, #4)
 ```
@@ -71,7 +71,7 @@ verified 2026-11-23). No code, no dependencies.
 Sequencing rationale: the profile (#1) and a normalized job store (#2) are inputs to
 everything else. Ranking (#3) needs both. Tracking (#5) must exist before prep (#6),
 because prep writes the application record and the duplicate guard reads it. The
-scheduler (#7) only re-runs saved searches, so it comes last.
+scheduler (#7) only re-runs the profile's search, so it comes last.
 
 ### #1 Profile & settings
 
@@ -109,7 +109,7 @@ normalized format.
 
 - Every discovered company is stored with its careers URL and detected ATS, so later
   scans read it directly without searching again. The company list grows over time.
-- Search queries are built from the saved search criteria (role keywords, location,
+- Search queries are built from the profile's preferences (role keywords, location,
   work mode) and combined with ATS domains, e.g.
   `"backend engineer" Milan site:jobs.lever.co`.
 
@@ -157,28 +157,19 @@ normalized format.
   changes.
 - Results are **sorted by affinity by default**; the user can switch to newest first.
 
-### #4 Search & filters
+### #4 Jobs list
 
-Manual search with these filters (all optional, combinable):
+The list shows the jobs that match the profile's preferences, with no filter form:
 
-- keywords (title and description), with exclude keywords
-- location: country, region/city; "remote" scope
+- roles: the title names one of them
+- places: countries, areas (EU, Europe) and cities; remote jobs must be open to where the
+  person lives
 - work mode: remote / hybrid / onsite
-- employment type: full-time / part-time / contract / freelance / internship / temporary
-- seniority
-- minimum salary (applies only to jobs that state salary; option to hide jobs without
-  salary)
-- posted within: 24h / 3d / 7d / 30d / any
-- posting language
-- visa sponsorship
-- company include / exclude list
-- source / ATS
-- minimum affinity score
-- application status: hide applied / hide dismissed (default: both hidden)
+- employment type: employee / freelance / internship
+- application status: applied jobs and dismissed jobs are hidden
 
-The user can **save** a search (name + filters) for the scheduler. Each job can be
-opened (full description, all source links), **dismissed** (hidden from future
-results), or **bookmarked**.
+Each job can be opened (full description, all source links), **dismissed** (hidden from
+future results), or **bookmarked**.
 
 ### #5 Application tracker
 
@@ -214,7 +205,7 @@ results), or **bookmarked**.
 
 ### #7 Scheduler & notifications
 
-- Saved searches run on a schedule (default every 24 h, configurable 1–168 h) while the
+- The profile's search runs on a schedule (default every 24 h, configurable 1–168 h) while the
   app is running. Missed runs (app was closed) run once at the next start.
 - A run that finds jobs not seen before sends **one desktop notification** per run
   summarizing new matches ("7 new jobs for 'Backend Milan', top match 88"). Clicking it
@@ -226,7 +217,7 @@ results), or **bookmarked**.
 1. Uploading a sample CV produces a profile where every work experience, education
    entry and skill present in the CV appears in the editable form (verified against 3
    fixture CVs: PDF, DOCX, TXT, in 2 languages).
-2. With no paid keys and a local OpenAI-compatible model configured, a saved search
+2. With no paid keys and a local OpenAI-compatible model configured, the profile's search
    completes end-to-end: discovery, ingestion, filtering and ranking return at least
    one job (live smoke test, documented in README).
 3. Each of the 8 ATS adapters parses a recorded fixture response into normalized jobs
@@ -234,7 +225,7 @@ results), or **bookmarked**.
 4. ATS detection identifies the ATS for 16 fixture careers URLs (2 per ATS) with 100%
    accuracy, and returns "unknown" for 3 non-ATS URLs.
 5. The same posting ingested from two sources is stored once (fingerprint dedupe test).
-6. Each filter in #4 includes and excludes the expected jobs on a fixed fixture set.
+6. Each condition in #4 includes and excludes the expected jobs on a fixed fixture set.
 7. Results are sorted by affinity descending by default; every ranked job shows a score
    and explanation.
 8. Preparing an application for a job already `applied` shows a warning with the earlier
@@ -263,11 +254,11 @@ results), or **bookmarked**.
 |---|---|---|
 | Unit | ATS adapters on recorded fixtures (8 ATS) | +16 |
 | Unit | ATS detection, fingerprint dedupe, normalization (locations, work mode, employment type, salary) | +20 |
-| Unit | Filters (one per filter + combinations) | +16 |
+| Unit | List conditions (one per condition + combinations) | +16 |
 | Unit | Duplicate guard rules, application status transitions | +8 |
 | Unit | Rate limiter, robots.txt, secret redaction | +6 |
 | Integration | CV upload → profile extraction (AI mocked with recorded responses) | +3 |
-| Integration | Saved search → discovery → ingestion → ranking (sources mocked) | +2 |
+| Integration | Profile search → discovery → ingestion → ranking (sources mocked) | +2 |
 | Integration | Tailored CV generation + "no invented facts" check | +5 |
 | Integration | Autofill on Greenhouse/Lever/Ashby/generic form fixtures in a real headless browser | +4 |
 | Integration | Scheduler run → notification (notifier mocked) | +2 |
@@ -318,7 +309,7 @@ only, with an automatic backup copy of the database file before each migration.
 | #1 Profile & settings (CV parse, profile editor, AI provider layer) | 4 d | 2 h |
 | #2 Discovery & ingestion (2 keyless sources, 3 keyed, 8 ATS, generic, dedupe) | 8 d | 5 h |
 | #3 Matching & ranking | 1.5 d | 1 h |
-| #4 Search & filters UI | 3 d | 2 h |
+| #4 Jobs list | 3 d | 2 h |
 | #5 Tracker | 2 d | 1 h |
 | #6 CV/letter generation, PDF, autofill (3 adapters + AI fallback) | 7 d | 5 h |
 | #7 Scheduler & notifications | 1.5 d | 1 h |

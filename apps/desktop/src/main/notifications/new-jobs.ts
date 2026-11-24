@@ -10,14 +10,7 @@ export interface NotificationText {
 /** Title and body of the notification for a run with new matches, in the app's language. */
 export function newJobsText(t: Translate, matches: NewJobMatches): NotificationText {
   const plural = matches.count === 1 ? "one" : "other";
-  const [search] = matches.searchNames;
-  let body =
-    matches.searchNames.length === 1 && search !== undefined
-      ? t(`notifications.singleSearch.${plural}`, { count: matches.count, search })
-      : t(`notifications.manySearches.${plural}`, {
-          count: matches.count,
-          searches: matches.searchNames.length,
-        });
+  let body = t(`notifications.newJobs.${plural}`, { count: matches.count });
   if (matches.topScore !== null) {
     body += t("notifications.topMatch", { score: matches.topScore });
   }
@@ -39,9 +32,9 @@ export function createNewJobsNotifier(options: {
   translate: Translate;
   sink: NotificationSink;
   open: (request: OpenNewJobsRequest) => void;
-}): (matches: NewJobMatches, request: OpenNewJobsRequest) => void {
-  return (matches, request) => {
+}): (matches: NewJobMatches) => void {
+  return (matches) => {
     if (!options.sink.isSupported()) return;
-    options.sink.show(newJobsText(options.translate, matches), () => options.open(request));
+    options.sink.show(newJobsText(options.translate, matches), () => options.open({}));
   };
 }

@@ -102,11 +102,6 @@ const api: JobFinderBridge = {
     update: (request) => invoke("applications:update", request),
     exportCsv: () => invoke("applications:export"),
   },
-  savedSearches: {
-    list: () => invoke("saved-searches:list"),
-    save: (request) => invoke("saved-searches:save", request),
-    delete: (request) => invoke("saved-searches:delete", request),
-  },
   ingest: {
     start: (companyId) =>
       invoke("ingest:start", companyId === undefined ? undefined : { companyId }),

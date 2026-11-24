@@ -13,13 +13,8 @@ export interface AppStatus {
   update: UpdateNotice | null;
 }
 
-/**
- * Where a desktop notification sends the user: the job list with only the new jobs. `savedSearchId`
- * is set when the new jobs came from one saved search, and null when they came from several.
- */
-export interface OpenNewJobsRequest {
-  savedSearchId: string | null;
-}
+/** What a desktop notification asks the window to show: the job list with only the new jobs. */
+export type OpenNewJobsRequest = Record<string, never>;
 
 /** Main pushes the status to every window when it changes. */
 export const APP_STATUS_CHANNEL = "app:status-changed";
