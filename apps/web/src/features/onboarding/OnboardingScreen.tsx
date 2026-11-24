@@ -84,7 +84,7 @@ export function OnboardingScreen() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-8">
+    <main className="flex w-full flex-col gap-8">
       <PageHeader title={t("onboarding.title")} />
 
       <ol
