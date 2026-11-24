@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2 } from "lucide-react";
+import { ArrowLeft, Building2, ChevronRight } from "lucide-react";
 import { Link } from "react-router";
 import type {
   CompanyAddFailureCode,
@@ -8,12 +8,11 @@ import type {
   CompanyScan,
   DiscoveryCandidate,
   DiscoverySearchFailureCode,
-  IngestStartFailureCode,
   SecretName,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Badge } from "../../components/ui/Badge";
-import { Button, buttonClass } from "../../components/ui/Button";
+import { Button } from "../../components/ui/Button";
 import { Card, CardTitle } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -30,10 +29,6 @@ type SearchState =
 
 /** The keyed search providers. Reliable discovery needs one of their keys (Settings). */
 const SEARCH_KEY_NAMES: readonly SecretName[] = ["search.brave", "search.tavily", "search.serper"];
-
-type ScanNotice =
-  | { companyId: string; status: "started" }
-  | { companyId: string; status: "failed"; code: IngestStartFailureCode };
 
 /** Comma-separated terms, trimmed, empty ones dropped, at most five (the most the search accepts). */
 export function splitTerms(value: string): string[] {
@@ -76,7 +71,6 @@ export function CompaniesScreen() {
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
   const [addFailure, setAddFailure] = useState<CompanyAddFailureCode | "unknown" | null>(null);
-  const [scanNotice, setScanNotice] = useState<ScanNotice | null>(null);
   const [removeFailed, setRemoveFailed] = useState(false);
   // Null until the key status is read; the hint to Settings is shown only once it says no key is set.
   const [hasSearchKey, setHasSearchKey] = useState<boolean | null>(null);
@@ -215,19 +209,13 @@ export function CompaniesScreen() {
     }
   }
 
-  async function retryScan(companyId: string) {
-    setScanNotice(null);
-    try {
-      const result = await bridge.ingest.start(companyId);
-      setScanNotice(
-        result.ok
-          ? { companyId, status: "started" }
-          : { companyId, status: "failed", code: result.code },
-      );
-    } catch {
-      setScanNotice({ companyId, status: "failed", code: "engine-unavailable" });
-    }
-  }
+  const failedCount =
+    load.status === "ready"
+      ? load.companies.filter(
+          (company) =>
+            company.lastScan?.outcome === "failed" && company.lastScan.code !== "no-parseable-jobs",
+        ).length
+      : 0;
 
   function scanSummary(scan: CompanyScan | null): string {
     if (scan === null) return t("companies.scan.never");
@@ -251,13 +239,17 @@ export function CompaniesScreen() {
   return (
     <main className="flex flex-col gap-8">
       <PageHeader
-        title={t("companies.title")}
-        description={t("companies.intro")}
-        actions={
-          <Link to="/jobs" className={buttonClass("secondary", "sm")}>
+        back={
+          <Link
+            to="/jobs"
+            className="inline-flex items-center gap-1.5 text-sm text-app-muted hover:text-app-fg"
+          >
+            <ArrowLeft aria-hidden="true" className="size-4" strokeWidth={1.8} />
             {t("companies.backJobs")}
           </Link>
         }
+        title={t("companies.title")}
+        description={t("companies.intro")}
       />
 
       {load.status === "loading" ? (
@@ -277,78 +269,77 @@ export function CompaniesScreen() {
 
       {load.status === "ready" ? (
         <>
-          <section aria-labelledby="companies-list-title" className="flex flex-col gap-4">
-            <h2 id="companies-list-title" className="sr-only">
-              {t("companies.list.heading")}
-            </h2>
-            <p className="text-sm text-app-muted">{t("companies.remove.hint")}</p>
-            {removeFailed ? (
-              <p role="alert" className="text-sm text-app-danger">
-                {t("companies.remove.failed")}
-              </p>
-            ) : null}
-            {load.companies.length === 0 ? (
-              <EmptyState
-                icon={<Building2 className="size-5" strokeWidth={1.8} aria-hidden="true" />}
-                title={t("companies.list.empty")}
+          {/* The list is long and rarely needed, so it starts closed with a count and the failures. */}
+          <details className="group rounded-2xl border border-app-border bg-app-surface shadow-card">
+            <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 select-none [&::-webkit-details-marker]:hidden">
+              <ChevronRight
+                aria-hidden="true"
+                className="size-4 text-app-muted transition-transform group-open:rotate-90"
+                strokeWidth={1.8}
               />
-            ) : (
-              <ul className="grid gap-3 md:grid-cols-2">
-                {load.companies.map((company) => (
-                  <Card as="li" key={company.id} className="flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="font-display text-lg font-semibold text-app-fg">
-                        {company.name}
+              <h2
+                id="companies-list-title"
+                className="font-sans text-base font-semibold text-app-fg"
+              >
+                {t("companies.list.summary", { count: load.companies.length })}
+              </h2>
+              {failedCount > 0 ? (
+                <span className="text-sm text-app-danger">
+                  {t("companies.list.failedCount", { count: failedCount })}
+                </span>
+              ) : null}
+            </summary>
+            <section
+              aria-labelledby="companies-list-title"
+              className="flex flex-col gap-4 px-5 pb-5"
+            >
+              <p className="text-sm text-app-muted">{t("companies.remove.hint")}</p>
+              {removeFailed ? (
+                <p role="alert" className="text-sm text-app-danger">
+                  {t("companies.remove.failed")}
+                </p>
+              ) : null}
+              {load.companies.length === 0 ? (
+                <EmptyState
+                  icon={<Building2 className="size-5" strokeWidth={1.8} aria-hidden="true" />}
+                  title={t("companies.list.empty")}
+                />
+              ) : (
+                <ul className="grid gap-3 md:grid-cols-2">
+                  {load.companies.map((company) => (
+                    <Card as="li" key={company.id} className="flex flex-col gap-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="font-display text-lg font-semibold text-app-fg">
+                          {company.name}
+                        </p>
+                        <Badge tone={company.ats ? "neutral" : "accent"}>
+                          {company.ats
+                            ? t("companies.list.board", { ats: company.ats })
+                            : t("companies.list.careersPage")}
+                        </Badge>
+                      </div>
+                      <p className="text-xs break-all text-app-muted">{company.careersUrl}</p>
+                      <p
+                        className={`text-sm ${company.lastScan?.outcome === "failed" && company.lastScan.code !== "no-parseable-jobs" ? "text-app-danger" : "text-app-fg"}`}
+                      >
+                        {scanSummary(company.lastScan)}
                       </p>
-                      <Badge tone={company.ats ? "neutral" : "accent"}>
-                        {company.ats
-                          ? t("companies.list.board", { ats: company.ats })
-                          : t("companies.list.careersPage")}
-                      </Badge>
-                    </div>
-                    <p className="text-xs break-all text-app-muted">{company.careersUrl}</p>
-                    <p
-                      className={`text-sm ${company.lastScan?.outcome === "failed" && company.lastScan.code !== "no-parseable-jobs" ? "text-app-danger" : "text-app-fg"}`}
-                    >
-                      {scanSummary(company.lastScan)}
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => void retryScan(company.id)}
-                      >
-                        {t("companies.scan.retry")}
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        aria-label={t("companies.remove.label", { name: company.name })}
-                        onClick={() => void removeCompany(company.id)}
-                      >
-                        {t("companies.remove.action")}
-                      </Button>
-                      {scanNotice?.companyId === company.id ? (
-                        scanNotice.status === "started" ? (
-                          <p role="status" className="text-sm text-app-good">
-                            {t("companies.scan.started")}
-                          </p>
-                        ) : (
-                          <p role="alert" className="text-sm text-app-danger">
-                            {t(
-                              scanNotice.code === "already-running"
-                                ? "companies.scan.alreadyRunning"
-                                : "companies.scan.engineUnavailable",
-                            )}
-                          </p>
-                        )
-                      ) : null}
-                    </div>
-                  </Card>
-                ))}
-              </ul>
-            )}
-          </section>
+                      <div className="flex items-center gap-3">
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          aria-label={t("companies.remove.label", { name: company.name })}
+                          onClick={() => void removeCompany(company.id)}
+                        >
+                          {t("companies.remove.action")}
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </details>
           <Card
             as="section"
             aria-labelledby="companies-discover-title"

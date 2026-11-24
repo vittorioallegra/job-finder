@@ -657,17 +657,17 @@
       "heading": "Aziende",
       "empty": "Nessuna azienda ancora. Cerca bacheche qui sotto o aggiungine una con il link alla pagina di lavoro.",
       "board": "Bacheca: {{ats}}",
-      "careersPage": "Pagina di lavoro, letta con l'IA"
+      "careersPage": "Pagina di lavoro, letta con l'IA",
+      "summary_one": "{{count}} azienda seguita",
+      "summary_other": "{{count}} aziende seguite",
+      "failedCount_one": "{{count}} non letta nell'ultima scansione",
+      "failedCount_other": "{{count}} non lette nell'ultima scansione"
     },
     "scan": {
       "never": "Non ancora analizzata.",
       "noJobs": "Nessun annuncio leggibile nell'ultima analisi.",
       "scanned": "Ultima analisi: {{postings}} annunci letti, {{closed}} chiusi.",
-      "failed": "Ultima analisi non riuscita: {{reason}}.",
-      "retry": "Analizza di nuovo",
-      "started": "Analisi avviata.",
-      "alreadyRunning": "Un'analisi è già in corso.",
-      "engineUnavailable": "Il motore in background non è disponibile. Riprova tra poco."
+      "failed": "Ultima analisi non riuscita: {{reason}}."
     },
     "discover": {
       "heading": "Trova aziende",

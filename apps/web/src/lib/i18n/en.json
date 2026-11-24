@@ -657,17 +657,17 @@
       "heading": "Companies",
       "empty": "No companies yet. Find boards below or add one by its careers page link.",
       "board": "Board: {{ats}}",
-      "careersPage": "Careers page, read with AI"
+      "careersPage": "Careers page, read with AI",
+      "summary_one": "{{count}} company followed",
+      "summary_other": "{{count}} companies followed",
+      "failedCount_one": "{{count}} not read in the last scan",
+      "failedCount_other": "{{count}} not read in the last scan"
     },
     "scan": {
       "never": "Not scanned yet.",
       "noJobs": "No parseable jobs in the last scan.",
       "scanned": "Last scan: {{postings}} postings read, {{closed}} closed.",
-      "failed": "Last scan failed: {{reason}}.",
-      "retry": "Scan again",
-      "started": "Scan started.",
-      "alreadyRunning": "A scan is already running.",
-      "engineUnavailable": "The background engine is not available. Try again in a moment."
+      "failed": "Last scan failed: {{reason}}."
     },
     "discover": {
       "heading": "Find companies",

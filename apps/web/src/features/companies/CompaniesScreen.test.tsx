@@ -1,5 +1,5 @@
-// protects=a company can be removed from the sources; the companies screen finds boards through the bridge and adds only the ones the user picks, adds a company by its link and shows why one is refused, shows each company's last scan, retries a scan for one company, shows an error with a retry when the list cannot be read, and points to Settings for a free-tier search key when no key is saved or keyless search is blocked;
-// fails_when=a found board is added without a click, a board already in the list is offered again, a refused company is shown as added, a last scan is missing or wrong, a retry scans all companies or starts with no message, or a failed read shows a blank page;
+// protects=a company can be removed from the sources; the companies screen finds boards through the bridge and adds only the ones the user picks, adds a company by its link and shows why one is refused, shows each company's last scan in a list that starts closed with its count and failures, shows an error with a retry when the list cannot be read, and points to Settings for a free-tier search key when no key is saved or keyless search is blocked;
+// fails_when=a found board is added without a click, a board already in the list is offered again, a refused company is shown as added, a last scan is missing or wrong, the list starts open or hides its failures, or a failed read shows a blank page;
 // no_claim=layout, keyboard focus order and the real search provider are not checked here; the core discovery tests and the engine runtime tests cover the search.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -83,7 +83,7 @@ describe("companies screen", () => {
     expect(button(container, "Search job boards").disabled).toBe(true);
   });
 
-  it("lists each company with its board or careers page and last scan, and offers a retry for every company", async () => {
+  it("lists each company with its board or careers page and last scan, inside a closed panel with the count and the failures", async () => {
     const failed: CompanyRecord = {
       ...acme,
       id: "co-2",
@@ -119,8 +119,12 @@ describe("companies screen", () => {
     expect(container.textContent).toContain("Not scanned yet.");
     expect(container.textContent).toContain("Careers page, read with AI");
     expect(
-      [...container.querySelectorAll("button")].filter((node) => node.textContent === "Scan again"),
-    ).toHaveLength(4);
+      [...container.querySelectorAll("button")].some((node) => node.textContent === "Scan again"),
+    ).toBe(false);
+    const panel = container.querySelector("details");
+    expect(panel?.open).toBe(false);
+    expect(panel?.querySelector("summary")?.textContent).toContain("4 companies followed");
+    expect(panel?.querySelector("summary")?.textContent).toContain("1 not read in the last scan");
   });
 
   it("removes a company from the sources and lists the rest", async () => {
@@ -290,40 +294,6 @@ describe("companies screen", () => {
 
     expect(container.querySelector('[role="alert"]')?.textContent).toContain("already in the list");
     expect(container.textContent).not.toContain("Company added.");
-  });
-
-  it("scans one company again and says when a scan is already running", async () => {
-    const bridge = createMemoryBridge({ companies: [acme] });
-    const start = vi.fn(async (companyId?: string) =>
-      companyId === "co-1"
-        ? ({ ok: false, code: "already-running" } as const)
-        : ({ ok: true, runId: "run-x" } as const),
-    );
-    bridge.ingest.start = start;
-    await render(bridge);
-
-    await act(async () => {
-      button(container, "Scan again").click();
-    });
-    await act(async () => {});
-
-    expect(start).toHaveBeenCalledWith("co-1");
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
-      "A scan is already running.",
-    );
-  });
-
-  it("confirms a retry that started", async () => {
-    const bridge = createMemoryBridge({ companies: [acme] });
-    bridge.ingest.start = async () => ({ ok: true, runId: "run-2" });
-    await render(bridge);
-
-    await act(async () => {
-      button(container, "Scan again").click();
-    });
-    await act(async () => {});
-
-    expect(container.querySelector('[role="status"]')?.textContent).toContain("Scan started.");
   });
 
   it("shows an error with a retry when the list cannot be read, and recovers on retry", async () => {
