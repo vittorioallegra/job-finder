@@ -9,6 +9,8 @@ import {
   profile,
 } from "../db/schema";
 import { APPLIED_STATUSES } from "../applications/status";
+import { foldForMatch } from "../normalize/text";
+import { remoteScopeTerms, resolvePlace } from "../normalize/geo";
 import { postedSince, type JobFilter } from "./schema";
 
 /** Escapes LIKE wildcards so a keyword matches its own characters only. */
@@ -47,6 +49,67 @@ export function roleTitleTerms(role: string): string[] {
 
 /** The title as `roleTitleTerms` compares it: lower case, with hyphens and spaces removed. */
 const comparableTitle = sql`replace(replace(replace(lower(${jobs.title}), '-', ''), ' ', ''), '/', '')`;
+
+/** The remote scope as `placeCondition` compares it: lower case, punctuation as spaces, padded. */
+const comparableScope = sql`(' ' || ${["-", "/", ",", "(", ")", ";", ":", "|", ".", "&"].reduce(
+  (expression, char) => sql`replace(${expression}, ${char}, ' ')`,
+  sql`lower(${jobs.remoteScope})`,
+)} || ' ')`;
+
+/** Words that only repeat the work mode, which has its own filter. */
+const MODE_WORDS = new Set(["remote", "remoto", "remota", "hybrid", "ibrido", "onsite"]);
+
+/**
+ * The places condition (see `JobFilter.places`). Countries and areas match a location's country
+ * code, or a remote scope that reaches them. Other text matches the city, region or location text.
+ * Without a country to judge by, a remote job is kept: a posting that does not say is not a no.
+ */
+function placeCondition(places: readonly string[]): SQL | undefined {
+  const countries = new Set<string>();
+  const cities: string[] = [];
+  for (const place of places) {
+    if (MODE_WORDS.has(foldForMatch(place))) continue;
+    const resolved = resolvePlace(place);
+    if (resolved.kind === "countries") resolved.codes.forEach((code) => countries.add(code));
+    else if (resolved.text !== "") cities.push(resolved.text);
+  }
+  if (countries.size === 0 && cities.length === 0) return undefined;
+
+  const options: SQL[] = [];
+  if (cities.length > 0) {
+    const anyCity = cities.map((city) => {
+      const pattern = likePattern(city);
+      return sql`(json_extract(loc.value, '$.raw') like ${pattern} escape '\\'
+        or json_extract(loc.value, '$.city') like ${pattern} escape '\\'
+        or json_extract(loc.value, '$.region') like ${pattern} escape '\\')`;
+    });
+    options.push(
+      sql`exists (select 1 from json_each(${jobs.locations}) as loc where ${sql.join(anyCity, sql` or `)})`,
+    );
+  }
+  if (countries.size > 0) {
+    const codes = [...countries];
+    options.push(
+      sql`exists (select 1 from json_each(${jobs.locations}) as loc where json_extract(loc.value, '$.countryCode') in (${sql.join(
+        codes.map((code) => sql`${code}`),
+        sql`, `,
+      )}))`,
+    );
+    const terms = remoteScopeTerms(codes).map(
+      (term) => sql`${comparableScope} like ${likePattern(` ${term} `)} escape '\\'`,
+    );
+    options.push(sql`(${jobs.remoteScope} is not null and (${sql.join(terms, sql` or `)}))`);
+    options.push(
+      sql`(${jobs.remoteScope} is null
+        and not exists (select 1 from json_each(${jobs.locations}) as loc where json_extract(loc.value, '$.countryCode') is not null)
+        and (${jobs.workMode} = 'remote' or json_array_length(${jobs.locations}) = 0))`,
+    );
+  } else {
+    // Only cities are named: a remote job has no city to compare, so it stays.
+    options.push(sql`${jobs.workMode} = 'remote'`);
+  }
+  return sql`(${sql.join(options, sql` or `)})`;
+}
 
 /**
  * The SQL condition of a filter on the `jobs` table, or undefined when the filter narrows nothing.
@@ -101,6 +164,9 @@ export function jobFilterCondition(filter: JobFilter, now: number): SQL | undefi
       sql`exists (select 1 from json_each(${jobs.locations}) as loc where ${matchesText} and ${matchesCountry})`,
     );
   }
+
+  const places = placeCondition(filter.places);
+  if (places !== undefined) parts.push(places);
 
   if (filter.remoteScope !== "") {
     parts.push(sql`${jobs.remoteScope} like ${likePattern(filter.remoteScope)} escape '\\'`);

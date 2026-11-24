@@ -143,6 +143,7 @@ export function ProfileEditor({ initialDraft, stored = true, onSaved }: ProfileE
             emptyText={t("profile.preferences.anyLocation")}
             removeLabel={(name) => t("profile.skillsEditor.remove", { name })}
             max={PREFERENCE_LIMITS.locations}
+            suggestions={t("profile.preferences.areaSuggestions").split("|")}
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">

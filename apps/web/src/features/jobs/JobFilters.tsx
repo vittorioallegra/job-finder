@@ -115,6 +115,12 @@ export function JobFilters({
           onChange={(event) => set("excludedKeywords", event.target.value)}
         />
         <TextInput
+          label={t("jobs.filters.places")}
+          hint={t("jobs.filters.placesHint")}
+          value={draft.places}
+          onChange={(event) => set("places", event.target.value)}
+        />
+        <TextInput
           label={t("jobs.filters.locationText")}
           value={draft.locationText}
           onChange={(event) => set("locationText", event.target.value)}

@@ -8,6 +8,7 @@ describe("job filter schema", () => {
   it("parses an empty object to a filter that narrows nothing and hides dismissed jobs", () => {
     expect(DEFAULT_JOB_FILTER).toEqual({
       roles: [],
+      places: [],
       keywords: [],
       excludedKeywords: [],
       locationText: "",

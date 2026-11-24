@@ -17,6 +17,8 @@ export interface FilterDraft {
   roles: string;
   keywords: string;
   excludedKeywords: string;
+  /** Places where the person can work, comma-separated. */
+  places: string;
   locationText: string;
   countryCode: string;
   remoteScope: string;
@@ -62,6 +64,7 @@ export function draftFromFilter(filter: JobFilter): FilterDraft {
     roles: filter.roles.join(", "),
     keywords: filter.keywords.join(", "),
     excludedKeywords: filter.excludedKeywords.join(", "),
+    places: filter.places.join(", "),
     locationText: filter.locationText,
     countryCode: filter.countryCode ?? "",
     remoteScope: filter.remoteScope,
@@ -94,6 +97,7 @@ export function filterFromDraft(
     roles: splitTerms(draft.roles),
     keywords: splitTerms(draft.keywords),
     excludedKeywords: splitTerms(draft.excludedKeywords),
+    places: splitTerms(draft.places),
     locationText: draft.locationText.trim(),
     countryCode: draft.countryCode.trim() === "" ? null : draft.countryCode.trim().toUpperCase(),
     remoteScope: draft.remoteScope.trim(),

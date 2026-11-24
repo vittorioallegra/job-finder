@@ -13,6 +13,8 @@ export interface ChipsInputProps {
   removeLabel: (value: string) => string;
   /** At most this many chips; the input is hidden once the list is full. */
   max?: number;
+  /** Values offered as one-click buttons, until they are in the list. */
+  suggestions?: string[];
 }
 
 /**
@@ -28,6 +30,7 @@ export function ChipsInput({
   emptyText,
   removeLabel,
   max,
+  suggestions = [],
 }: ChipsInputProps) {
   const id = useId();
   const [text, setText] = useState("");
@@ -98,6 +101,22 @@ export function ChipsInput({
           <p id={`${id}-hint`} className="text-xs text-app-muted">
             {hint}
           </p>
+          {suggestions.filter((value) => !values.includes(value)).length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {suggestions
+                .filter((value) => !values.includes(value))
+                .map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className="rounded-full border border-dashed border-app-border px-3 py-1 text-xs text-app-muted hover:border-app-subtle hover:text-app-fg"
+                    onClick={() => add(value)}
+                  >
+                    + {value}
+                  </button>
+                ))}
+            </div>
+          ) : null}
         </>
       )}
     </div>

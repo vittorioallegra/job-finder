@@ -304,6 +304,28 @@ describe("job filters over the fixture set", () => {
     ]);
   });
 
+  it("filters by places: a country or an area keeps local jobs and remote jobs open to it", async () => {
+    // Italy: the two Milan jobs, and the remote job whose scope is the EU (which includes Italy).
+    expect(await titles({ places: ["Italia"], hideDismissed: false })).toEqual(
+      ["Backend Engineer", "Backend Intern", "Frontend Developer"].sort(),
+    );
+    // The EU as a whole: every EU office plus the EU-wide remote job, not New York.
+    expect(await titles({ places: ["UE"] })).toEqual(
+      [
+        "Backend Engineer",
+        "Frontend Developer",
+        "Platform Engineer",
+        "Sviluppatore Backend",
+      ].sort(),
+    );
+    // A city matches its own jobs; the remote job stays since it has no city to compare.
+    expect(await titles({ places: ["Berlin"] })).toEqual(
+      ["Frontend Developer", "Sviluppatore Backend"].sort(),
+    );
+    // A remote job limited to another country is left out.
+    expect(await titles({ places: ["Stati Uniti"] })).toEqual(["Data Engineer"]);
+  });
+
   it("filters by remote scope text, work mode, employment type and seniority", async () => {
     expect(await titles({ remoteScope: "eu" })).toEqual(["Frontend Developer"]);
     expect(await titles({ workModes: ["remote"] })).toEqual(["Frontend Developer"]);

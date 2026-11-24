@@ -2,6 +2,7 @@ export * from "./job";
 export * from "./countries";
 export * from "./employment-type";
 export * from "./fingerprint";
+export * from "./geo";
 export * from "./language";
 export * from "./location";
 export * from "./salary";

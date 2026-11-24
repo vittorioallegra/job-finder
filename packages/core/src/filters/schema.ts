@@ -57,6 +57,13 @@ export const JobFilterSchema = z.strictObject({
     .regex(/^[A-Z]{2}$/)
     .nullable()
     .default(null),
+  /**
+   * Where the person can work: countries, areas such as "EU" or "Europe", and cities. A job matches
+   * when it is in one of them, or is remote and open to someone living there (its remote scope
+   * names the country, an area containing it, or the world). A remote job limited to other
+   * countries is left out; one that states no scope is kept.
+   */
+  places: z.array(term).max(10).default([]),
   /** Text the remote scope must contain, e.g. "EU". */
   remoteScope: z.string().trim().max(100).default(""),
   workModes: z.array(z.enum(WORK_MODES)).max(WORK_MODES.length).default([]),
