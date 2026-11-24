@@ -1,4 +1,4 @@
-// protects=onboarding saves the AI provider before Continue unlocks, asks for consent before a CV goes to a cloud provider but not to a local endpoint, shows AI unavailable when the engine fails, and opens the review with the extracted draft;
+// protects=onboarding saves the AI provider before Continue unlocks, with the same context controls as Settings, asks for consent before a CV goes to a cloud provider but not to a local endpoint, shows AI unavailable when the engine fails, and opens the review with the extracted draft;
 // fails_when=Continue unlocks with unsaved AI edits, a cloud import is enabled without consent, a local endpoint asks for consent, an engine failure shows no reason, or the extracted draft is not shown for review;
 // no_claim=the real file dialog, the engine's extraction quality and the OS keychain are not exercised; the bridge is an in-memory double.
 import { act } from "react";
@@ -101,6 +101,7 @@ describe("onboarding", () => {
       );
     });
     await act(async () => {});
+    return bridge;
   }
 
   /** Renders with the given AI settings already saved and moves past the AI step. */
@@ -117,6 +118,28 @@ describe("onboarding", () => {
 
     await act(async () => button(container, "Save provider").click());
     expect(button(container, "Continue to the CV").disabled).toBe(false);
+  });
+
+  it("offers the same context slider as Settings for Ollama and saves it", async () => {
+    const bridge = await render({
+      settings: withAi({
+        provider: "openai-compatible",
+        baseUrl: "http://localhost:11434/v1",
+        model: "qwen3:8b",
+        contextSize: 16_384,
+      }),
+      models: {
+        ok: true,
+        models: [{ id: "qwen3:8b", label: null, sizeBytes: null, contextLength: 40_960 }],
+      },
+    });
+    await act(() => new Promise((resolve) => setTimeout(resolve, 450)));
+    const slider = labelled(container, "Longest text per request");
+    expect(slider.type).toBe("range");
+    await act(async () => setValue(slider, slider.max));
+    expect(button(container, "Continue to the CV").disabled).toBe(true);
+    await act(async () => button(container, "Save provider").click());
+    expect((await bridge.settings.get()).ai.contextSize).toBe(40_960);
   });
 
   it("asks for consent before a CV goes to a cloud provider", async () => {

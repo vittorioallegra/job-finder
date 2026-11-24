@@ -54,7 +54,7 @@ interface AiProviderFieldsProps {
   isKeySet: (name: SecretName) => boolean;
   /**
    * The context size, as typed in the form. With `onContextSize`, Ollama shows a slider up to the
-   * chosen model's limit; without, the field is left out (onboarding keeps the default).
+   * chosen model's limit and another server a number field; hosted providers show neither.
    */
   contextSize?: string;
   onContextSize?: (value: string) => void;
@@ -132,6 +132,20 @@ export function AiProviderFields({
           ) : null}
           {keyName !== null ? keyField(keyName) : null}
           {modelField}
+          {/* Another server reads what it was started with, so the user types that size; Ollama
+              takes it per request (the slider by the model); hosted providers need neither. */}
+          {value.choice === "openai-compatible" && contextSize !== undefined && onContextSize ? (
+            <TextInput
+              label={t("settings.ai.contextSize")}
+              hint={t("settings.ai.contextSizeHint")}
+              type="number"
+              inputMode="numeric"
+              min={SETTING_LIMITS.contextSizeMin}
+              max={SETTING_LIMITS.contextSizeMax}
+              value={contextSize}
+              onChange={(event) => onContextSize(event.target.value)}
+            />
+          ) : null}
         </>
       )}
     </div>

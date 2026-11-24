@@ -5,6 +5,7 @@ import { FileUp } from "lucide-react";
 import { useNavigate } from "react-router";
 import {
   CV_UPLOAD_MAX_BYTES,
+  SETTING_LIMITS,
   emptyProfile,
   aiConsentTarget,
   isCloudAiEndpoint,
@@ -26,6 +27,7 @@ import {
   aiSettingsFromChoice,
   type AiChoiceFields,
   contextSizeFor,
+  defaultContextSize,
 } from "../settings/provider-choice";
 import { draftFromExtraction, draftFromProfile, type ProfileDraft } from "../profile/profile-draft";
 import { ProfileEditor } from "../profile/ProfileEditor";
@@ -192,9 +194,13 @@ function AiStep({ bridge, settings, onSaved, onContinue }: AiStepProps) {
     model: settings.ai.model,
     baseUrl: settings.ai.baseUrl,
   }));
+  // Kept as typed, like the settings form; a hosted provider's size never carries to a server.
+  const [contextSize, setContextSize] = useState(() =>
+    String(contextSizeFor(aiChoiceFromSettings(settings.ai), settings.ai.contextSize)),
+  );
   const [secrets, setSecrets] = useState<SecretsStatus | null>(null);
   const [dirty, setDirty] = useState(false);
-  const [message, setMessage] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [message, setMessage] = useState<"idle" | "saving" | "saved" | "error" | "invalid">("idle");
 
   useEffect(() => {
     let active = true;
@@ -211,18 +217,37 @@ function AiStep({ bridge, settings, onSaved, onContinue }: AiStepProps) {
     };
   }, [bridge]);
 
-  const changeFields = useCallback((next: AiChoiceFields) => {
-    setFields(next);
+  const changeFields = useCallback(
+    (next: AiChoiceFields) => {
+      // Each provider starts from its own context size, as in Settings.
+      if (next.choice !== fields.choice) setContextSize(String(defaultContextSize(next.choice)));
+      setFields(next);
+      setDirty(true);
+    },
+    [fields.choice],
+  );
+
+  const changeContextSize = useCallback((value: string) => {
+    setContextSize(value);
     setDirty(true);
   }, []);
 
   async function saveFields(): Promise<boolean> {
+    const typed = Number(contextSize);
+    if (
+      !Number.isInteger(typed) ||
+      typed < SETTING_LIMITS.contextSizeMin ||
+      typed > SETTING_LIMITS.contextSizeMax
+    ) {
+      setMessage("invalid");
+      return false;
+    }
     setMessage("saving");
     try {
       const next = await bridge.settings.update({
         ai: {
           ...aiSettingsFromChoice(fields),
-          contextSize: contextSizeFor(fields.choice, settings.ai.contextSize),
+          contextSize: contextSizeFor(fields.choice, typed),
         },
       });
       setDirty(false);
@@ -249,6 +274,8 @@ function AiStep({ bridge, settings, onSaved, onContinue }: AiStepProps) {
           bridge={bridge}
           value={fields}
           onChange={changeFields}
+          contextSize={contextSize}
+          onContextSize={changeContextSize}
           isKeySet={(name) => secrets?.keys[name] ?? false}
           keyField={(name) =>
             secrets !== null ? (
@@ -266,10 +293,11 @@ function AiStep({ bridge, settings, onSaved, onContinue }: AiStepProps) {
         <div className="flex items-center justify-end gap-3">
           <p
             role="status"
-            className={`text-sm ${message === "error" ? "text-app-danger" : message === "saved" ? "text-app-good" : "text-app-muted"}`}
+            className={`text-sm ${message === "error" || message === "invalid" ? "text-app-danger" : message === "saved" ? "text-app-good" : "text-app-muted"}`}
           >
             {message === "saved" ? t("onboarding.ai.saved") : null}
             {message === "error" ? t("onboarding.ai.saveFailed") : null}
+            {message === "invalid" ? t("settings.invalid") : null}
           </p>
           <Button type="submit" variant="secondary" disabled={message === "saving"}>
             {message === "saving" ? t("onboarding.ai.saving") : t("onboarding.ai.save")}

@@ -215,20 +215,6 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
             />
           )}
         />
-        {/* Ollama takes the size per request (a slider in the fields above); another server reads
-            what it was started with, so the user types that. Hosted providers need neither. */}
-        {draft.aiProvider === "openai-compatible" ? (
-          <TextInput
-            label={t("settings.ai.contextSize")}
-            hint={t("settings.ai.contextSizeHint")}
-            type="number"
-            inputMode="numeric"
-            min={SETTING_LIMITS.contextSizeMin}
-            max={SETTING_LIMITS.contextSizeMax}
-            value={draft.aiContextSize}
-            onChange={(event) => change("aiContextSize", event.target.value)}
-          />
-        ) : null}
         {/* The test reads the saved settings, so the changes on screen are saved first. */}
         <AiConnectionTest
           bridge={bridge}
