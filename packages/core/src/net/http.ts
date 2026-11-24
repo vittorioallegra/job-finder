@@ -44,6 +44,11 @@ export interface HttpRequestOptions {
   signal?: AbortSignal;
   /** Extra headers, merged over the client's own (user agent, accept). Requests with headers are not cached. */
   headers?: Record<string, string>;
+  /**
+   * A larger body limit for this request, such as a big company's whole job board in one JSON
+   * answer. Such a request also gets more time, and its answer is not cached.
+   */
+  maxBodyBytes?: number;
 }
 
 export interface HttpPostOptions extends HttpRequestOptions {
@@ -56,6 +61,8 @@ interface RequestSpec {
   method: "GET" | "POST";
   headers: Record<string, string>;
   body?: string;
+  /** Overrides the client's body limit; the time limit grows with it. */
+  maxBodyBytes?: number;
 }
 
 export interface HttpClientOptions {
@@ -286,7 +293,12 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
     if (signal?.aborted) {
       return { kind: "failed", code: "aborted" };
     }
-    const timeoutSignal = AbortSignal.timeout(timeoutMs);
+    // A larger body gets proportionally more time to arrive.
+    const timeoutSignal = AbortSignal.timeout(
+      spec.maxBodyBytes === undefined
+        ? timeoutMs
+        : Math.ceil(timeoutMs * Math.max(1, spec.maxBodyBytes / maxBodyBytes)),
+    );
     const requestSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
     const failed = (): RawAttempt => {
       if (signal?.aborted) {
@@ -328,7 +340,7 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
       return base;
     }
     try {
-      return { ...base, body: await readBody(response, maxBodyBytes) };
+      return { ...base, body: await readBody(response, spec.maxBodyBytes ?? maxBodyBytes) };
     } catch {
       return failed();
     }
@@ -399,8 +411,17 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
     },
     async get(url, requestOptions = {}): Promise<HttpResult> {
       const headers = requestOptions.headers ?? {};
-      const cacheable = Object.keys(headers).length === 0;
-      return send(url, { method: "GET", headers }, requestOptions.signal, cacheable);
+      const larger = requestOptions.maxBodyBytes;
+      // A body above the usual limit is not kept in memory for the cache.
+      const cacheable = Object.keys(headers).length === 0 && larger === undefined;
+      return send(
+        url,
+        larger === undefined
+          ? { method: "GET", headers }
+          : { method: "GET", headers, maxBodyBytes: larger },
+        requestOptions.signal,
+        cacheable,
+      );
     },
     async post(url, postOptions): Promise<HttpResult> {
       const { body, headers = {}, signal } = postOptions;

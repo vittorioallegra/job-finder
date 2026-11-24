@@ -1,5 +1,5 @@
 // protects=adapters read boards through the shared HTTP client, follow every page, and never return partial jobs after a failure or an unknown slug;
-// fails_when=an adapter calls fetch itself, stops after the first page, returns the jobs read before a failing page, accepts a slug that changes the URL, or reports a failure as success;
+// fails_when=an adapter calls fetch itself, a large company's board is refused as too large, a 404 board is not reported as gone, stops after the first page, returns the jobs read before a failing page, accepts a slug that changes the URL, or reports a failure as success;
 // no_claim=rate limits, robots.txt and backoff, which the HTTP client's own tests cover, and real provider responses, which are never requested here.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -94,10 +94,22 @@ describe("adapter fetch", () => {
     expect(result).toMatchObject({ ok: false, code: "http-status", status: 503 });
   });
 
-  it("reports a 404 board as a failure, not as an empty board", async () => {
+  it("reports a 404 board as a board that no longer exists, not as an empty board", async () => {
     const { client } = scripted(() => ({ status: 404, body: "Not Found" }));
     const result = await ATS_ADAPTERS.workable.fetchJobs({ ats: "workable", slug: "gone" }, client);
-    expect(result).toMatchObject({ ok: false, code: "http-status", status: 404 });
+    expect(result).toMatchObject({ ok: false, code: "board-not-found", status: 404 });
+  });
+
+  it("reads a board answer larger than a web page may be, as big companies' boards are", async () => {
+    const board = JSON.parse(greenhouseBody) as { jobs: { content?: string }[] };
+    // About 8 MB of descriptions: over the client's 5 MB page limit.
+    board.jobs[0]!.content = "x".repeat(8 * 1024 * 1024);
+    const { client } = scripted(() => ({ body: JSON.stringify(board) }));
+    const result = await ATS_ADAPTERS.greenhouse.fetchJobs(
+      { ats: "greenhouse", slug: "bigco" },
+      client,
+    );
+    expect(result.ok).toBe(true);
   });
 
   it("refuses a slug that could change the URL, without requesting anything", async () => {

@@ -441,6 +441,7 @@
         "too-large": "the page is too large",
         "invalid-response": "the response was not in the expected format",
         "invalid-slug": "the board name is not valid",
+        "board-not-found": "the board no longer exists; remove the company from Sources",
         "too-many-pages": "the board has too many pages",
         "storage-failed": "the postings could not be saved",
         "aborted": "the scan was stopped",
@@ -701,6 +702,12 @@
         "duplicate-company": "This job board is already in the list.",
         "unknown": "The company could not be added."
       }
+    },
+    "remove": {
+      "action": "Remove",
+      "label": "Remove {{name}} from the sources",
+      "failed": "The company could not be removed. Try again.",
+      "hint": "A removed company is no longer scanned and its jobs leave the lists; the company search will not add it again. Adding it by hand brings it back."
     }
   },
   "applications": {

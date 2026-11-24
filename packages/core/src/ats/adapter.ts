@@ -23,6 +23,12 @@ export interface AdapterSpec {
   parse(body: string, board: BoardRef): ParsedPage | undefined;
 }
 
+/**
+ * A board API answers with every opening in one document: a large company's Greenhouse board with
+ * descriptions runs to tens of megabytes (46 MB for one seen in use). Web pages keep the usual limit.
+ */
+export const ATS_MAX_BODY_BYTES = 128 * 1024 * 1024;
+
 /** Builds an adapter that reads every page of a board through the shared HTTP client. */
 export function createAdapter(spec: AdapterSpec): AtsAdapter {
   return {
@@ -34,8 +40,15 @@ export function createAdapter(spec: AdapterSpec): AtsAdapter {
       let url: string | undefined = spec.endpoint(board.slug);
       for (let page = 0; url !== undefined; page++) {
         if (page === MAX_PAGES) return { ok: false, code: "too-many-pages", url };
-        const response = await client.get(url, { signal: options?.signal });
+        const response = await client.get(url, {
+          signal: options?.signal,
+          maxBodyBytes: ATS_MAX_BODY_BYTES,
+        });
         if (!response.ok) {
+          // A board API answers 404 for a name it does not know: the board was closed or renamed.
+          if (response.code === "http-status" && response.status === 404) {
+            return { ok: false, code: "board-not-found", url, status: 404 };
+          }
           const failure = { ok: false as const, code: response.code, url };
           return response.status === undefined ? failure : { ...failure, status: response.status };
         }

@@ -24,6 +24,8 @@ export interface BoardRef {
 export type AdapterFailureCode =
   | HttpErrorCode
   | "invalid-slug"
+  /** The provider has no board under this name (404): it was closed or renamed. */
+  | "board-not-found"
   | "invalid-response"
   | "too-many-pages"
   /** Generic careers pages: no AI provider is configured, or it failed. */

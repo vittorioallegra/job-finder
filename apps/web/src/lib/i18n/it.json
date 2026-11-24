@@ -441,6 +441,7 @@
         "too-large": "la pagina è troppo grande",
         "invalid-response": "la risposta non ha il formato atteso",
         "invalid-slug": "il nome della bacheca non è valido",
+        "board-not-found": "la bacheca non esiste più; togli l'azienda dalle Fonti",
         "too-many-pages": "la bacheca ha troppe pagine",
         "storage-failed": "gli annunci non sono stati salvati",
         "aborted": "la scansione è stata fermata",
@@ -701,6 +702,12 @@
         "duplicate-company": "Questa bacheca è già nell'elenco.",
         "unknown": "Non è stato possibile aggiungere l'azienda."
       }
+    },
+    "remove": {
+      "action": "Rimuovi",
+      "label": "Rimuovi {{name}} dalle fonti",
+      "failed": "Non è stato possibile rimuovere l'azienda. Riprova.",
+      "hint": "Un'azienda rimossa non viene più scansionata e le sue offerte spariscono dagli elenchi; la ricerca automatica non la aggiunge di nuovo. Aggiungendola a mano torna nell'elenco."
     }
   },
   "applications": {
