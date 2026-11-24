@@ -215,6 +215,13 @@ if (gotSingleInstanceLock) {
     });
     let supervisor: EngineSupervisor | null = null;
     const ingestion = createIngestionService({
+      onBoardGone: (companyId) => {
+        void ingestRepository.removeCompany(companyId).then(
+          () => logger.log("info", `removed company ${companyId}: its board no longer exists`),
+          (error: unknown) =>
+            logger.log("warn", `could not remove company ${companyId}: ${String(error)}`),
+        );
+      },
       onRunFinished: (runId, status) => {
         void scheduler?.handleRunFinished(runId, status);
       },

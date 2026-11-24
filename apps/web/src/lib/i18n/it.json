@@ -446,7 +446,7 @@
         "too-large": "la pagina è troppo grande",
         "invalid-response": "la risposta non ha il formato atteso",
         "invalid-slug": "il nome della bacheca non è valido",
-        "board-not-found": "la bacheca non esiste più; togli l'azienda dalle Fonti",
+        "board-not-found": "la bacheca non esiste più; l'azienda è stata rimossa dalle Fonti",
         "too-many-pages": "la bacheca ha troppe pagine",
         "storage-failed": "gli annunci non sono stati salvati",
         "aborted": "la scansione è stata fermata",

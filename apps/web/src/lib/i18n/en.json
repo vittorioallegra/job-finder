@@ -446,7 +446,7 @@
         "too-large": "the page is too large",
         "invalid-response": "the response was not in the expected format",
         "invalid-slug": "the board name is not valid",
-        "board-not-found": "the board no longer exists; remove the company from Sources",
+        "board-not-found": "the board no longer exists; the company was removed from Sources",
         "too-many-pages": "the board has too many pages",
         "storage-failed": "the postings could not be saved",
         "aborted": "the scan was stopped",

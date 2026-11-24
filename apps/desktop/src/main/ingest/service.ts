@@ -27,6 +27,11 @@ export interface IngestionServiceOptions {
    * reported when the engine died during the run.
    */
   onRunFinished?: (runId: string, status: IngestRunOutcome | "interrupted") => void;
+  /**
+   * A company's board answered that it does not exist (closed or renamed): it is removed from the
+   * sources, so later scans do not fail on it again and the company search does not add it back.
+   */
+  onBoardGone?: (companyId: string) => void;
   newRunId?: () => string;
 }
 
@@ -89,6 +94,9 @@ export function createIngestionService(options: IngestionServiceOptions): Ingest
 
     handleEngineEvent(event) {
       options.broadcast(event);
+      if (event.kind === "company-failed" && event.code === "board-not-found") {
+        options.onBoardGone?.(event.companyId);
+      }
       if (event.kind === "run-finished" && event.runId === activeRunId) {
         activeRunId = undefined;
         options.onRunFinished?.(event.runId, event.status);

@@ -1,4 +1,4 @@
-// protects=the jobs screen lists open jobs with their affinity score and explanation (unscored jobs marked as not scored), starts a scan only when companies exist, opens with the profile's preferences as the filter, links to the sources to manage them, follows its progress in the log and cancels it by run id, says when a scan is already running, asks for consent before scoring with a cloud provider, shows the AI unavailable state while keeping the jobs listed, and shows an error with a retry when the lists cannot be read;
+// protects=the jobs screen lists open jobs with their affinity score and explanation (unscored jobs marked as not scored), starts a scan only when companies exist, opens with the profile's preferences as the filter, links to the sources to manage them, follows its progress in a log that scrolls to its newest line and cancels it by run id, says when a scan is already running, asks for consent before scoring with a cloud provider, shows the AI unavailable state while keeping the jobs listed, and shows an error with a retry when the lists cannot be read;
 // fails_when=an open job is not shown, a scan starts with no companies, a scored job shows no score or an unscored one shows a number, scoring starts with a cloud provider before the consent box is ticked, an AI failure hides the jobs, a second scan starts while one is running without a message, progress or the cancel is not wired to the run id, or a failed read shows a blank page;
 // no_claim=layout, keyboard focus order, the real provider's answers and the real engine run are not checked here; the core ranking tests and the engine and ingestion tests cover the scoring and the run, and company entry is tested on the Sources screen.
 import { act } from "react";
@@ -150,6 +150,17 @@ describe("jobs screen", () => {
 
     await emit({ runId: "run-1", seq: 0, at: 1, kind: "run-started" });
     expect(container.textContent).toContain("Scan started.");
+    // The log follows the scan: a new line scrolls it to the bottom.
+    const log = container.querySelector<HTMLOListElement>('ol[aria-labelledby="jobs-log-title"]')!;
+    let scrolledTo = 0;
+    Object.defineProperty(log, "scrollHeight", { configurable: true, value: 480 });
+    Object.defineProperty(log, "scrollTop", {
+      configurable: true,
+      get: () => scrolledTo,
+      set: (value: number) => {
+        scrolledTo = value;
+      },
+    });
     await act(async () => {
       button(container, "Cancel scan").click();
     });
@@ -168,6 +179,7 @@ describe("jobs screen", () => {
     await emit({ runId: "run-1", seq: 2, at: 3, kind: "run-finished", status: "succeeded" });
 
     expect(container.textContent).toContain("Acme: 2 postings read, 1 closed.");
+    expect(scrolledTo).toBe(480);
     expect(container.textContent).toContain("Scan finished: completed.");
     expect(button(container, "Scan companies").disabled).toBe(false);
   });

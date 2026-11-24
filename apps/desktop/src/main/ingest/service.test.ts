@@ -1,4 +1,4 @@
-// protects=an ingestion run starts only when the engine accepts it, one run is active at a time, a company-limited start names its company, progress reaches the windows, a run whose engine died is reported interrupted, and the run-finished hook fires once for the run this service started;
+// protects=an ingestion run starts only when the engine accepts it, one run is active at a time, a company-limited start names its company, progress reaches the windows, a run whose engine died is reported interrupted, the run-finished hook fires once for the run this service started, and a company whose board is gone is removed;
 // fails_when=a second run starts while one is active, a run is reported started when the engine refused or is gone, a finished run keeps blocking new ones, or a dead engine leaves a run looking active;
 // no_claim=the engine's own run logic and the supervisor's crash handling are not exercised here; the engine and supervisor tests cover them.
 import { describe, expect, it } from "vitest";
@@ -147,5 +147,26 @@ describe("ingestion service", () => {
     const { service } = setup(engine);
     service.cancel("run-9");
     expect(engine.cancelled).toEqual(["run-9"]);
+  });
+
+  it("removes a company whose board no longer exists, and only that one", () => {
+    const gone: string[] = [];
+    const service = createIngestionService({
+      engine: () => fakeEngine(),
+      broadcast: () => {},
+      onBoardGone: (companyId) => gone.push(companyId),
+    });
+    const failed = (companyId: string, code: string): IngestEvent => ({
+      runId: "run-1",
+      seq: 1,
+      at: 0,
+      kind: "company-failed",
+      companyId,
+      companyName: companyId,
+      code,
+    });
+    service.handleEngineEvent(failed("co-gone", "board-not-found"));
+    service.handleEngineEvent(failed("co-down", "http-status"));
+    expect(gone).toEqual(["co-gone"]);
   });
 });

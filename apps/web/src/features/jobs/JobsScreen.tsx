@@ -56,6 +56,12 @@ export function JobsScreen() {
   const bridge = useBridge();
   const [load, setLoad] = useState<LoadState>({ status: "loading" });
   const [events, setEvents] = useState<IngestEvent[]>([]);
+  // The log follows the scan: each new line scrolls it to the bottom.
+  const logRef = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    const log = logRef.current;
+    if (log) log.scrollTop = log.scrollHeight;
+  }, [events]);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [startFailure, setStartFailure] = useState<IngestStartFailureCode | null>(null);
   const [starting, setStarting] = useState(false);
@@ -463,7 +469,15 @@ export function JobsScreen() {
                   )}
                 </p>
               ) : null}
-              <details className="group" open={events.length > 0 && activeRunId !== null}>
+              <details
+                className="group"
+                open={events.length > 0 && activeRunId !== null}
+                // A log opened by hand starts at its newest line too.
+                onToggle={() => {
+                  const log = logRef.current;
+                  if (log) log.scrollTop = log.scrollHeight;
+                }}
+              >
                 <summary
                   id="jobs-log-title"
                   className="cursor-pointer text-[13px] text-app-muted select-none hover:text-app-fg"
@@ -474,6 +488,7 @@ export function JobsScreen() {
                   <p className="mt-2 text-[13px] text-app-muted">{t("jobs.log.empty")}</p>
                 ) : (
                   <ol
+                    ref={logRef}
                     aria-labelledby="jobs-log-title"
                     aria-live="polite"
                     className="mt-2 flex max-h-48 flex-col gap-1 overflow-auto rounded-lg bg-app-sunken p-3 font-mono text-xs text-app-fg"
