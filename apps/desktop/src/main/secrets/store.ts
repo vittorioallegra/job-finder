@@ -29,6 +29,12 @@ export interface SecretStoreOptions {
   rows: SecretRows;
   /** Whether the user opted in to keys on disk without keyring encryption (Linux `basic_text`). */
   isBasicTextAllowed(): Promise<boolean>;
+  /**
+   * The OS. On macOS and Windows asking safeStorage anything opens the keychain, which can show a
+   * password prompt, so the status shown in Settings does not ask it: only saving or using a key
+   * does. Linux asks for the status, since the keyring backend decides the opt-in.
+   */
+  platform?: NodeJS.Platform;
 }
 
 export interface SecretStore {
@@ -71,13 +77,23 @@ export function resolveSecretStorage(
 export function createSecretStore(options: SecretStoreOptions): SecretStore {
   const { safeStorage, rows } = options;
   const inMemory = new Map<SecretName, string>();
+  const checksForStatus = (options.platform ?? process.platform) === "linux";
+  // The last answer from safeStorage, kept so the status can show it without asking again.
+  let checked: SecretStorageInfo | null = null;
 
   async function storage(): Promise<SecretStorageInfo> {
-    return resolveSecretStorage(safeStorage, await options.isBasicTextAllowed());
+    checked = resolveSecretStorage(safeStorage, await options.isBasicTextAllowed());
+    return checked;
+  }
+
+  /** The storage for the status: encrypted, unless saving or reading a key found otherwise. */
+  async function storageForStatus(): Promise<SecretStorageInfo> {
+    if (checksForStatus) return storage();
+    return checked ?? { mode: "encrypted", optInRequired: false };
   }
 
   async function status(): Promise<SecretsStatus> {
-    const info = await storage();
+    const info = await storageForStatus();
     const onDisk = info.mode !== "session-only";
     const keys = {} as Record<SecretName, boolean>;
     for (const name of SECRET_NAMES) {

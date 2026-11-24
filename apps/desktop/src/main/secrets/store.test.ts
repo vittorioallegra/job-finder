@@ -1,5 +1,5 @@
-// protects=secrets are encrypted on disk when safeStorage is available, kept in memory only when it is not, Linux basic_text is written only after the opt-in, and the renderer-facing status never carries a value;
-// fails_when=a key is written in plain text, written to disk without the opt-in, reported as set after clear, or returned by status;
+// protects=secrets are encrypted on disk when safeStorage is available, kept in memory only when it is not, Linux basic_text is written only after the opt-in, the renderer-facing status never carries a value, and on macOS showing the status never opens the keychain;
+// fails_when=opening Settings on macOS asks the keychain, a key is written in plain text, written to disk without the opt-in, reported as set after clear, or returned by status;
 // no_claim=the real OS keychain and its prompts are not exercised here; the fake safeStorage only checks the call contract.
 import { describe, expect, it } from "vitest";
 import { createSecretStore, resolveSecretStorage, type SafeStorageLike } from "./store";
@@ -35,11 +35,50 @@ function storeWith(options: {
     safeStorage: options.safeStorage,
     rows,
     isBasicTextAllowed: async () => options.basicTextAllowed ?? false,
+    platform: "linux",
   });
   return { store, rows };
 }
 
 describe("secret store", () => {
+  it("on macOS shows the status without touching the keychain, and asks only to save or read a key", async () => {
+    let asked = 0;
+    const safeStorage = fakeSafeStorage();
+    const counted: SafeStorageLike = {
+      ...safeStorage,
+      isEncryptionAvailable: () => {
+        asked += 1;
+        return safeStorage.isEncryptionAvailable();
+      },
+    };
+    const rows = memoryRows();
+    const store = createSecretStore({
+      safeStorage: counted,
+      rows,
+      isBasicTextAllowed: async () => false,
+      platform: "darwin",
+    });
+    expect((await store.status()).storage).toEqual({ mode: "encrypted", optInRequired: false });
+    expect(asked).toBe(0);
+    await store.set("ai.apiKey.openai", "sk-test-value");
+    expect(asked).toBe(1);
+    expect((await store.status()).keys["ai.apiKey.openai"]).toBe(true);
+    expect(asked).toBe(1);
+  });
+
+  it("on macOS reports keys kept in memory once saving found no keychain", async () => {
+    const store = createSecretStore({
+      safeStorage: fakeSafeStorage({ available: false }),
+      rows: memoryRows(),
+      isBasicTextAllowed: async () => false,
+      platform: "darwin",
+    });
+    await store.set("ai.apiKey.openai", "sk-test-value");
+    const status = await store.status();
+    expect(status.storage.mode).toBe("session-only");
+    expect(status.keys["ai.apiKey.openai"]).toBe(true);
+  });
+
   it("writes an encrypted blob, not the plain key, when encryption is available", async () => {
     const { store, rows } = storeWith({ safeStorage: fakeSafeStorage() });
     await store.set("ai.apiKey.openai", "sk-test-value");
