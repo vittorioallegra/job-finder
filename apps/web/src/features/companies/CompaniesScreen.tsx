@@ -16,6 +16,7 @@ import { Button } from "../../components/ui/Button";
 import { Card, CardTitle } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { ProfileDiscovery } from "./ProfileDiscovery";
 import { TextInput } from "../../components/ui/TextInput";
 
 type LoadState =
@@ -158,6 +159,16 @@ export function CompaniesScreen() {
     }
   }
 
+  /** Reads the list again, after the search from the profile added companies. */
+  async function reloadCompanies() {
+    try {
+      const companies = await bridge.companies.list();
+      setLoad((previous) => (previous.status === "ready" ? { ...previous, companies } : previous));
+    } catch {
+      setLoad({ status: "error" });
+    }
+  }
+
   /** Removes a company from the sources; adding it by hand brings it back. */
   async function removeCompany(companyId: string) {
     setRemoveFailed(false);
@@ -269,6 +280,7 @@ export function CompaniesScreen() {
 
       {load.status === "ready" ? (
         <>
+          <ProfileDiscovery bridge={bridge} onAdded={() => void reloadCompanies()} />
           {/* The list is long and rarely needed, so it starts closed with a count and the failures. */}
           <details className="group rounded-2xl border border-app-border bg-app-surface shadow-card">
             <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 select-none [&::-webkit-details-marker]:hidden">

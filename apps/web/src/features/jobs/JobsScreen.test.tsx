@@ -1,9 +1,9 @@
-// protects=the jobs screen lists open jobs with their affinity score and explanation (unscored jobs marked as not scored), starts a scan only when companies exist, opens with the profile's preferences as the filter, finds companies from the profile (also on ?discover=1), follows its progress in the log and cancels it by run id, says when a scan is already running, asks for consent before scoring with a cloud provider, shows the AI unavailable state while keeping the jobs listed, and shows an error with a retry when the lists cannot be read;
+// protects=the jobs screen lists open jobs with their affinity score and explanation (unscored jobs marked as not scored), starts a scan only when companies exist, opens with the profile's preferences as the filter, links to the sources to manage them, follows its progress in the log and cancels it by run id, says when a scan is already running, asks for consent before scoring with a cloud provider, shows the AI unavailable state while keeping the jobs listed, and shows an error with a retry when the lists cannot be read;
 // fails_when=an open job is not shown, a scan starts with no companies, a scored job shows no score or an unscored one shows a number, scoring starts with a cloud provider before the consent box is ticked, an AI failure hides the jobs, a second scan starts while one is running without a message, progress or the cancel is not wired to the run id, or a failed read shows a blank page;
 // no_claim=layout, keyboard focus order, the real provider's answers and the real engine run are not checked here; the core ranking tests and the engine and ingestion tests cover the scoring and the run, and company entry is tested on the Sources screen.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   emptyPreferences,
@@ -272,55 +272,7 @@ describe("jobs screen", () => {
     await render({ ...memory, jobs: { ...memory.jobs, list } });
     expect(list.mock.calls[0]?.[0].filter.workModes).toEqual(["remote", "unknown"]);
     expect(list.mock.calls[0]?.[0].filter.roles).toEqual(["Backend Engineer"]);
-    expect(container.textContent).toContain("Find new companies");
-  });
-
-  it("finds companies from the profile on ?discover=1 and says what it added", async () => {
-    const memory = createMemoryBridge({
-      companies: [acme],
-      profile: {
-        ...emptyProfile(),
-        preferences: { ...emptyPreferences(), roles: ["Backend Engineer"] },
-      },
-      profileDiscovery: { ok: true, found: 3, added: 2, runStarted: true },
-    });
-    const fromProfile = vi.fn(memory.discovery.fromProfile);
-    let path = "";
-    function Where() {
-      const location = useLocation();
-      path = `${location.pathname}${location.search}`;
-      return null;
-    }
-    await act(async () => {
-      root.render(
-        <MemoryRouter initialEntries={["/jobs?discover=1"]}>
-          <BridgeProvider bridge={{ ...memory, discovery: { ...memory.discovery, fromProfile } }}>
-            <Routes>
-              <Route
-                path="/jobs"
-                element={
-                  <>
-                    <JobsScreen />
-                    <Where />
-                  </>
-                }
-              />
-            </Routes>
-          </BridgeProvider>
-        </MemoryRouter>,
-      );
-    });
-    await act(async () => {});
-    await act(async () => {});
-    expect(fromProfile).toHaveBeenCalledTimes(1);
-    expect(path).toBe("/jobs");
-    expect(container.textContent).toContain("Added 2 new companies out of 3 found.");
-    expect(container.textContent).toContain("Their jobs are being read now.");
-  });
-
-  it("points to the profile when it names no role yet", async () => {
-    await render(createMemoryBridge({ companies: [acme], profile: emptyProfile() }));
-    expect(container.textContent).toContain("Say which roles you are looking for in your profile");
-    expect(() => button(container, "Find new companies")).toThrow();
+    expect(container.textContent).not.toContain("Find new companies");
+    expect(container.querySelector('a[href="/companies"]')?.textContent).toBe("Manage");
   });
 });

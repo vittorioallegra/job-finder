@@ -630,25 +630,7 @@
     "discover": {
       "companies_one": "Jobs come from {{count}} company.",
       "companies_other": "Jobs come from {{count}} companies.",
-      "start": "Find new companies",
-      "searching": "Searching…",
-      "searchingLong": "Looking on the web for companies hiring for your roles. This can take a minute.",
-      "needRoles": "Say which roles you are looking for in your profile, and the app finds the companies hiring for them.",
-      "openProfile": "Open the profile",
-      "manage": "Manage sources",
-      "added_one": "Added {{count}} new company out of {{found}} found.",
-      "added_other": "Added {{count}} new companies out of {{found}} found.",
-      "nothingNew_one": "Found {{count}} company, already in your list.",
-      "nothingNew_other": "Found {{count}} companies, all already in your list.",
-      "none": "No company found for your roles and places. Try broader roles, or add a search key in Settings.",
-      "scanning": "Their jobs are being read now.",
-      "blocked": "The keyless search was blocked; a free search key in Settings gives more results.",
-      "failure": {
-        "no-roles": "Add at least one role in your profile first.",
-        "search-blocked": "The search service blocked the request. Add a free search key in Settings and try again.",
-        "search-failed": "The search failed. Try again later.",
-        "engine-unavailable": "The background engine is not running. Try again shortly."
-      }
+      "manage": "Manage"
     }
   },
   "companies": {
@@ -713,6 +695,28 @@
       "label": "Remove {{name}} from the sources",
       "failed": "The company could not be removed. Try again.",
       "hint": "A removed company is no longer scanned and its jobs leave the lists; the company search will not add it again. Adding it by hand brings it back."
+    },
+    "profileSearch": {
+      "heading": "Companies for your roles",
+      "intro": "The app looks on the web for companies hiring as {{roles}}, adds the new ones and reads their jobs. It does this by itself with every scheduled scan.",
+      "start": "Find new companies",
+      "searching": "Searching…",
+      "searchingLong": "Looking on the web for companies hiring for your roles. This can take a minute.",
+      "needRoles": "Say which roles you are looking for in your profile, and the app finds the companies hiring for them.",
+      "openProfile": "Open the profile",
+      "added_one": "Added {{count}} new company out of {{found}} found.",
+      "added_other": "Added {{count}} new companies out of {{found}} found.",
+      "nothingNew_one": "Found {{count}} company, already in your list.",
+      "nothingNew_other": "Found {{count}} companies, all already in your list.",
+      "none": "No company found for your roles and places. Try broader roles, or add a search key in Settings.",
+      "scanning": "Their jobs are being read now.",
+      "blocked": "The keyless search was blocked; a free search key in Settings gives more results.",
+      "failure": {
+        "no-roles": "Add at least one role in your profile first.",
+        "search-blocked": "The search service blocked the request. Add a free search key in Settings and try again.",
+        "search-failed": "The search failed. Try again later.",
+        "engine-unavailable": "The background engine is not running. Try again shortly."
+      }
     }
   },
   "applications": {

@@ -15,12 +15,11 @@ import {
   type LatestRun,
   type SavedSearch,
   type ScoreStartResult,
-  type ProfileDiscoveryResult,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Briefcase, Building2, RefreshCw, SlidersHorizontal, Sparkles } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
-import { Button } from "../../components/ui/Button";
+import { Button, buttonClass } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Drawer } from "../../components/ui/Drawer";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -73,9 +72,6 @@ export function JobsScreen() {
   const [applied, setApplied] = useState<JobFilter>(DEFAULT_JOB_FILTER);
   // The filter from the profile's "what you are looking for": the list opens with it, Reset returns to it.
   const [baseFilter, setBaseFilter] = useState<JobFilter>(DEFAULT_JOB_FILTER);
-  const [hasRoles, setHasRoles] = useState(false);
-  const [discovering, setDiscovering] = useState(false);
-  const [discovery, setDiscovery] = useState<ProfileDiscoveryResult | null>(null);
   const [sort, setSort] = useState<JobSort>("affinity");
   const [refreshing, setRefreshing] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -112,24 +108,21 @@ export function JobsScreen() {
         state: { status: "ready", ...lists } as LoadState,
         latest,
         base,
-        hasRoles: (preferences?.roles.length ?? 0) > 0,
       };
     } catch {
       return {
         state: { status: "error" } as LoadState,
         latest: null as LatestRun | null,
         base: DEFAULT_JOB_FILTER,
-        hasRoles: false,
       };
     }
   }, [bridge, readLists]);
 
   /** Opens the list with the profile's filter, as loaded. */
-  function applyBase(base: JobFilter, roles: boolean) {
+  function applyBase(base: JobFilter) {
     setBaseFilter(base);
     setApplied(base);
     setDraft(draftFromFilter(base));
-    setHasRoles(roles);
   }
 
   const readSaved = useCallback(async () => {
@@ -151,10 +144,10 @@ export function JobsScreen() {
         setProviderName(t(`settings.ai.providers.${settings.ai.provider}`));
       })
       .catch(() => {});
-    void loadAll().then(({ state, latest, base, hasRoles: roles }) => {
+    void loadAll().then(({ state, latest, base }) => {
       if (!active) return;
       void readSaved();
-      applyBase(base, roles);
+      applyBase(base);
       setLoad(state);
       setEvents(latest?.events ?? []);
       setActiveRunId(latest?.run.status === "running" ? latest.run.id : null);
@@ -187,18 +180,6 @@ export function JobsScreen() {
   // current state through a ref, so the effect runs only when the link or the load state changes.
   const [params, setParams] = useSearchParams();
   const wantsNew = params.get("new") === "1";
-  // Profile setup ends on `?discover=1`: the first company search starts by itself, once.
-  const wantsDiscover = params.get("discover") === "1";
-  const discoverOnce = useRef<() => void>(() => {});
-  useEffect(() => {
-    discoverOnce.current = () => {
-      setParams({}, { replace: true });
-      void discoverFromProfile();
-    };
-  });
-  useEffect(() => {
-    if (wantsDiscover && load.status === "ready") discoverOnce.current();
-  }, [wantsDiscover, load.status]);
   const wantedSaved = params.get("saved");
   const applyLink = useRef<() => void>(() => {});
   useEffect(() => {
@@ -230,8 +211,8 @@ export function JobsScreen() {
 
   function retry() {
     setLoad({ status: "loading" });
-    void loadAll().then(({ state, latest, base, hasRoles: roles }) => {
-      applyBase(base, roles);
+    void loadAll().then(({ state, latest, base }) => {
+      applyBase(base);
       setLoad(state);
       setEvents(latest?.events ?? []);
       setActiveRunId(latest?.run.status === "running" ? latest.run.id : null);
@@ -265,26 +246,6 @@ export function JobsScreen() {
     setFilterInvalid(false);
     setApplied(baseFilter);
     void refreshJobs(baseFilter, sort);
-  }
-
-  /** Finds and adds the companies the profile points to; the scan that follows shows in the log. */
-  async function discoverFromProfile() {
-    setDiscovering(true);
-    setDiscovery(null);
-    try {
-      const result = await bridge.discovery.fromProfile();
-      setDiscovery(result);
-      if (result.ok && result.added > 0) {
-        const companies = await bridge.companies.list();
-        setLoad((previous) =>
-          previous.status === "ready" ? { ...previous, companies } : previous,
-        );
-      }
-    } catch {
-      setDiscovery({ ok: false, code: "engine-unavailable" });
-    } finally {
-      setDiscovering(false);
-    }
   }
 
   function changeSort(next: JobSort) {
@@ -480,42 +441,16 @@ export function JobsScreen() {
                   {activeRunId === null ? t("jobs.scan.idle") : t("jobs.scan.running")}
                 </p>
               </div>
-              <div className="flex flex-col gap-2 rounded-lg bg-app-sunken p-3">
-                <div className="flex flex-wrap items-center gap-3">
-                  <Building2
-                    aria-hidden="true"
-                    className="size-4 text-app-accent"
-                    strokeWidth={1.8}
-                  />
-                  <p className="flex-1 text-[13px] text-app-fg">
-                    {t("jobs.discover.companies", { count: load.companies.length })}
-                  </p>
-                  {hasRoles ? (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => void discoverFromProfile()}
-                      disabled={discovering}
-                    >
-                      {discovering ? t("jobs.discover.searching") : t("jobs.discover.start")}
-                    </Button>
-                  ) : null}
-                </div>
-                {hasRoles ? null : (
-                  <p className="text-[13px] text-app-muted">
-                    {t("jobs.discover.needRoles")}{" "}
-                    <Link to="/profile" className="text-app-accent underline">
-                      {t("jobs.discover.openProfile")}
-                    </Link>
-                  </p>
-                )}
-                {discovering ? (
-                  <p role="status" className="text-[13px] text-app-muted">
-                    {t("jobs.discover.searchingLong")}
-                  </p>
-                ) : null}
-                {discovery ? <DiscoveryOutcome result={discovery} /> : null}
-                <Link to="/companies" className="text-[13px] text-app-accent underline">
+              <div className="flex flex-wrap items-center gap-3 rounded-lg bg-app-sunken p-3">
+                <Building2
+                  aria-hidden="true"
+                  className="size-4 text-app-accent"
+                  strokeWidth={1.8}
+                />
+                <p className="flex-1 text-[13px] text-app-fg">
+                  {t("jobs.discover.companies", { count: load.companies.length })}
+                </p>
+                <Link to="/companies" className={buttonClass("secondary", "sm")}>
                   {t("jobs.discover.manage")}
                 </Link>
               </div>
@@ -753,28 +688,5 @@ function JobCard({ job, onOpen }: { job: JobListItem; onOpen: () => void }) {
         </Button>
       </div>
     </Card>
-  );
-}
-
-/** What the company search from the profile did, or why it could not. */
-function DiscoveryOutcome({ result }: { result: ProfileDiscoveryResult }) {
-  const { t } = useTranslation();
-  if (!result.ok) {
-    return (
-      <p role="alert" className="text-[13px] text-app-danger">
-        {t(`jobs.discover.failure.${result.code}`)}
-      </p>
-    );
-  }
-  return (
-    <p role="status" className="text-[13px] text-app-fg">
-      {result.added > 0
-        ? t("jobs.discover.added", { count: result.added, found: result.found })
-        : result.found > 0
-          ? t("jobs.discover.nothingNew", { count: result.found })
-          : t("jobs.discover.none")}
-      {result.runStarted ? ` ${t("jobs.discover.scanning")}` : ""}
-      {result.searchBlocked ? ` ${t("jobs.discover.blocked")}` : ""}
-    </p>
   );
 }

@@ -1,11 +1,16 @@
-// protects=a company can be removed from the sources; the companies screen finds boards through the bridge and adds only the ones the user picks, adds a company by its link and shows why one is refused, shows each company's last scan in a list that starts closed with its count and failures, shows an error with a retry when the list cannot be read, and points to Settings for a free-tier search key when no key is saved or keyless search is blocked;
+// protects=the sources page finds companies for the profile's roles (also on ?discover=1) or points to the profile without roles; a company can be removed from the sources; the companies screen finds boards through the bridge and adds only the ones the user picks, adds a company by its link and shows why one is refused, shows each company's last scan in a list that starts closed with its count and failures, shows an error with a retry when the list cannot be read, and points to Settings for a free-tier search key when no key is saved or keyless search is blocked;
 // fails_when=a found board is added without a click, a board already in the list is offered again, a refused company is shown as added, a last scan is missing or wrong, the list starts open or hides its failures, or a failed read shows a blank page;
 // no_claim=layout, keyboard focus order and the real search provider are not checked here; the core discovery tests and the engine runtime tests cover the search.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CompanyRecord, JobFinderBridge } from "@job-finder/bridge";
+import {
+  emptyPreferences,
+  emptyProfile,
+  type CompanyRecord,
+  type JobFinderBridge,
+} from "@job-finder/bridge";
 import { BridgeProvider } from "../../lib/bridge/BridgeContext";
 import { createMemoryBridge } from "../../lib/bridge/memory";
 import { i18n } from "../../lib/i18n";
@@ -139,6 +144,39 @@ describe("companies screen", () => {
     await act(async () => {});
     expect(remove).toHaveBeenCalledWith(acme.id);
     expect(container.textContent).not.toContain(acme.careersUrl);
+  });
+
+  it("finds companies for the profile's roles on ?discover=1 and says what it added", async () => {
+    const memory = createMemoryBridge({
+      companies: [acme],
+      profile: {
+        ...emptyProfile(),
+        preferences: { ...emptyPreferences(), roles: ["Backend Engineer"] },
+      },
+      profileDiscovery: { ok: true, found: 3, added: 2, runStarted: true },
+    });
+    const fromProfile = vi.fn(memory.discovery.fromProfile);
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/companies?discover=1"]}>
+          <BridgeProvider bridge={{ ...memory, discovery: { ...memory.discovery, fromProfile } }}>
+            <CompaniesScreen />
+          </BridgeProvider>
+        </MemoryRouter>,
+      );
+    });
+    await act(async () => {});
+    await act(async () => {});
+    expect(fromProfile).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toContain("companies hiring as Backend Engineer");
+    expect(container.textContent).toContain("Added 2 new companies out of 3 found.");
+    expect(container.textContent).toContain("Their jobs are being read now.");
+  });
+
+  it("points to the profile when it names no role, and offers no search", async () => {
+    await render(createMemoryBridge({ companies: [acme], profile: emptyProfile() }));
+    expect(container.textContent).toContain("Say which roles you are looking for in your profile");
+    expect(container.textContent).not.toContain("Find new companies");
   });
 
   it("finds boards for the keywords and adds only the one the user picks", async () => {

@@ -630,25 +630,7 @@
     "discover": {
       "companies_one": "Le offerte arrivano da {{count}} azienda.",
       "companies_other": "Le offerte arrivano da {{count}} aziende.",
-      "start": "Cerca nuove aziende",
-      "searching": "Ricerca…",
-      "searchingLong": "Sto cercando sul web le aziende che assumono per i tuoi ruoli. Può richiedere un minuto.",
-      "needRoles": "Indica nel profilo quali ruoli cerchi, e l'app trova le aziende che assumono per quei ruoli.",
-      "openProfile": "Apri il profilo",
-      "manage": "Gestisci le fonti",
-      "added_one": "Aggiunta {{count}} nuova azienda su {{found}} trovate.",
-      "added_other": "Aggiunte {{count}} nuove aziende su {{found}} trovate.",
-      "nothingNew_one": "Trovata {{count}} azienda, già nel tuo elenco.",
-      "nothingNew_other": "Trovate {{count}} aziende, tutte già nel tuo elenco.",
-      "none": "Nessuna azienda trovata per i tuoi ruoli e luoghi. Prova ruoli più ampi, o aggiungi una chiave di ricerca nelle Impostazioni.",
-      "scanning": "Sto leggendo le loro offerte.",
-      "blocked": "La ricerca senza chiave è stata bloccata; una chiave di ricerca gratuita nelle Impostazioni dà più risultati.",
-      "failure": {
-        "no-roles": "Aggiungi prima almeno un ruolo nel profilo.",
-        "search-blocked": "Il servizio di ricerca ha bloccato la richiesta. Aggiungi una chiave di ricerca gratuita nelle Impostazioni e riprova.",
-        "search-failed": "La ricerca non è riuscita. Riprova più tardi.",
-        "engine-unavailable": "Il motore in background non è in esecuzione. Riprova tra poco."
-      }
+      "manage": "Gestisci"
     }
   },
   "companies": {
@@ -713,6 +695,28 @@
       "label": "Rimuovi {{name}} dalle fonti",
       "failed": "Non è stato possibile rimuovere l'azienda. Riprova.",
       "hint": "Un'azienda rimossa non viene più scansionata e le sue offerte spariscono dagli elenchi; la ricerca automatica non la aggiunge di nuovo. Aggiungendola a mano torna nell'elenco."
+    },
+    "profileSearch": {
+      "heading": "Aziende per i tuoi ruoli",
+      "intro": "L'app cerca sul web le aziende che assumono come {{roles}}, aggiunge quelle nuove e ne legge le offerte. Lo fa da sola a ogni scansione programmata.",
+      "start": "Cerca nuove aziende",
+      "searching": "Ricerca…",
+      "searchingLong": "Sto cercando sul web le aziende che assumono per i tuoi ruoli. Può richiedere un minuto.",
+      "needRoles": "Indica nel profilo quali ruoli cerchi, e l'app trova le aziende che assumono per quei ruoli.",
+      "openProfile": "Apri il profilo",
+      "added_one": "Aggiunta {{count}} nuova azienda su {{found}} trovate.",
+      "added_other": "Aggiunte {{count}} nuove aziende su {{found}} trovate.",
+      "nothingNew_one": "Trovata {{count}} azienda, già nel tuo elenco.",
+      "nothingNew_other": "Trovate {{count}} aziende, tutte già nel tuo elenco.",
+      "none": "Nessuna azienda trovata per i tuoi ruoli e luoghi. Prova ruoli più ampi, o aggiungi una chiave di ricerca nelle Impostazioni.",
+      "scanning": "Sto leggendo le loro offerte.",
+      "blocked": "La ricerca senza chiave è stata bloccata; una chiave di ricerca gratuita nelle Impostazioni dà più risultati.",
+      "failure": {
+        "no-roles": "Aggiungi prima almeno un ruolo nel profilo.",
+        "search-blocked": "Il servizio di ricerca ha bloccato la richiesta. Aggiungi una chiave di ricerca gratuita nelle Impostazioni e riprova.",
+        "search-failed": "La ricerca non è riuscita. Riprova più tardi.",
+        "engine-unavailable": "Il motore in background non è in esecuzione. Riprova tra poco."
+      }
     }
   },
   "applications": {

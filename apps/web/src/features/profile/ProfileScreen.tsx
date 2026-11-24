@@ -84,7 +84,7 @@ export function ProfileScreen() {
       {searchChanged ? (
         <p role="note" className="rounded-xl bg-app-accent-soft p-3 text-sm text-app-fg">
           {t("profile.searchChanged")}{" "}
-          <Link to="/jobs?discover=1" className="font-medium text-app-accent underline">
+          <Link to="/companies?discover=1" className="font-medium text-app-accent underline">
             {t("profile.searchChangedAction")}
           </Link>
         </p>

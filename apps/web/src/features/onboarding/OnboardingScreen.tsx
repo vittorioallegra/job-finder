@@ -177,9 +177,9 @@ export function OnboardingScreen() {
             initialDraft={draft}
             // The draft from the CV or the empty one is not stored yet: it can be saved as it is.
             stored={false}
-            // With roles to look for, setup ends on the jobs list, which starts the company search.
+            // With roles to look for, setup ends on the sources, which start the company search.
             onSaved={(record) =>
-              navigate(record.profile.preferences.roles.length > 0 ? "/jobs?discover=1" : "/")
+              navigate(record.profile.preferences.roles.length > 0 ? "/companies?discover=1" : "/")
             }
           />
           <div>
