@@ -333,7 +333,7 @@
       "employmentTypes": "Contratto",
       "contracts": {
         "employee": "Dipendente",
-        "freelance": "Freelance o a progetto",
+        "freelance": "Freelance",
         "internship": "Stage"
       }
     },

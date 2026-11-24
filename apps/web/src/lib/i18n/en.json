@@ -333,7 +333,7 @@
       "employmentTypes": "Contract",
       "contracts": {
         "employee": "Employee",
-        "freelance": "Freelance or contractor",
+        "freelance": "Freelance",
         "internship": "Internship"
       }
     },
