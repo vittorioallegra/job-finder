@@ -8,6 +8,7 @@ import {
   DEFAULT_APP_SETTINGS,
   SECRET_NAMES,
   type AiTestResult,
+  type AiModelsResult,
   type AppSettings,
   type AppSettingsPatch,
   type CompanyRecord,
@@ -36,6 +37,8 @@ export interface MemoryBridgeOptions {
   storage?: SecretStorageInfo;
   /** Outcome of "test connection". Defaults to AI unavailable, since there is no engine here. */
   aiTest?: AiTestResult;
+  /** What `ai.models` answers; defaults to an unreachable provider. */
+  models?: AiModelsResult;
   /** Outcome of a CV import. Defaults to engine unavailable, since there is no engine here. */
   cvImport?: CvImportResult;
   /** A profile already saved before the page loads. Defaults to none (onboarding not done). */
@@ -108,6 +111,7 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
     ai: {
       testConnection: async () =>
         structuredClone(options.aiTest ?? { ok: false, code: "engine-unavailable" }),
+      models: async () => structuredClone(options.models ?? { ok: false, code: "unreachable" }),
     },
     profile: {
       get: async () => (profile ? structuredClone(profile) : null),

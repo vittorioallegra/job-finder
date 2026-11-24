@@ -20,6 +20,7 @@ import {
   type DiscoverySearchRequest,
   type IngestStartRequest,
   type IpcChannel,
+  type IpcRequest,
   type JobDetailRequest,
   type JobFlagRequest,
   type JobsListRequest,
@@ -131,6 +132,8 @@ export async function handleInvoke(
     }
     case "ai:test-connection":
       return services.ai.testConnection();
+    case "ai:models":
+      return services.ai.listModels(payload as IpcRequest<"ai:models">);
     case "app:status":
       return services.app.status();
     case "app:open-update":

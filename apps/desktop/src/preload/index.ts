@@ -38,6 +38,7 @@ const api: JobFinderBridge = {
   },
   ai: {
     testConnection: () => invoke("ai:test-connection"),
+    models: (request: IpcRequest<"ai:models">) => invoke("ai:models", request),
   },
   app: {
     status: () => invoke("app:status"),

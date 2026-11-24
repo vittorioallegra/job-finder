@@ -5,3 +5,4 @@ export * from "./provider";
 export * from "./replay";
 export * from "./structured";
 export * from "./tokens";
+export * from "./models";

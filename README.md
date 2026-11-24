@@ -53,6 +53,10 @@ rules could not map. Choose one provider in Settings:
   This is a cloud service and you pay for its use.
 - **OpenAI** (`openai`): needs an API key from your OpenAI account and a model name. Also a cloud
   service that you pay for.
+- **Google Gemini**: create a key in Google AI Studio (`https://aistudio.google.com`) and set the
+  model name it shows (it starts with `gemini-`). The app fills in Gemini's address; it is saved
+  as the OpenAI-compatible provider. On the free tier Google may use what you send to improve
+  its models.
 - **OpenAI-compatible** (`openai-compatible`): any server with the OpenAI chat API. Set its base
   URL, for example a local Ollama server (below). A key is optional.
 
@@ -61,14 +65,29 @@ consent. Any other address is treated as a cloud provider: the app then asks for
 before it sends your CV, your profile or a job to it, and it does not send them until you say
 yes. The AI is never called from the interface itself; it runs in a separate process of the app.
 
+For every provider the **Model** menu lists the provider's own models: for Anthropic, OpenAI
+and Gemini save the key first, then pick the model. When a list cannot be read, the model name
+can be typed instead.
+
 ### Ollama (free, local)
 
-1. Install Ollama from `https://ollama.com` and start it.
-2. Pull a model, for example `ollama pull llama3.1`. Use a model that follows instructions
-   and handles JSON well; larger models give better results.
-3. In Settings choose `openai-compatible`, set the base URL to `http://localhost:11434/v1`,
-   set the model name to the one you pulled, and leave the key empty.
-4. Test the connection. Ollama runs on your machine, so no data leaves it.
+1. Install Ollama from `https://ollama.com` and open it.
+2. Download a model in the terminal, for example `ollama pull qwen3:8b`. Use a model that
+   follows instructions and handles JSON well; larger models give better results.
+3. In Settings (or the first setup step) choose **Ollama (on this computer)**. The address is
+   filled in, the model menu lists the models you have installed, and no key is asked for.
+   If Ollama is not running, or has no models yet, the screen says what to do.
+4. Save, then test the connection. Ollama runs on your machine, so no data leaves it.
+
+Ollama cuts text longer than the context size it was started with, without warning. Start it
+with a context at least as large as **Context size** in Settings (8192 by default), for example
+on macOS:
+
+```bash
+launchctl setenv OLLAMA_CONTEXT_LENGTH 16384
+```
+
+then quit and reopen Ollama, and set the same value in Settings.
 
 ## Search keys (free tier)
 

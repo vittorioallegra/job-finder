@@ -62,6 +62,10 @@ function spyServices() {
       calls.push("ai.testConnection");
       return { ok: false as const, code: "not-configured" as const };
     },
+    listModels: async (request: { source: string; baseUrl: string }) => {
+      calls.push(`ai.listModels:${request.source}:${request.baseUrl}`);
+      return { ok: false as const, code: "unreachable" as const };
+    },
   };
   const profile = {
     get: async () => {
@@ -306,6 +310,23 @@ describe("IPC sender and payload guard", () => {
     expect(calls).toEqual(["ai.testConnection"]);
   });
 
+  it("validates the source and address before listing models", async () => {
+    const { services, calls } = spyServices();
+    await expect(
+      handleInvoke("ai:models", services, topFrame(), { source: "other", baseUrl: "" }, APP_ORIGIN),
+    ).rejects.toThrow();
+    expect(calls).toEqual([]);
+
+    await handleInvoke(
+      "ai:models",
+      services,
+      topFrame(),
+      { source: "ollama", baseUrl: " http://localhost:11434/v1 " },
+      APP_ORIGIN,
+    );
+    expect(calls).toEqual(["ai.listModels:ollama:http://localhost:11434/v1"]);
+  });
+
   it("registers every channel in the contract", () => {
     const registered: string[] = [];
     registerIpcHandlers(
@@ -315,6 +336,7 @@ describe("IPC sender and payload guard", () => {
     );
     expect(registered.sort()).toEqual(
       [
+        "ai:models",
         "ai:test-connection",
         "app:open-update",
         "app:status",

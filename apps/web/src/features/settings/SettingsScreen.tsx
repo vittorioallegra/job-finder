@@ -17,6 +17,8 @@ import { SelectInput, type SelectOption } from "../../components/ui/SelectInput"
 import { TextInput } from "../../components/ui/TextInput";
 import { draftFromSettings, patchFromDraft, type SettingsDraft } from "./draft";
 import { AiConnectionTest, SecretField } from "./AiControls";
+import { AiProviderFields } from "./AiProviderFields";
+import type { AiChoiceFields } from "./provider-choice";
 
 type LoadState =
   | { status: "loading" }
@@ -109,6 +111,21 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
     setSaveState("idle");
   }
 
+  const aiFields: AiChoiceFields = {
+    choice: draft.aiProvider,
+    model: draft.aiModel,
+    baseUrl: draft.aiBaseUrl,
+  };
+  const changeAi = useCallback((next: AiChoiceFields) => {
+    setDraft((current) => ({
+      ...current,
+      aiProvider: next.choice,
+      aiModel: next.model,
+      aiBaseUrl: next.baseUrl,
+    }));
+    setSaveState("idle");
+  }, []);
+
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const patch = patchFromDraft(draft);
@@ -136,11 +153,6 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
     }
   }
 
-  const providerOptions: SelectOption[] = [
-    { value: "anthropic", label: t("settings.ai.providers.anthropic") },
-    { value: "openai", label: t("settings.ai.providers.openai") },
-    { value: "openai-compatible", label: t("settings.ai.providers.openaiCompatible") },
-  ];
   const languageOptions: SelectOption[] = [
     { value: "system", label: t("settings.language.system") },
     { value: "en", label: t("settings.language.en") },
@@ -156,48 +168,34 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
     <form onSubmit={save} className="flex flex-col gap-6" noValidate>
       <Card as="section" aria-labelledby="settings-ai" className="flex flex-col gap-4">
         <CardTitle id="settings-ai">{t("settings.sections.ai")}</CardTitle>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <SelectInput
-            label={t("settings.ai.provider")}
-            options={providerOptions}
-            value={draft.aiProvider}
-            onChange={(event) =>
-              change("aiProvider", event.target.value as SettingsDraft["aiProvider"])
-            }
-          />
-          <TextInput
-            label={t("settings.ai.model")}
-            value={draft.aiModel}
-            maxLength={SETTING_LIMITS.modelMaxLength}
-            onChange={(event) => change("aiModel", event.target.value)}
-          />
-        </div>
-        {draft.aiProvider === "openai-compatible" ? (
-          <TextInput
-            label={t("settings.ai.baseUrl")}
-            hint={t("settings.ai.baseUrlHint")}
-            type="url"
-            value={draft.aiBaseUrl}
-            maxLength={SETTING_LIMITS.baseUrlMaxLength}
-            onChange={(event) => change("aiBaseUrl", event.target.value)}
-          />
-        ) : null}
+        <AiProviderFields
+          bridge={bridge}
+          value={aiFields}
+          onChange={changeAi}
+          keySet={secrets.keys["ai.apiKey"]}
+          keyField={
+            <SecretField
+              bridge={bridge}
+              name="ai.apiKey"
+              label={t("settings.ai.apiKey")}
+              secrets={secrets}
+              onStatus={setSecrets}
+            />
+          }
+        />
         <TextInput
           label={t("settings.ai.contextSize")}
-          hint={t("settings.ai.contextSizeHint")}
+          hint={
+            draft.aiProvider === "ollama"
+              ? t("settings.ai.contextSizeHintOllama")
+              : t("settings.ai.contextSizeHint")
+          }
           type="number"
           inputMode="numeric"
           min={SETTING_LIMITS.contextSizeMin}
           max={SETTING_LIMITS.contextSizeMax}
           value={draft.aiContextSize}
           onChange={(event) => change("aiContextSize", event.target.value)}
-        />
-        <SecretField
-          bridge={bridge}
-          name="ai.apiKey"
-          label={t("settings.ai.apiKey")}
-          secrets={secrets}
-          onStatus={setSecrets}
         />
         <AiConnectionTest bridge={bridge} />
       </Card>

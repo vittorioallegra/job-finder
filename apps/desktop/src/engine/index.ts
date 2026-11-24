@@ -1,4 +1,4 @@
-import { testAiConnection } from "@job-finder/core/ai";
+import { listAiModels, testAiConnection } from "@job-finder/core/ai";
 import { discoverCompanies } from "@job-finder/core/discovery";
 import { createHttpClient } from "@job-finder/core/net";
 import { createIngestController } from "./ingest";
@@ -23,6 +23,8 @@ const AUTOFILL_AI_TIMEOUT_MS = 120_000;
 
 /** The update check is one request; a slow GitHub answer is treated as no answer. */
 const UPDATE_CHECK_TIMEOUT_MS = 15_000;
+/** A model list is one small request; a short wait keeps the settings screen responsive. */
+const MODEL_LIST_TIMEOUT_MS = 8_000;
 
 /** A discovery run makes one request per query, one second apart; it returns what it found by the deadline. */
 const DISCOVERY_TIMEOUT_MS = 120_000;
@@ -85,6 +87,8 @@ if (parentPort) {
             signal: AbortSignal.timeout(UPDATE_CHECK_TIMEOUT_MS),
           });
         },
+        listModels: (request) =>
+          listAiModels(request, { signal: AbortSignal.timeout(MODEL_LIST_TIMEOUT_MS) }),
         importCv: async (request) => {
           // Loaded on first use: the CV readers pull in PDF and DOCX parsers the app does not need until a CV is imported.
           const { importCv } = await import("@job-finder/core/cv");

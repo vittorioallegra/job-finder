@@ -1,8 +1,17 @@
-// protects=the AI test channel takes no payload and the failure code list matches the codes the AI layer and engine can produce, so the renderer can translate every outcome;
+// protects=the AI test channel takes no payload and the failure code list matches the codes the AI layer and engine can produce, so the renderer can translate every outcome; the model list channel takes a source and an address but never a key, and Ollama is recognised only on a loopback host and its port, Gemini only on Google's API host;
 // fails_when=the channel accepts a payload that could carry a key, or a failure code the UI has no message for is added without an entry in this list;
 // no_claim=the result type is not checked against the core error codes at runtime, only as a list here; renderer translations are checked in apps/web.
 import { describe, expect, it } from "vitest";
-import { AI_TEST_FAILURE_CODES, IPC_REQUEST_SCHEMAS, aiConsentTarget, hasAiConsent } from "./index";
+import {
+  AI_TEST_FAILURE_CODES,
+  IPC_REQUEST_SCHEMAS,
+  GEMINI_BASE_URL,
+  aiConsentTarget,
+  isCloudAiEndpoint,
+  hasAiConsent,
+  isGeminiBaseUrl,
+  isOllamaBaseUrl,
+} from "./index";
 
 describe("AI connection test contract", () => {
   it("takes no payload, so the renderer cannot send a key through it", () => {
@@ -56,5 +65,36 @@ describe("consent target", () => {
       ),
     ).toBe(false);
     expect(hasAiConsent(local, {})).toBe(true);
+  });
+});
+
+describe("local Ollama", () => {
+  it("lists models for a known source and an address, never with a key in the payload", () => {
+    const schema = IPC_REQUEST_SCHEMAS["ai:models"];
+    expect(
+      schema.safeParse({ source: "ollama", baseUrl: "http://localhost:11434/v1" }).success,
+    ).toBe(true);
+    expect(schema.safeParse({ source: "anthropic", baseUrl: "" }).success).toBe(true);
+    expect(schema.safeParse({ source: "mistral", baseUrl: "" }).success).toBe(false);
+    expect(schema.safeParse({ source: "openai", baseUrl: "", apiKey: "k" }).success).toBe(false);
+  });
+
+  it("recognises Ollama only on a loopback host and Ollama's port", () => {
+    expect(isOllamaBaseUrl("http://localhost:11434/v1")).toBe(true);
+    expect(isOllamaBaseUrl(" http://127.0.0.1:11434/v1 ")).toBe(true);
+    expect(isOllamaBaseUrl("http://localhost:1234/v1")).toBe(false);
+    expect(isOllamaBaseUrl("https://ollama.example.com:11434/v1")).toBe(false);
+    expect(isOllamaBaseUrl("")).toBe(false);
+  });
+});
+
+describe("Gemini", () => {
+  it("is recognised only on Google's API host, and counts as cloud", () => {
+    expect(isGeminiBaseUrl(GEMINI_BASE_URL)).toBe(true);
+    expect(isGeminiBaseUrl("https://generativelanguage.googleapis.com.example.com/v1")).toBe(false);
+    expect(isGeminiBaseUrl("not a url")).toBe(false);
+    expect(isCloudAiEndpoint({ provider: "openai-compatible", baseUrl: GEMINI_BASE_URL })).toBe(
+      true,
+    );
   });
 });

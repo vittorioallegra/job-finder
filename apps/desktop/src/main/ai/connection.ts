@@ -1,5 +1,16 @@
-import type { AiTestResult } from "@job-finder/bridge";
-import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
+import {
+  GEMINI_BASE_URL,
+  isCloudAiEndpoint,
+  type AiModelSource,
+  type AiModelsResult,
+  type AiTestResult,
+} from "@job-finder/bridge";
+import type {
+  AiConnectionResult,
+  AiModelsOutcome,
+  AiModelsRequest,
+  AiProviderConfig,
+} from "@job-finder/core/ai";
 import { EngineUnavailableError } from "../engine/supervisor";
 import type { SecretStore } from "../secrets/store";
 import type { SettingsRepository } from "../settings/repository";
@@ -7,6 +18,7 @@ import type { SettingsRepository } from "../settings/repository";
 /** The engine side of a connection test, as seen from main. */
 export interface AiEngine {
   testAiConnection(config: AiProviderConfig): Promise<AiConnectionResult>;
+  listModels(request: AiModelsRequest): Promise<AiModelsOutcome>;
 }
 
 export interface AiConnectionServiceOptions {
@@ -18,6 +30,12 @@ export interface AiConnectionServiceOptions {
 export interface AiConnectionService {
   /** Tests the saved AI settings. The key is read here and handed only to the engine. */
   testConnection(): Promise<AiTestResult>;
+  /**
+   * The models a provider offers. The saved key goes only to the provider it was saved for:
+   * Anthropic, OpenAI and Gemini at their fixed addresses, or the saved OpenAI-compatible origin.
+   * Ollama is asked only on a loopback host, with no key.
+   */
+  listModels(request: { source: AiModelSource; baseUrl: string }): Promise<AiModelsResult>;
 }
 
 /**
@@ -46,5 +64,41 @@ export function createAiConnectionService(
         return { ok: false, code: "unknown" };
       }
     },
+    async listModels({ source, baseUrl }) {
+      let url = baseUrl.trim();
+      let apiKey: string | null = null;
+      if (source === "ollama") {
+        if (isCloudAiEndpoint({ provider: "openai-compatible", baseUrl: url })) {
+          return { ok: false, code: "not-local" };
+        }
+      } else if (source === "openai-compatible") {
+        if (url === "") return { ok: false, code: "unreachable" };
+        // A key typed for one server never goes to another address typed later.
+        const { ai } = await options.settings.get();
+        if (ai.provider === "openai-compatible" && sameOrigin(ai.baseUrl, url)) {
+          apiKey = await options.secrets.read("ai.apiKey");
+        }
+      } else {
+        if (source === "gemini") url = GEMINI_BASE_URL;
+        apiKey = await options.secrets.read("ai.apiKey");
+        if (apiKey === null || apiKey === "") return { ok: false, code: "no-key" };
+      }
+      try {
+        return await options.engine.listModels({ source, baseUrl: url, apiKey });
+      } catch (error) {
+        if (error instanceof EngineUnavailableError) {
+          return { ok: false, code: "engine-unavailable" };
+        }
+        return { ok: false, code: "unreachable" };
+      }
+    },
   };
+}
+
+function sameOrigin(a: string, b: string): boolean {
+  try {
+    return new URL(a.trim()).origin === new URL(b.trim()).origin;
+  } catch {
+    return false;
+  }
 }

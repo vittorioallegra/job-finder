@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { AppSettings } from "./settings";
-import { AppSettingsPatchSchema } from "./settings";
-import type { AiTestResult } from "./ai";
+import { AppSettingsPatchSchema, SETTING_LIMITS } from "./settings";
+import { AI_MODEL_SOURCES, type AiModelsResult, type AiTestResult } from "./ai";
 import type { SecretsStatus } from "./secrets";
 import { SecretClearRequestSchema, SecretSetRequestSchema } from "./secrets";
 import type { CvImportResult, ProfileRecord } from "./profile";
@@ -72,6 +72,14 @@ export const IPC_REQUEST_SCHEMAS = {
   "secrets:set": SecretSetRequestSchema,
   "secrets:clear": SecretClearRequestSchema,
   "ai:test-connection": z.undefined(),
+  /**
+   * The model menu: the source and the base URL being edited, not yet saved. Main decides whether
+   * the saved key goes with the request; the key never travels in this payload.
+   */
+  "ai:models": z.strictObject({
+    source: z.enum(AI_MODEL_SOURCES),
+    baseUrl: z.string().trim().max(SETTING_LIMITS.baseUrlMaxLength),
+  }),
   "profile:get": z.undefined(),
   "profile:save": ProfileSchema,
   "profile:import-cv": CvImportRequestSchema,
@@ -117,6 +125,7 @@ export interface IpcResponses {
   "secrets:set": SecretsStatus;
   "secrets:clear": SecretsStatus;
   "ai:test-connection": AiTestResult;
+  "ai:models": AiModelsResult;
   "profile:get": ProfileRecord | null;
   "profile:save": ProfileRecord;
   "profile:import-cv": CvImportResult;

@@ -1,4 +1,9 @@
-import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
+import type {
+  AiConnectionResult,
+  AiModelsOutcome,
+  AiModelsRequest,
+  AiProviderConfig,
+} from "@job-finder/core/ai";
 import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
 import type {
   DiscoveryCriteria,
@@ -62,6 +67,8 @@ export interface EngineServices {
   mapFormFields(request: MapFormFieldsRequest): Promise<AutofillMapOutcome>;
   /** Asks GitHub for the latest release through the engine's HTTP path. */
   checkForUpdate(currentVersion: string): Promise<UpdateCheckOutcome>;
+  /** Lists the models installed in a local Ollama server. */
+  listModels(request: AiModelsRequest): Promise<AiModelsOutcome>;
 }
 
 /**
@@ -162,6 +169,14 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
         .checkForUpdate(currentVersion)
         .catch((): UpdateCheckOutcome => ({ ok: false, code: "unavailable" }))
         .then((outcome) => post(port, { type: "check-update-result", id, outcome }));
+      return;
+    }
+    if (message.type === "list-models") {
+      const { id, request } = message;
+      void services
+        .listModels(request)
+        .catch((): AiModelsOutcome => ({ ok: false, code: "unreachable" }))
+        .then((outcome) => post(port, { type: "list-models-result", id, outcome }));
       return;
     }
     if (message.type === "ingest-cancel") {

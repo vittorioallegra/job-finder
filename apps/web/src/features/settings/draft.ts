@@ -1,16 +1,17 @@
 import {
   AppSettingsPatchSchema,
-  type AiProvider,
   type AppSettings,
   type AppSettingsPatch,
   type CloseBehavior,
   type SearchProvider,
   type UiLanguage,
 } from "@job-finder/bridge";
+import { aiChoiceFromSettings, aiSettingsFromChoice, type AiChoice } from "./provider-choice";
 
 /** Form state. Numbers stay strings while typing and are parsed only when saving. */
 export interface SettingsDraft {
-  aiProvider: AiProvider;
+  /** The provider menu entry; Ollama is saved as the OpenAI-compatible provider. */
+  aiProvider: AiChoice;
   aiModel: string;
   aiBaseUrl: string;
   aiContextSize: string;
@@ -25,7 +26,7 @@ export interface SettingsDraft {
 
 export function draftFromSettings(settings: AppSettings): SettingsDraft {
   return {
-    aiProvider: settings.ai.provider,
+    aiProvider: aiChoiceFromSettings(settings.ai),
     aiModel: settings.ai.model,
     aiBaseUrl: settings.ai.baseUrl,
     aiContextSize: String(settings.ai.contextSize),
@@ -43,9 +44,11 @@ export function draftFromSettings(settings: AppSettings): SettingsDraft {
 export function patchFromDraft(draft: SettingsDraft): AppSettingsPatch | null {
   const patch: AppSettingsPatch = {
     ai: {
-      provider: draft.aiProvider,
-      model: draft.aiModel,
-      baseUrl: draft.aiProvider === "openai-compatible" ? draft.aiBaseUrl : "",
+      ...aiSettingsFromChoice({
+        choice: draft.aiProvider,
+        model: draft.aiModel,
+        baseUrl: draft.aiBaseUrl,
+      }),
       contextSize: Number(draft.aiContextSize),
     },
     search: { ...draft.search },

@@ -73,11 +73,13 @@
       "providers": {
         "anthropic": "Anthropic",
         "openai": "OpenAI",
-        "openaiCompatible": "OpenAI-compatible"
+        "gemini": "Google Gemini",
+        "openaiCompatible": "Other OpenAI-compatible server",
+        "ollama": "Ollama (on this computer)"
       },
       "model": "Model",
       "baseUrl": "Base URL",
-      "baseUrlHint": "Required for OpenAI-compatible endpoints such as Ollama or LM Studio.",
+      "baseUrlHint": "The address of the server's OpenAI-compatible API, for example http://localhost:1234/v1 for LM Studio.",
       "contextSize": "Context size (tokens)",
       "contextSizeHint": "How much text is sent to the model in one request.",
       "apiKey": "API key",
@@ -96,6 +98,49 @@
           "invalid-output": "the provider answered in an unexpected format",
           "unknown": "unexpected error",
           "engine-unavailable": "the AI worker is not running"
+        }
+      },
+      "contextSizeHintOllama": "Ollama uses the context size it was started with. Start it with OLLAMA_CONTEXT_LENGTH at least this large, or longer texts are cut without warning.",
+      "help": {
+        "anthropic": "Claude models, in the cloud. Create an API key in the Anthropic Console and paste it below. Your CV and job texts are sent to Anthropic.",
+        "openai": "GPT models, in the cloud. Create an API key on the OpenAI platform and paste it below. Your CV and job texts are sent to OpenAI.",
+        "gemini": "Gemini models, in the cloud. Create an API key in Google AI Studio (aistudio.google.com) and paste it below. Your CV and job texts are sent to Google; on the free tier Google may use them to improve its models.",
+        "ollama": "Runs on this computer: no key, and nothing leaves your machine. Install Ollama from ollama.com, open it, then download a model in the terminal, for example: ollama pull {{example}}",
+        "openaiCompatible": "Any server with an OpenAI-compatible API, such as LM Studio or vLLM. Enter its address and, if it asks for one, a key."
+      },
+      "ollama": {
+        "address": "Ollama address",
+        "addressHint": "Ollama's default address. Change it only if you started Ollama on another port.",
+        "noUrl": "Enter Ollama's address to see the installed models.",
+        "found_one": "{{count}} model installed in Ollama.",
+        "found_other": "{{count}} models installed in Ollama.",
+        "empty": "Ollama is running but has no models. Download one in the terminal, for example: ollama pull {{example}}, then refresh the list.",
+        "reasons": {
+          "not-local": "The model list is read only from Ollama on this computer. Use a localhost address.",
+          "unreachable": "Ollama is not answering at {{url}}. Open the Ollama app, then refresh the list.",
+          "invalid-response": "The server at {{url}} is not Ollama. Choose \"Other OpenAI-compatible server\" for it."
+        }
+      },
+      "geminiModelHint": "The model name as Google AI Studio shows it, starting with gemini-. A Flash model is fast and cheap for scoring many jobs.",
+      "models": {
+        "choose": "Choose a model",
+        "loading": "Loading the models…",
+        "found_one": "{{count}} model available.",
+        "found_other": "{{count}} models available.",
+        "empty": "The provider listed no models. Type the model name instead.",
+        "noUrl": "Enter the server address to see its models.",
+        "option": "{{name}} ({{size}} GB)",
+        "notListed": "{{name}} (not in the list)",
+        "refresh": "Refresh list",
+        "reasons": {
+          "no-key": "Save your API key above to see the available models.",
+          "invalid-key": "The provider rejected the saved key. Check it and save it again.",
+          "invalid-key-server": "The server asks for a key. Save the address and the key in the settings, then refresh the list.",
+          "unreachable": "The provider is not answering. Check your connection, then refresh the list.",
+          "unreachable-server": "The server at {{url}} is not answering. Start it, then refresh the list.",
+          "invalid-response": "This server does not list its models. Type the model name instead.",
+          "not-local": "The model list is read only from this computer.",
+          "engine-unavailable": "The AI worker is not running, so the models cannot be listed. Restart the app."
         }
       }
     },

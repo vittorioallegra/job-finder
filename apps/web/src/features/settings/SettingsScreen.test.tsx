@@ -1,11 +1,16 @@
-// protects=the settings screen loads the saved values, saves only valid changes through the bridge, retries after a failed read, and never shows a stored key value; Linux shows the keyring opt-in and hides launch at login; the AI connection test shows the model or the AI unavailable reason;
-// fails_when=a value is sent without validation, a key value is rendered, a failed read shows a blank form, Linux shows launch at login, or a failed AI test shows no reason;
+// protects=the settings screen loads the saved values, saves only valid changes through the bridge, retries after a failed read, and never shows a stored key value; Linux shows the keyring opt-in and hides launch at login; the AI connection test shows the model or the AI unavailable reason; Ollama is set up from its installed models without a key field;
+// fails_when=a value is sent without validation, a key value is rendered, a failed read shows a blank form, Linux shows launch at login, a failed AI test shows no reason, Ollama asks for a key, saves an unusable provider or hides why its models are missing;
 // no_claim=visual layout, keyboard focus order and the real OS keychain are not checked here.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_APP_SETTINGS, type JobFinderBridge } from "@job-finder/bridge";
+import {
+  DEFAULT_APP_SETTINGS,
+  GEMINI_BASE_URL,
+  OLLAMA_BASE_URL,
+  type JobFinderBridge,
+} from "@job-finder/bridge";
 import { BridgeProvider } from "../../lib/bridge/BridgeContext";
 import { createMemoryBridge } from "../../lib/bridge/memory";
 import { i18n } from "../../lib/i18n";
@@ -122,6 +127,135 @@ describe("settings screen", () => {
     expect(container.textContent).toContain("Settings saved.");
   });
 
+  it("sets up Ollama from its installed models, with no key field", async () => {
+    const memory = createMemoryBridge({
+      models: {
+        ok: true,
+        models: [
+          { id: "gemma3:4b", label: null, sizeBytes: 3_300_000_000 },
+          { id: "qwen3:8b", label: null, sizeBytes: 5_200_000_000 },
+        ],
+      },
+    });
+    const models = vi.fn(memory.ai.models);
+    const update = vi.fn(memory.settings.update);
+    await render({
+      ...memory,
+      ai: { ...memory.ai, models },
+      settings: { ...memory.settings, update },
+    });
+    expect(container.textContent).toContain("API key");
+
+    await act(async () => {
+      setInputValue(field(container, "Provider"), "ollama");
+    });
+    await act(() => new Promise((resolve) => setTimeout(resolve, 450)));
+
+    expect(models).toHaveBeenLastCalledWith({ source: "ollama", baseUrl: OLLAMA_BASE_URL });
+    expect(container.textContent).not.toContain("API key");
+    expect(container.textContent).toContain("2 models installed in Ollama.");
+    const model = field(container, "Model");
+    expect(model).toBeInstanceOf(HTMLSelectElement);
+    expect(model.value).toBe("gemma3:4b");
+    await act(async () => {
+      setInputValue(model, "qwen3:8b");
+    });
+    await act(async () => {
+      button(container, "Save settings").click();
+    });
+    await act(async () => {});
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ai: expect.objectContaining({
+          provider: "openai-compatible",
+          model: "qwen3:8b",
+          baseUrl: OLLAMA_BASE_URL,
+        }),
+      }),
+    );
+  });
+
+  it("saves Gemini at Google's address with a key field and no base URL", async () => {
+    const memory = createMemoryBridge();
+    const update = vi.fn(memory.settings.update);
+    await render({ ...memory, settings: { ...memory.settings, update } });
+    await act(async () => {
+      setInputValue(field(container, "Provider"), "gemini");
+    });
+    expect(container.textContent).toContain("API key");
+    expect(container.textContent).not.toContain("Base URL");
+    await act(async () => {
+      setInputValue(field(container, "Model"), "gemini-flash");
+    });
+    await act(async () => {
+      button(container, "Save settings").click();
+    });
+    await act(async () => {});
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ai: expect.objectContaining({
+          provider: "openai-compatible",
+          model: "gemini-flash",
+          baseUrl: GEMINI_BASE_URL,
+        }),
+      }),
+    );
+  });
+
+  it("picks a hosted model from the provider's list and clears it on a provider switch", async () => {
+    const memory = createMemoryBridge({
+      settings: {
+        ...DEFAULT_APP_SETTINGS,
+        ai: {
+          ...DEFAULT_APP_SETTINGS.ai,
+          provider: "openai-compatible",
+          model: "qwen3:8b",
+          baseUrl: OLLAMA_BASE_URL,
+        },
+      },
+      models: { ok: true, models: [{ id: "claude-a", label: "Claude A", sizeBytes: null }] },
+    });
+    const models = vi.fn(memory.ai.models);
+    await render({ ...memory, ai: { ...memory.ai, models } });
+    await act(async () => {
+      setInputValue(field(container, "Provider"), "anthropic");
+    });
+    await act(() => new Promise((resolve) => setTimeout(resolve, 450)));
+
+    expect(models).toHaveBeenLastCalledWith({ source: "anthropic", baseUrl: "" });
+    const model = field(container, "Model");
+    expect(model).toBeInstanceOf(HTMLSelectElement);
+    expect(model.value).toBe("");
+    expect([...(model as HTMLSelectElement).options].map((option) => option.text)).toEqual([
+      "Choose a model",
+      "Claude A",
+    ]);
+    expect(container.textContent).not.toContain("qwen3:8b");
+    expect(container.textContent).not.toContain(OLLAMA_BASE_URL);
+  });
+
+  it("says how to start Ollama when it does not answer", async () => {
+    await render(
+      createMemoryBridge({
+        settings: {
+          ...DEFAULT_APP_SETTINGS,
+          ai: {
+            ...DEFAULT_APP_SETTINGS.ai,
+            provider: "openai-compatible",
+            baseUrl: OLLAMA_BASE_URL,
+          },
+        },
+        models: { ok: false, code: "unreachable" },
+      }),
+    );
+    await act(() => new Promise((resolve) => setTimeout(resolve, 450)));
+    expect(field(container, "Provider").value).toBe("ollama");
+    expect(container.textContent).toContain(
+      `Ollama is not answering at ${OLLAMA_BASE_URL}. Open the Ollama app, then refresh the list.`,
+    );
+    expect(field(container, "Model")).toBeInstanceOf(HTMLInputElement);
+  });
+
   it("refuses an out-of-range interval without calling the bridge", async () => {
     const memory = createMemoryBridge();
     const update = vi.fn(memory.settings.update);
@@ -179,7 +313,7 @@ describe("settings screen", () => {
   it("tests the AI connection and explains an unavailable AI with the reason", async () => {
     const memory = createMemoryBridge({ aiTest: { ok: false, code: "invalid-key" } });
     const testConnection = vi.fn(memory.ai.testConnection);
-    await render({ ...memory, ai: { testConnection } });
+    await render({ ...memory, ai: { ...memory.ai, testConnection } });
     await act(async () => {
       button(container, "Test connection").click();
     });

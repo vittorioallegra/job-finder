@@ -1,15 +1,25 @@
-// protects=the connection test reads the saved AI settings and the key in main, hands the key only to the engine, and returns a code (never the key) for every outcome including an unreachable engine;
-// fails_when=the key is returned or logged in the result, the wrong provider or model is sent, or an unreachable engine is reported as a generic failure;
+// protects=the connection test reads the saved AI settings and the key in main, hands the key only to the engine, and returns a code (never the key) for every outcome including an unreachable engine; the model list sends the saved key only to the provider it was saved for and asks Ollama only on loopback;
+// fails_when=the key is returned or logged in the result, the wrong provider or model is sent, an unreachable engine is reported as a generic failure, or the key reaches another address through the model list;
 // no_claim=the provider request itself and the keychain are not exercised; the engine round trip is covered by the supervisor test.
 import { describe, expect, it } from "vitest";
 import { DEFAULT_APP_SETTINGS, type AppSettings } from "@job-finder/bridge";
-import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
+import type {
+  AiConnectionResult,
+  AiModelsOutcome,
+  AiModelsRequest,
+  AiProviderConfig,
+} from "@job-finder/core/ai";
 import { EngineUnavailableError } from "../engine/supervisor";
 import type { SecretStore } from "../secrets/store";
 import type { SettingsRepository } from "../settings/repository";
 import { createAiConnectionService } from "./connection";
 
 const KEY = "sk-live-test-key";
+
+const noModels = async (): Promise<AiModelsOutcome> => ({
+  ok: false,
+  code: "unreachable",
+});
 
 function settingsWith(ai: Partial<AppSettings["ai"]>): SettingsRepository {
   const settings: AppSettings = {
@@ -37,6 +47,7 @@ describe("AI connection service", () => {
       }),
       secrets: secretsReturning(KEY),
       engine: {
+        listModels: noModels,
         testAiConnection: async (config) => {
           seen.push(config);
           return { ok: true, model: config.model };
@@ -62,7 +73,7 @@ describe("AI connection service", () => {
     const service = createAiConnectionService({
       settings: settingsWith({}),
       secrets: secretsReturning(KEY),
-      engine: { testAiConnection: async () => outcome },
+      engine: { testAiConnection: async () => outcome, listModels: noModels },
     });
 
     const result = await service.testConnection();
@@ -76,6 +87,7 @@ describe("AI connection service", () => {
       settings: settingsWith({}),
       secrets: secretsReturning(KEY),
       engine: {
+        listModels: noModels,
         testAiConnection: async () => {
           throw new EngineUnavailableError("gave_up");
         },
@@ -94,6 +106,7 @@ describe("AI connection service", () => {
       settings: settingsWith({}),
       secrets: secretsReturning(null),
       engine: {
+        listModels: noModels,
         testAiConnection: async (config) => {
           seen.push(config.apiKey);
           throw new Error("unexpected");
@@ -103,5 +116,73 @@ describe("AI connection service", () => {
 
     await expect(service.testConnection()).resolves.toEqual({ ok: false, code: "unknown" });
     expect(seen).toEqual([null]);
+  });
+
+  it("sends the saved key only to the provider it was saved for", async () => {
+    const asked: AiModelsRequest[] = [];
+    const service = createAiConnectionService({
+      settings: settingsWith({
+        provider: "openai-compatible",
+        baseUrl: "https://llm.example.com/v1",
+      }),
+      secrets: secretsReturning(KEY),
+      engine: {
+        testAiConnection: async () => ({ ok: true, model: "unused" }),
+        listModels: async (request) => {
+          asked.push(request);
+          return { ok: true, models: [] };
+        },
+      },
+    });
+
+    await service.listModels({ source: "anthropic", baseUrl: "" });
+    await service.listModels({ source: "gemini", baseUrl: "https://elsewhere.example.com/" });
+    await service.listModels({
+      source: "openai-compatible",
+      baseUrl: "https://llm.example.com/v1/",
+    });
+    await service.listModels({
+      source: "openai-compatible",
+      baseUrl: "https://other.example.com/v1",
+    });
+    await service.listModels({ source: "ollama", baseUrl: " http://localhost:11434/v1 " });
+
+    expect(asked).toEqual([
+      { source: "anthropic", baseUrl: "", apiKey: KEY },
+      {
+        source: "gemini",
+        baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai/",
+        apiKey: KEY,
+      },
+      { source: "openai-compatible", baseUrl: "https://llm.example.com/v1/", apiKey: KEY },
+      { source: "openai-compatible", baseUrl: "https://other.example.com/v1", apiKey: null },
+      { source: "ollama", baseUrl: "http://localhost:11434/v1", apiKey: null },
+    ]);
+  });
+
+  it("asks nothing without a key or for a remote Ollama, and reports a missing engine", async () => {
+    let asked = 0;
+    const withoutKey = createAiConnectionService({
+      settings: settingsWith({}),
+      secrets: secretsReturning(null),
+      engine: {
+        testAiConnection: async () => ({ ok: true, model: "unused" }),
+        listModels: async () => {
+          asked += 1;
+          throw new EngineUnavailableError("crashed");
+        },
+      },
+    });
+    await expect(withoutKey.listModels({ source: "openai", baseUrl: "" })).resolves.toEqual({
+      ok: false,
+      code: "no-key",
+    });
+    await expect(
+      withoutKey.listModels({ source: "ollama", baseUrl: "https://ollama.example.com/v1" }),
+    ).resolves.toEqual({ ok: false, code: "not-local" });
+    expect(asked).toBe(0);
+    await expect(
+      withoutKey.listModels({ source: "ollama", baseUrl: "http://127.0.0.1:11434/v1" }),
+    ).resolves.toEqual({ ok: false, code: "engine-unavailable" });
   });
 });

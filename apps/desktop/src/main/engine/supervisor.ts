@@ -1,4 +1,9 @@
-import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
+import type {
+  AiConnectionResult,
+  AiModelsOutcome,
+  AiModelsRequest,
+  AiProviderConfig,
+} from "@job-finder/core/ai";
 import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
 import type { GenerateDocumentOutcome } from "@job-finder/core/documents/generate";
 import type { AutofillMapOutcome } from "@job-finder/core/ats/autofill/ai";
@@ -128,6 +133,8 @@ export interface EngineSupervisor {
   mapFormFields(request: MapFormFieldsRequest): Promise<AutofillMapOutcome>;
   /** Asks the engine for the latest release. Rejects with EngineUnavailableError when the engine is gone. */
   checkForUpdate(currentVersion: string): Promise<UpdateCheckOutcome>;
+  /** Lists the models in a local Ollama server. Rejects with EngineUnavailableError when the engine is gone. */
+  listModels(request: AiModelsRequest): Promise<AiModelsOutcome>;
   /** Asks the engine to stop a run. Ignored when no engine is running. */
   cancelIngestion(runId: string): void;
   readonly state: EngineSupervisorState;
@@ -174,6 +181,11 @@ interface PendingFormMap {
   reject: (error: Error) => void;
 }
 
+interface PendingModelList {
+  resolve: (outcome: AiModelsOutcome) => void;
+  reject: (error: Error) => void;
+}
+
 interface PendingUpdateCheck {
   resolve: (outcome: UpdateCheckOutcome) => void;
   reject: (error: Error) => void;
@@ -191,6 +203,7 @@ interface Current {
   pendingDocuments: Map<number, PendingDocument>;
   pendingFormMaps: Map<number, PendingFormMap>;
   pendingUpdateChecks: Map<number, PendingUpdateCheck>;
+  pendingModelLists: Map<number, PendingModelList>;
 }
 
 /**
@@ -233,6 +246,7 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pendingDocuments: new Map(),
       pendingFormMaps: new Map(),
       pendingUpdateChecks: new Map(),
+      pendingModelLists: new Map(),
     };
     current = state;
     setPhase("running");
@@ -297,6 +311,10 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pending.reject(new EngineUnavailableError(reason));
     }
     state.pendingUpdateChecks.clear();
+    for (const pending of state.pendingModelLists.values()) {
+      pending.reject(new EngineUnavailableError(reason));
+    }
+    state.pendingModelLists.clear();
   }
 
   function rejectReadyWaiters(reason: EngineUnavailableReason): void {
@@ -350,6 +368,12 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
     if (message.type === "map-form-fields-result") {
       const pending = state.pendingFormMaps.get(message.id);
       state.pendingFormMaps.delete(message.id);
+      pending?.resolve(message.outcome);
+      return;
+    }
+    if (message.type === "list-models-result") {
+      const pending = state.pendingModelLists.get(message.id);
+      state.pendingModelLists.delete(message.id);
       pending?.resolve(message.outcome);
       return;
     }
@@ -508,6 +532,15 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       return new Promise<UpdateCheckOutcome>((resolve, reject) => {
         ready.pendingUpdateChecks.set(id, { resolve, reject });
         ready.handle.port.postMessage({ type: "check-update", id, currentVersion });
+      });
+    },
+    async listModels(request) {
+      const ready = current?.ready ? current : await waitUntilReady();
+      const id = nextRequestId;
+      nextRequestId += 1;
+      return new Promise<AiModelsOutcome>((resolve, reject) => {
+        ready.pendingModelLists.set(id, { resolve, reject });
+        ready.handle.port.postMessage({ type: "list-models", id, request });
       });
     },
     async mapFormFields(request) {

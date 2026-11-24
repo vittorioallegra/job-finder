@@ -108,6 +108,10 @@ async function startHarness(): Promise<Harness> {
     const { port1, port2 } = new MessageChannel();
     const runtime = createEngineRuntime(toPortLike(port2), {
       net: fakeNet(),
+      listModels: async (request) => ({
+        ok: true,
+        models: [{ id: `${request.source}-model`, label: null, sizeBytes: null }],
+      }),
       checkForUpdate: async (currentVersion) => {
         control.updateChecks.push(currentVersion);
         return { ok: true, release: { version: "9.0.0", url: "https://example.test/release" } };
@@ -346,6 +350,20 @@ describe("engine supervisor", () => {
     expect(outcome).toEqual({
       ok: true,
       release: { version: "9.0.0", url: "https://example.test/release" },
+    });
+  });
+
+  it("lists models in the engine and answers under its request id", async () => {
+    const { supervisor } = await startHarness();
+    await expect(
+      supervisor.listModels({
+        source: "ollama",
+        baseUrl: "http://localhost:11434/v1",
+        apiKey: null,
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      models: [{ id: "ollama-model", label: null, sizeBytes: null }],
     });
   });
 

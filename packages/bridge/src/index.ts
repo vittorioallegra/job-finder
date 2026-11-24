@@ -1,4 +1,4 @@
-import type { AiTestResult } from "./ai";
+import type { AiModelSource, AiModelsResult, AiTestResult } from "./ai";
 import type { AutofillStartRequest, AutofillStartResult } from "./autofill";
 import type {
   ApplicationBookmarkRequest,
@@ -77,6 +77,11 @@ export interface JobFinderBridge {
   readonly ai: {
     /** Tests the saved AI settings and key from main. The key itself never reaches the renderer. */
     testConnection(): Promise<AiTestResult>;
+    /**
+     * The models a provider offers, for the model menu. `baseUrl` is the value being edited. Main
+     * adds the saved key only for the provider's own address; Ollama is asked only on loopback.
+     */
+    models(request: { source: AiModelSource; baseUrl: string }): Promise<AiModelsResult>;
   };
   readonly profile: {
     /** The saved profile, or null before onboarding. */

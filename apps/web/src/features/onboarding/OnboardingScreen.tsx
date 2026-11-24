@@ -1,5 +1,5 @@
 import { useAiConsent } from "../../lib/useAiConsent";
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { FileUp } from "lucide-react";
 import { useNavigate } from "react-router";
@@ -8,8 +8,6 @@ import {
   emptyProfile,
   aiConsentTarget,
   isCloudAiEndpoint,
-  SETTING_LIMITS,
-  type AiProvider,
   type AppSettings,
   type CvImportFailureCode,
   type CvImportWarning,
@@ -21,9 +19,13 @@ import { Button } from "../../components/ui/Button";
 import { Card, CardTitle } from "../../components/ui/Card";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { CheckboxInput } from "../../components/ui/CheckboxInput";
-import { SelectInput, type SelectOption } from "../../components/ui/SelectInput";
-import { TextInput } from "../../components/ui/TextInput";
 import { AiConnectionTest, SecretField } from "../settings/AiControls";
+import { AiProviderFields } from "../settings/AiProviderFields";
+import {
+  aiChoiceFromSettings,
+  aiSettingsFromChoice,
+  type AiChoiceFields,
+} from "../settings/provider-choice";
 import { draftFromExtraction, draftFromProfile, type ProfileDraft } from "../profile/profile-draft";
 import { ProfileEditor } from "../profile/ProfileEditor";
 
@@ -184,9 +186,11 @@ interface AiStepProps {
 /** Saves the provider, model and endpoint, then the key. Continue unlocks only once the settings are saved. */
 function AiStep({ bridge, settings, onSaved, onContinue }: AiStepProps) {
   const { t } = useTranslation();
-  const [provider, setProvider] = useState<AiProvider>(settings.ai.provider);
-  const [model, setModel] = useState(settings.ai.model);
-  const [baseUrl, setBaseUrl] = useState(settings.ai.baseUrl);
+  const [fields, setFields] = useState<AiChoiceFields>(() => ({
+    choice: aiChoiceFromSettings(settings.ai),
+    model: settings.ai.model,
+    baseUrl: settings.ai.baseUrl,
+  }));
   const [secrets, setSecrets] = useState<SecretsStatus | null>(null);
   const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -206,18 +210,17 @@ function AiStep({ bridge, settings, onSaved, onContinue }: AiStepProps) {
     };
   }, [bridge]);
 
-  const providerOptions: SelectOption[] = [
-    { value: "anthropic", label: t("settings.ai.providers.anthropic") },
-    { value: "openai", label: t("settings.ai.providers.openai") },
-    { value: "openai-compatible", label: t("settings.ai.providers.openaiCompatible") },
-  ];
+  const changeFields = useCallback((next: AiChoiceFields) => {
+    setFields(next);
+    setDirty(true);
+  }, []);
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("saving");
     try {
       const next = await bridge.settings.update({
-        ai: { provider, model, baseUrl, contextSize: settings.ai.contextSize },
+        ai: { ...aiSettingsFromChoice(fields), contextSize: settings.ai.contextSize },
       });
       setDirty(false);
       setMessage("saved");
@@ -232,46 +235,23 @@ function AiStep({ bridge, settings, onSaved, onContinue }: AiStepProps) {
       <CardTitle id="onboarding-ai">{t("onboarding.ai.title")}</CardTitle>
       <p className="text-app-muted">{t("onboarding.ai.intro")}</p>
       <form onSubmit={save} noValidate className="flex flex-col gap-4">
-        <SelectInput
-          label={t("settings.ai.provider")}
-          options={providerOptions}
-          value={provider}
-          onChange={(event) => {
-            setProvider(event.target.value as AiProvider);
-            setDirty(true);
-          }}
+        <AiProviderFields
+          bridge={bridge}
+          value={fields}
+          onChange={changeFields}
+          keySet={secrets?.keys["ai.apiKey"] ?? false}
+          keyField={
+            secrets !== null ? (
+              <SecretField
+                bridge={bridge}
+                name="ai.apiKey"
+                label={t("settings.ai.apiKey")}
+                secrets={secrets}
+                onStatus={setSecrets}
+              />
+            ) : null
+          }
         />
-        <TextInput
-          label={t("settings.ai.model")}
-          value={model}
-          maxLength={SETTING_LIMITS.modelMaxLength}
-          onChange={(event) => {
-            setModel(event.target.value);
-            setDirty(true);
-          }}
-        />
-        {provider === "openai-compatible" ? (
-          <TextInput
-            label={t("settings.ai.baseUrl")}
-            hint={t("settings.ai.baseUrlHint")}
-            type="url"
-            value={baseUrl}
-            maxLength={SETTING_LIMITS.baseUrlMaxLength}
-            onChange={(event) => {
-              setBaseUrl(event.target.value);
-              setDirty(true);
-            }}
-          />
-        ) : null}
-        {secrets !== null ? (
-          <SecretField
-            bridge={bridge}
-            name="ai.apiKey"
-            label={t("settings.ai.apiKey")}
-            secrets={secrets}
-            onStatus={setSecrets}
-          />
-        ) : null}
         <div className="flex items-center justify-end gap-3">
           <p
             role="status"

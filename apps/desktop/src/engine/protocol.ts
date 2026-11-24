@@ -1,5 +1,10 @@
 import type { RunStatus } from "@job-finder/core";
-import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
+import type {
+  AiConnectionResult,
+  AiModelsOutcome,
+  AiModelsRequest,
+  AiProviderConfig,
+} from "@job-finder/core/ai";
 import type { CvImportOutcome, CvImportRequest } from "@job-finder/core/cv";
 import type {
   DiscoveryCriteria,
@@ -128,6 +133,11 @@ export type MainToEngineMessage =
    */
   | { type: "check-update"; id: number; currentVersion: string }
   /**
+   * Lists a provider's models for the model menu; the answer is `list-models-result`. Like
+   * `ai-test`, it may carry the saved key, which main sends only to that key's provider.
+   */
+  | { type: "list-models"; id: number; request: AiModelsRequest }
+  /**
    * Web search for ATS boards. The engine makes the requests; main relays the criteria, the enabled
    * sources and, for keyed providers, their keys (the only path a search key takes out of main).
    */
@@ -153,5 +163,7 @@ export type EngineToMainMessage =
   | { type: "map-form-fields-result"; id: number; outcome: AutofillMapOutcome }
   /** The answer to a `check-update` request. */
   | { type: "check-update-result"; id: number; outcome: UpdateCheckOutcome }
+  /** The answer to a `list-models` request. */
+  | { type: "list-models-result"; id: number; outcome: AiModelsOutcome }
   /** A run's progress and log entries. The final `run-finished` is sent after the run row is closed. */
   | { type: "ingest-progress"; event: IngestEvent };

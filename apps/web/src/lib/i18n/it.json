@@ -73,11 +73,13 @@
       "providers": {
         "anthropic": "Anthropic",
         "openai": "OpenAI",
-        "openaiCompatible": "Compatibile con OpenAI"
+        "gemini": "Google Gemini",
+        "openaiCompatible": "Altro server compatibile con OpenAI",
+        "ollama": "Ollama (su questo computer)"
       },
       "model": "Modello",
       "baseUrl": "URL base",
-      "baseUrlHint": "Richiesto per endpoint compatibili con OpenAI, come Ollama o LM Studio.",
+      "baseUrlHint": "L'indirizzo dell'API compatibile con OpenAI del server, per esempio http://localhost:1234/v1 per LM Studio.",
       "contextSize": "Dimensione del contesto (token)",
       "contextSizeHint": "Quanto testo viene inviato al modello in una singola richiesta.",
       "apiKey": "Chiave API",
@@ -96,6 +98,49 @@
           "invalid-output": "il provider ha risposto in un formato inatteso",
           "unknown": "errore imprevisto",
           "engine-unavailable": "il processo AI non è in esecuzione"
+        }
+      },
+      "contextSizeHintOllama": "Ollama usa la dimensione del contesto con cui è stato avviato. Avvialo con OLLAMA_CONTEXT_LENGTH almeno pari a questo valore, altrimenti i testi lunghi vengono tagliati senza avviso.",
+      "help": {
+        "anthropic": "Modelli Claude, nel cloud. Crea una chiave API nella Console di Anthropic e incollala qui sotto. Il CV e i testi delle offerte vengono inviati ad Anthropic.",
+        "openai": "Modelli GPT, nel cloud. Crea una chiave API sulla piattaforma OpenAI e incollala qui sotto. Il CV e i testi delle offerte vengono inviati a OpenAI.",
+        "gemini": "Modelli Gemini, nel cloud. Crea una chiave API in Google AI Studio (aistudio.google.com) e incollala qui sotto. Il CV e i testi delle offerte vengono inviati a Google; con il piano gratuito Google può usarli per migliorare i suoi modelli.",
+        "ollama": "Gira su questo computer: nessuna chiave, e nulla esce dal computer. Installa Ollama da ollama.com, aprilo, poi scarica un modello dal terminale, per esempio: ollama pull {{example}}",
+        "openaiCompatible": "Qualsiasi server con un'API compatibile con OpenAI, come LM Studio o vLLM. Inserisci il suo indirizzo e, se la richiede, una chiave."
+      },
+      "ollama": {
+        "address": "Indirizzo di Ollama",
+        "addressHint": "L'indirizzo predefinito di Ollama. Cambialo solo se hai avviato Ollama su un'altra porta.",
+        "noUrl": "Inserisci l'indirizzo di Ollama per vedere i modelli installati.",
+        "found_one": "{{count}} modello installato in Ollama.",
+        "found_other": "{{count}} modelli installati in Ollama.",
+        "empty": "Ollama è attivo ma non ha modelli. Scaricane uno dal terminale, per esempio: ollama pull {{example}}, poi aggiorna l'elenco.",
+        "reasons": {
+          "not-local": "L'elenco dei modelli si legge solo da Ollama su questo computer. Usa un indirizzo localhost.",
+          "unreachable": "Ollama non risponde su {{url}}. Apri l'app Ollama, poi aggiorna l'elenco.",
+          "invalid-response": "Il server su {{url}} non è Ollama. Per questo server scegli \"Altro server compatibile con OpenAI\"."
+        }
+      },
+      "geminiModelHint": "Il nome del modello come lo mostra Google AI Studio, che inizia con gemini-. Un modello Flash è veloce ed economico per dare il punteggio a molte offerte.",
+      "models": {
+        "choose": "Scegli un modello",
+        "loading": "Carico i modelli…",
+        "found_one": "{{count}} modello disponibile.",
+        "found_other": "{{count}} modelli disponibili.",
+        "empty": "Il provider non ha elencato modelli. Scrivi il nome del modello.",
+        "noUrl": "Inserisci l'indirizzo del server per vedere i suoi modelli.",
+        "option": "{{name}} ({{size}} GB)",
+        "notListed": "{{name}} (non in elenco)",
+        "refresh": "Aggiorna elenco",
+        "reasons": {
+          "no-key": "Salva la chiave API qui sopra per vedere i modelli disponibili.",
+          "invalid-key": "Il provider ha rifiutato la chiave salvata. Controllala e salvala di nuovo.",
+          "invalid-key-server": "Il server chiede una chiave. Salva indirizzo e chiave nelle impostazioni, poi aggiorna l'elenco.",
+          "unreachable": "Il provider non risponde. Controlla la connessione, poi aggiorna l'elenco.",
+          "unreachable-server": "Il server su {{url}} non risponde. Avvialo, poi aggiorna l'elenco.",
+          "invalid-response": "Questo server non elenca i suoi modelli. Scrivi il nome del modello.",
+          "not-local": "L'elenco dei modelli si legge solo da questo computer.",
+          "engine-unavailable": "Il processo dell'AI non è attivo, quindi i modelli non si possono elencare. Riavvia l'app."
         }
       }
     },

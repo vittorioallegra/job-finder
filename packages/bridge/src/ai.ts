@@ -59,3 +59,75 @@ export function isCloudAiEndpoint(ai: { provider: AiProvider; baseUrl: string })
     return true;
   }
 }
+
+/** Ollama's OpenAI-compatible endpoint on this computer, its default address. */
+export const OLLAMA_BASE_URL = "http://localhost:11434/v1";
+
+const OLLAMA_PORT = "11434";
+
+/**
+ * True when an OpenAI-compatible base URL points at Ollama on this computer: a loopback host on
+ * Ollama's port. The settings screen then shows the guided Ollama choice instead of the generic one.
+ */
+export function isOllamaBaseUrl(baseUrl: string): boolean {
+  try {
+    const url = new URL(baseUrl.trim());
+    return (
+      !isCloudAiEndpoint({ provider: "openai-compatible", baseUrl }) && url.port === OLLAMA_PORT
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** Google Gemini's OpenAI-compatible endpoint. */
+export const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/";
+
+const GEMINI_HOST = "generativelanguage.googleapis.com";
+
+/**
+ * True when an OpenAI-compatible base URL points at Google Gemini. The settings screen then shows
+ * the guided Gemini choice instead of the generic one.
+ */
+export function isGeminiBaseUrl(baseUrl: string): boolean {
+  try {
+    return new URL(baseUrl.trim()).hostname === GEMINI_HOST;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Where the model menu reads its list from. Mirrors `AI_MODEL_SOURCES` in core/ai, which the
+ * bridge cannot import at runtime.
+ */
+export const AI_MODEL_SOURCES = [
+  "anthropic",
+  "openai",
+  "gemini",
+  "ollama",
+  "openai-compatible",
+] as const;
+export type AiModelSource = (typeof AI_MODEL_SOURCES)[number];
+
+/** Why the model list could not be read. */
+export const AI_MODELS_FAILURE_CODES = [
+  "no-key",
+  "not-local",
+  "invalid-key",
+  "unreachable",
+  "invalid-response",
+  "engine-unavailable",
+] as const;
+export type AiModelsFailureCode = (typeof AI_MODELS_FAILURE_CODES)[number];
+
+/** One entry of the model menu. */
+export interface AiModelOption {
+  id: string;
+  label: string | null;
+  sizeBytes: number | null;
+}
+
+/** The models a provider offers, or a code. Never carries the key. */
+export type AiModelsResult =
+  { ok: true; models: AiModelOption[] } | { ok: false; code: AiModelsFailureCode };
