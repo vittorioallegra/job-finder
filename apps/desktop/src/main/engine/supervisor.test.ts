@@ -110,7 +110,9 @@ async function startHarness(): Promise<Harness> {
       net: fakeNet(),
       listModels: async (request) => ({
         ok: true,
-        models: [{ id: `${request.source}-model`, label: null, sizeBytes: null }],
+        models: [
+          { id: `${request.source}-model`, label: null, sizeBytes: null, contextLength: null },
+        ],
       }),
       checkForUpdate: async (currentVersion) => {
         control.updateChecks.push(currentVersion);
@@ -363,7 +365,7 @@ describe("engine supervisor", () => {
       }),
     ).resolves.toEqual({
       ok: true,
-      models: [{ id: "ollama-model", label: null, sizeBytes: null }],
+      models: [{ id: "ollama-model", label: null, sizeBytes: null, contextLength: null }],
     });
   });
 

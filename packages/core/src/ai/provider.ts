@@ -1,7 +1,8 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import type { LanguageModel } from "ai";
+import { defaultSettingsMiddleware, wrapLanguageModel, type LanguageModel } from "ai";
+import { createOllama } from "ollama-ai-provider-v2";
 import { AI_CAPABILITIES, type AiCapabilities, type AiProviderKind } from "./capabilities";
 import { AiError } from "./errors";
 
@@ -12,6 +13,28 @@ export interface AiProviderConfig {
   baseUrl: string;
   /** Null for keyless local servers. Never logged, never sent to the renderer. */
   apiKey: string | null;
+  /**
+   * The context size the user chose. Only Ollama takes it per request (as `num_ctx`); hosted
+   * providers and other servers read what they were set up with.
+   */
+  contextSize?: number;
+}
+
+const OLLAMA_PORT = "11434";
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/**
+ * True when an OpenAI-compatible base URL is Ollama on this computer: a loopback host on Ollama's
+ * port. Mirrors `isOllamaBaseUrl` in packages/bridge, which this package cannot import.
+ */
+export function isOllamaEndpoint(baseUrl: string): boolean {
+  try {
+    const url = new URL(baseUrl.trim());
+    const host = url.hostname;
+    return (LOOPBACK_HOSTS.has(host) || host.endsWith(".localhost")) && url.port === OLLAMA_PORT;
+  } catch {
+    return false;
+  }
 }
 
 export interface AiModelHandle {
@@ -61,6 +84,12 @@ export function createAiModel(
       if (baseURL === undefined) {
         throw new AiError("not-configured", "The OpenAI-compatible provider needs a base URL");
       }
+      if (isOllamaEndpoint(baseURL)) {
+        return {
+          model: ollamaModel(baseURL, modelId, config.contextSize, fetchImpl),
+          capabilities: AI_CAPABILITIES["openai-compatible"],
+        };
+      }
       const provider = createOpenAICompatible({
         name: "openai-compatible",
         baseURL,
@@ -73,4 +102,28 @@ export function createAiModel(
       };
     }
   }
+}
+
+/**
+ * Ollama through its own API rather than its OpenAI-compatible one: only the native API takes the
+ * context size per request, so the app's choice holds whatever Ollama was started with.
+ */
+function ollamaModel(
+  baseURL: string,
+  modelId: string,
+  contextSize: number | undefined,
+  fetchImpl: typeof fetch | undefined,
+): LanguageModel {
+  const provider = createOllama({
+    baseURL: new URL("/api", new URL(baseURL).origin).toString(),
+    fetch: fetchImpl,
+  });
+  const model = provider(modelId);
+  if (contextSize === undefined) return model;
+  return wrapLanguageModel({
+    model,
+    middleware: defaultSettingsMiddleware({
+      settings: { providerOptions: { ollama: { options: { num_ctx: contextSize } } } },
+    }),
+  });
 }

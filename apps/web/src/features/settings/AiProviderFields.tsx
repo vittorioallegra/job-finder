@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
 import {
@@ -11,7 +11,13 @@ import {
 import { Button } from "../../components/ui/Button";
 import { SelectInput, type SelectOption } from "../../components/ui/SelectInput";
 import { TextInput } from "../../components/ui/TextInput";
-import { AI_CHOICES, switchAiChoice, type AiChoice, type AiChoiceFields } from "./provider-choice";
+import {
+  AI_CHOICES,
+  contextSteps,
+  switchAiChoice,
+  type AiChoice,
+  type AiChoiceFields,
+} from "./provider-choice";
 
 /** Waits for typing in an address to settle before asking for the models again. */
 const MODEL_LIST_DEBOUNCE_MS = 400;
@@ -46,6 +52,12 @@ interface AiProviderFieldsProps {
   keyField: (name: SecretName) => ReactNode;
   /** Whether a key is saved; saving or removing one reads the model list again. */
   isKeySet: (name: SecretName) => boolean;
+  /**
+   * The context size, as typed in the form. With `onContextSize`, Ollama shows a slider up to the
+   * chosen model's limit; without, the field is left out (onboarding keeps the default).
+   */
+  contextSize?: string;
+  onContextSize?: (value: string) => void;
 }
 
 /**
@@ -58,6 +70,8 @@ export function AiProviderFields({
   onChange,
   keyField,
   isKeySet,
+  contextSize,
+  onContextSize,
 }: AiProviderFieldsProps) {
   const { t } = useTranslation();
   const keyName = aiKeyNameForSource(value.choice);
@@ -71,7 +85,14 @@ export function AiProviderFields({
       ? t(CHOICE_HELP_KEYS.ollama, { example: OLLAMA_EXAMPLE_MODEL })
       : t(CHOICE_HELP_KEYS[value.choice]);
   const modelField = (
-    <ModelField bridge={bridge} value={value} onChange={onChange} keySet={keySet} />
+    <ModelField
+      bridge={bridge}
+      value={value}
+      onChange={onChange}
+      keySet={keySet}
+      contextSize={contextSize}
+      onContextSize={onContextSize}
+    />
   );
 
   return (
@@ -128,9 +149,18 @@ interface ModelFieldProps {
   value: AiChoiceFields;
   onChange: (next: AiChoiceFields) => void;
   keySet: boolean;
+  contextSize?: string | undefined;
+  onContextSize?: ((value: string) => void) | undefined;
 }
 
-function ModelField({ bridge, value, onChange, keySet }: ModelFieldProps) {
+function ModelField({
+  bridge,
+  value,
+  onChange,
+  keySet,
+  contextSize,
+  onContextSize,
+}: ModelFieldProps) {
   const { t } = useTranslation();
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState<LoadedModels | null>(null);
@@ -234,6 +264,15 @@ function ModelField({ bridge, value, onChange, keySet }: ModelFieldProps) {
           onChange={(event) => onChange({ ...value, model: event.target.value })}
         />
       )}
+      {ollama && contextSize !== undefined && onContextSize ? (
+        <ContextSlider
+          value={contextSize}
+          onChange={onContextSize}
+          modelLimit={models.find((model) => model.id === value.model)?.contextLength ?? null}
+          // Until the list is read, the model's limit is unknown and nothing is cut to it.
+          known={result !== null}
+        />
+      ) : null}
       <div className="flex flex-wrap items-center gap-3">
         <p
           role="status"
@@ -251,6 +290,67 @@ function ModelField({ bridge, value, onChange, keySet }: ModelFieldProps) {
           {t("settings.ai.models.refresh")}
         </Button>
       </div>
+    </div>
+  );
+}
+
+interface ContextSliderProps {
+  value: string;
+  onChange: (value: string) => void;
+  /** The chosen model's longest context, or null when Ollama did not say. */
+  modelLimit: number | null;
+  known: boolean;
+}
+
+/** Ollama's context size per request, from 4k up to the chosen model's limit. */
+function ContextSlider({ value, onChange, modelLimit, known }: ContextSliderProps) {
+  const { t, i18n } = useTranslation();
+  const steps = contextSteps(modelLimit);
+  const current = Number(value);
+  // The stop at or below the current size; a size above the model's limit comes down to it.
+  let index = steps.findLastIndex((step) => step <= current);
+  if (index < 0) index = 0;
+  const shown = steps[index] ?? steps[0] ?? current;
+
+  useEffect(() => {
+    if (known && Number.isFinite(current) && current !== shown) onChange(String(shown));
+  }, [known, current, shown, onChange]);
+
+  const format = (tokens: number) => new Intl.NumberFormat(i18n.language).format(tokens);
+  const short = (tokens: number) =>
+    tokens >= 1024 ? `${Math.round(tokens / 1024)}k` : String(tokens);
+  const id = useId();
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <label htmlFor={id} className="text-[13px] font-medium text-app-fg">
+          {t("settings.ai.contextSize")}
+        </label>
+        <span className="text-sm tabular-nums text-app-fg">
+          {t("settings.ai.contextTokens", { count: shown, formatted: format(shown) })}
+        </span>
+      </div>
+      <input
+        id={id}
+        type="range"
+        min={0}
+        max={steps.length - 1}
+        step={1}
+        value={index}
+        aria-valuetext={t("settings.ai.contextTokens", { count: shown, formatted: format(shown) })}
+        onChange={(event) => onChange(String(steps[Number(event.target.value)] ?? shown))}
+        className="w-full accent-app-accent"
+      />
+      <div className="flex justify-between text-xs tabular-nums text-app-muted" aria-hidden>
+        {steps.map((step) => (
+          <span key={step}>{short(step)}</span>
+        ))}
+      </div>
+      <p className="text-xs text-app-muted">
+        {modelLimit === null
+          ? t("settings.ai.contextSizeHintOllama")
+          : t("settings.ai.contextSizeHintOllamaLimit", { limit: format(modelLimit) })}
+      </p>
     </div>
   );
 }

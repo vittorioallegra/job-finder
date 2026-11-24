@@ -42,7 +42,7 @@ function compatibleModel(fetchImpl: typeof fetch) {
   const config: AiProviderConfig = {
     provider: "openai-compatible",
     model: "local-test",
-    baseUrl: "http://localhost:11434/v1",
+    baseUrl: "http://localhost:1234/v1",
     apiKey: null,
   };
   return createAiModel(config, { fetch: fetchImpl });

@@ -54,7 +54,10 @@ export async function importCv(
   }
 
   try {
-    const { model, capabilities } = createAiModel(request.config, { fetch: options.fetch });
+    const { model, capabilities } = createAiModel(
+      { ...request.config, contextSize: request.contextSize },
+      { fetch: options.fetch },
+    );
     const result = await generateStructured({
       model,
       capabilities,

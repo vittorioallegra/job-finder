@@ -54,7 +54,10 @@ export async function generateDocument(
 ): Promise<GenerateDocumentOutcome> {
   let model: AiModelHandle;
   try {
-    model = createAiModel(input.config, { fetch: options.fetch });
+    model = createAiModel(
+      { ...input.config, contextSize: input.contextSize },
+      { fetch: options.fetch },
+    );
   } catch (error) {
     return { ok: false, code: toAiError(error).code };
   }

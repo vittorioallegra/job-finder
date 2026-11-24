@@ -59,6 +59,7 @@ export function createAiConnectionService(
           model: ai.model,
           baseUrl: ai.baseUrl,
           apiKey,
+          contextSize: ai.contextSize,
         });
       } catch (error) {
         if (error instanceof EngineUnavailableError) {

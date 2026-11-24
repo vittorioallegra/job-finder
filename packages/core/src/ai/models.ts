@@ -16,6 +16,8 @@ export interface AiModelInfo {
   label: string | null;
   /** Size on disk in bytes (Ollama only), or null. */
   sizeBytes: number | null;
+  /** The longest context the model takes, in tokens (Ollama only), or null when unknown. */
+  contextLength: number | null;
 }
 
 /** The models, or why they could not be read. Never carries the key or the response body. */
@@ -86,7 +88,47 @@ export async function listAiModels(
   }
   const models =
     request.source === "ollama" ? parseOllamaTags(body) : parseModelList(body, request.source);
-  return models === null ? { ok: false, code: "invalid-response" } : { ok: true, models };
+  if (models === null) return { ok: false, code: "invalid-response" };
+  if (request.source === "ollama") {
+    await addOllamaContextLengths(url, models, options);
+  }
+  return { ok: true, models };
+}
+
+/**
+ * Asks Ollama for each model's longest context (`/api/show`), so the settings can offer up to it.
+ * A model Ollama cannot describe keeps null; the list itself still counts as read.
+ */
+async function addOllamaContextLengths(
+  tagsUrl: string,
+  models: AiModelInfo[],
+  options: AiModelsOptions,
+): Promise<void> {
+  const showUrl = new URL("/api/show", new URL(tagsUrl).origin).toString();
+  await Promise.all(
+    models.map(async (model) => {
+      try {
+        const response = await (options.fetch ?? fetch)(showUrl, {
+          method: "POST",
+          headers: { "content-type": "application/json", accept: "application/json" },
+          body: JSON.stringify({ model: model.id }),
+          signal: options.signal,
+        });
+        if (!response.ok) return;
+        const info = record(record(await response.json())?.model_info);
+        if (!info) return;
+        // The key is `<architecture>.context_length`, such as `gemma4.context_length`.
+        for (const [key, value] of Object.entries(info)) {
+          if (key.endsWith(".context_length") && typeof value === "number" && value > 0) {
+            model.contextLength = value;
+            return;
+          }
+        }
+      } catch {
+        // Unknown length: the settings fall back to their own ceiling.
+      }
+    }),
+  );
 }
 
 function modelsUrl(request: AiModelsRequest): string | null {
@@ -122,6 +164,7 @@ function parseOllamaTags(body: unknown): AiModelInfo[] | null {
       id,
       label: null,
       sizeBytes: typeof size === "number" && Number.isFinite(size) ? size : null,
+      contextLength: null,
     });
   }
   return models.sort((a, b) => a.id.localeCompare(b.id));
@@ -147,7 +190,7 @@ function parseModelList(body: unknown, source: AiModelSource): AiModelInfo[] | n
     const label =
       typeof item.display_name === "string" && item.display_name !== "" ? item.display_name : null;
     const created = typeof item.created === "number" ? item.created : 0;
-    models.push({ info: { id, label, sizeBytes: null }, created });
+    models.push({ info: { id, label, sizeBytes: null, contextLength: null }, created });
   }
   // Anthropic lists newest first already; OpenAI gives a creation time to sort by.
   if (source === "openai") models.sort((a, b) => b.created - a.created);

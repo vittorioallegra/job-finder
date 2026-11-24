@@ -43,7 +43,7 @@ function careersAi(ai: IngestAiSettings | undefined): CareersAi | undefined {
   if (!ai) return undefined;
   let handle: AiModelHandle;
   try {
-    handle = createAiModel(ai.config);
+    handle = createAiModel({ ...ai.config, contextSize: ai.contextSize });
   } catch {
     return undefined;
   }

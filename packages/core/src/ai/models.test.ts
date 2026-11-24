@@ -33,8 +33,8 @@ describe("listAiModels", () => {
     expect(outcome).toEqual({
       ok: true,
       models: [
-        { id: "claude-new", label: "Claude New", sizeBytes: null },
-        { id: "claude-old", label: null, sizeBytes: null },
+        { id: "claude-new", label: "Claude New", sizeBytes: null, contextLength: null },
+        { id: "claude-old", label: null, sizeBytes: null, contextLength: null },
       ],
     });
   });
@@ -78,28 +78,42 @@ describe("listAiModels", () => {
     expect(outcome.ok && outcome.models.map((model) => model.id)).toEqual(["gemini-flash"]);
   });
 
-  it("reads Ollama's tags at the server root, sorted, and sends no key", async () => {
-    const { fetch, calls } = scripted(
-      json({
-        models: [
-          { name: "qwen3:8b", size: 5_200_000_000 },
-          { model: "gemma3:4b" },
-          { size: 1 },
-          "junk",
-        ],
-      }),
-    );
+  it("reads Ollama's tags at the server root, sorted, with each model's longest context, and sends no key", async () => {
+    const calls: { url: string; body: string | undefined; headers: Record<string, string> }[] = [];
+    const fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const body = typeof init?.body === "string" ? init.body : undefined;
+      calls.push({ url, body, headers: { ...(init?.headers as Record<string, string>) } });
+      if (url.endsWith("/api/tags")) {
+        return json({
+          models: [
+            { name: "qwen3:8b", size: 5_200_000_000 },
+            { model: "gemma3:4b" },
+            { size: 1 },
+            "junk",
+          ],
+        })();
+      }
+      // Only qwen3 can be described; gemma3's description fails.
+      return body?.includes("qwen3:8b")
+        ? json({ model_info: { "general.architecture": "qwen3", "qwen3.context_length": 40960 } })()
+        : json({ error: "not found" }, 404)();
+    }) as typeof globalThis.fetch;
     const outcome = await listAiModels(
       { source: "ollama", baseUrl: " http://localhost:11434/v1 ", apiKey: "unused" },
       { fetch },
     );
     expect(calls[0]?.url).toBe("http://localhost:11434/api/tags");
-    expect(calls[0]?.headers.authorization).toBeUndefined();
+    expect(calls.every((call) => call.headers.authorization === undefined)).toBe(true);
+    expect(calls.slice(1).map((call) => call.url)).toEqual([
+      "http://localhost:11434/api/show",
+      "http://localhost:11434/api/show",
+    ]);
     expect(outcome).toEqual({
       ok: true,
       models: [
-        { id: "gemma3:4b", label: null, sizeBytes: null },
-        { id: "qwen3:8b", label: null, sizeBytes: 5_200_000_000 },
+        { id: "gemma3:4b", label: null, sizeBytes: null, contextLength: null },
+        { id: "qwen3:8b", label: null, sizeBytes: 5_200_000_000, contextLength: 40960 },
       ],
     });
   });

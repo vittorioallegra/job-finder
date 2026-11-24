@@ -1,4 +1,4 @@
-// protects=the settings screen loads the saved values, saves only valid changes through the bridge, retries after a failed read, and never shows a stored key value; Linux shows the keyring opt-in and hides launch at login; the AI connection test saves the changes on screen first, then shows the model or the AI unavailable reason; Ollama is set up from its installed models without a key field; each provider keeps its own key; the context size shows only for a server and a search key only while its service is on;
+// protects=the settings screen loads the saved values, saves only valid changes through the bridge, retries after a failed read, and never shows a stored key value; Linux shows the keyring opt-in and hides launch at login; the AI connection test saves the changes on screen first, then shows the model or the AI unavailable reason; Ollama is set up from its installed models without a key field, with a context slider up to the model's limit; each provider keeps its own key; the context size shows only for a server and a search key only while its service is on;
 // fails_when=a value is sent without validation, a key value is rendered, a failed read shows a blank form, Linux shows launch at login, a failed AI test shows no reason, the test reads settings older than the screen, Ollama asks for a key, saves an unusable provider or hides why its models are missing;
 // no_claim=visual layout, keyboard focus order and the real OS keychain are not checked here.
 import { act } from "react";
@@ -132,8 +132,8 @@ describe("settings screen", () => {
       models: {
         ok: true,
         models: [
-          { id: "gemma3:4b", label: null, sizeBytes: 3_300_000_000 },
-          { id: "qwen3:8b", label: null, sizeBytes: 5_200_000_000 },
+          { id: "gemma3:4b", label: null, sizeBytes: 3_300_000_000, contextLength: 131_072 },
+          { id: "qwen3:8b", label: null, sizeBytes: 5_200_000_000, contextLength: 40_960 },
         ],
       },
     });
@@ -157,9 +157,19 @@ describe("settings screen", () => {
     const model = field(container, "Model");
     expect(model).toBeInstanceOf(HTMLSelectElement);
     expect(model.value).toBe("gemma3:4b");
+    // The context slider starts at 16k and ends at the chosen model's limit.
+    expect(container.textContent).toContain("16,384 tokens");
+    expect(container.textContent).toContain("128k");
     await act(async () => {
       setInputValue(model, "qwen3:8b");
     });
+    expect(container.textContent).toContain("up to 40,960 tokens");
+    const slider = field(container, "Longest text per request") as HTMLInputElement;
+    expect(slider.type).toBe("range");
+    await act(async () => {
+      setInputValue(slider, slider.max);
+    });
+    expect(container.textContent).toContain("40,960 tokens");
     await act(async () => {
       button(container, "Save settings").click();
     });
@@ -170,6 +180,7 @@ describe("settings screen", () => {
           provider: "openai-compatible",
           model: "qwen3:8b",
           baseUrl: OLLAMA_BASE_URL,
+          contextSize: 40_960,
         }),
       }),
     );
@@ -213,7 +224,10 @@ describe("settings screen", () => {
           baseUrl: OLLAMA_BASE_URL,
         },
       },
-      models: { ok: true, models: [{ id: "claude-a", label: "Claude A", sizeBytes: null }] },
+      models: {
+        ok: true,
+        models: [{ id: "claude-a", label: "Claude A", sizeBytes: null, contextLength: null }],
+      },
     });
     const models = vi.fn(memory.ai.models);
     await render({ ...memory, ai: { ...memory.ai, models } });

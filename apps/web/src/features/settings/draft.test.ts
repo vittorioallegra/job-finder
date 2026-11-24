@@ -36,7 +36,7 @@ describe("settings draft", () => {
     expect(
       patchFromDraft({ ...hosted, aiProvider: "ollama", aiBaseUrl: "http://localhost:11434/v1" })
         ?.ai?.contextSize,
-    ).toBe(8192);
+    ).toBe(16_384);
     expect(
       patchFromDraft({
         ...hosted,

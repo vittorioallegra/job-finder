@@ -68,7 +68,7 @@ function scriptedAi(answers: Array<string | number>, contextSize = 8192) {
     {
       provider: "openai-compatible",
       model: "local-test",
-      baseUrl: "http://localhost:11434/v1",
+      baseUrl: "http://localhost:1234/v1",
       apiKey: null,
     },
     { fetch: fetchImpl },

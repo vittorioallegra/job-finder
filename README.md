@@ -84,15 +84,10 @@ then tries the provider; a failure names the provider's HTTP status and error co
    If Ollama is not running, or has no models yet, the screen says what to do.
 4. Save, then test the connection. Ollama runs on your machine, so no data leaves it.
 
-Ollama cuts text longer than the context size it was started with, without warning. Start it
-with a context at least as large as **Context size** in Settings (8192 by default), for example
-on macOS:
-
-```bash
-launchctl setenv OLLAMA_CONTEXT_LENGTH 16384
-```
-
-then quit and reopen Ollama, and set the same value in Settings.
+The app talks to Ollama through Ollama's own API and sends the context size with every request,
+so Ollama's own context setting does not limit it. Pick it with the **Longest text per request**
+slider in Settings: 16k (the default) is enough for a CV and a posting, more takes more memory
+while the model works, and the slider ends at the chosen model's limit.
 
 ## Search keys (free tier)
 

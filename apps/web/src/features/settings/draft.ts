@@ -11,7 +11,7 @@ import {
   aiSettingsFromChoice,
   choiceSetsContextSize,
   contextSizeFor,
-  LOCAL_CONTEXT_SIZE,
+  defaultContextSize,
   type AiChoice,
 } from "./provider-choice";
 
@@ -40,7 +40,7 @@ export function draftFromSettings(settings: AppSettings): SettingsDraft {
     aiContextSize: String(
       choiceSetsContextSize(aiChoiceFromSettings(settings.ai))
         ? settings.ai.contextSize
-        : LOCAL_CONTEXT_SIZE,
+        : defaultContextSize("ollama"),
     ),
     search: { ...settings.search },
     language: settings.ui.language,

@@ -63,6 +63,7 @@ describe("AI connection service", () => {
         model: "llama",
         baseUrl: "http://localhost:1234/v1",
         apiKey: KEY,
+        contextSize: 8192,
       },
     ]);
     expect(result).toEqual({ ok: true, model: "llama" });

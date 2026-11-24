@@ -18,7 +18,7 @@ import { TextInput } from "../../components/ui/TextInput";
 import { draftFromSettings, patchFromDraft, type SettingsDraft } from "./draft";
 import { AiConnectionTest, SecretField } from "./AiControls";
 import { AiProviderFields } from "./AiProviderFields";
-import { choiceSetsContextSize, type AiChoiceFields } from "./provider-choice";
+import { defaultContextSize, type AiChoiceFields } from "./provider-choice";
 
 type LoadState =
   | { status: "loading" }
@@ -131,11 +131,23 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
       aiProvider: next.choice,
       aiModel: next.model,
       aiBaseUrl: next.baseUrl,
+      // Each provider starts from its own context size; one never carries over to another.
+      aiContextSize:
+        next.choice === current.aiProvider
+          ? current.aiContextSize
+          : String(defaultContextSize(next.choice)),
     }));
     setSaveState("idle");
   }, []);
 
   /** Saves the whole form; resolves whether the saved settings now match it. */
+  const changeContextSize = useCallback((value: string) => {
+    setDraft((current) =>
+      current.aiContextSize === value ? current : { ...current, aiContextSize: value },
+    );
+    setSaveState("idle");
+  }, []);
+
   async function saveDraft(): Promise<boolean> {
     const patch = patchFromDraft(draft);
     if (!patch) {
@@ -189,6 +201,8 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
           bridge={bridge}
           value={aiFields}
           onChange={changeAi}
+          contextSize={draft.aiContextSize}
+          onContextSize={changeContextSize}
           isKeySet={(name) => secrets.keys[name]}
           keyField={(name) => (
             <SecretField
@@ -201,15 +215,12 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
             />
           )}
         />
-        {/* Hosted providers read far more than any text the app sends; only a server needs it. */}
-        {choiceSetsContextSize(draft.aiProvider) ? (
+        {/* Ollama takes the size per request (a slider in the fields above); another server reads
+            what it was started with, so the user types that. Hosted providers need neither. */}
+        {draft.aiProvider === "openai-compatible" ? (
           <TextInput
             label={t("settings.ai.contextSize")}
-            hint={
-              draft.aiProvider === "ollama"
-                ? t("settings.ai.contextSizeHintOllama")
-                : t("settings.ai.contextSizeHint")
-            }
+            hint={t("settings.ai.contextSizeHint")}
             type="number"
             inputMode="numeric"
             min={SETTING_LIMITS.contextSizeMin}

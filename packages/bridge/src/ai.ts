@@ -131,6 +131,8 @@ export interface AiModelOption {
   id: string;
   label: string | null;
   sizeBytes: number | null;
+  /** The longest context the model takes, in tokens (Ollama only), or null when unknown. */
+  contextLength: number | null;
 }
 
 /** The models a provider offers, or a code. Never carries the key. */

@@ -49,7 +49,7 @@ export function createScoringRunner(
     async score(request) {
       let handle: AiModelHandle;
       try {
-        handle = createModel(request.ai.config);
+        handle = createModel({ ...request.ai.config, contextSize: request.ai.contextSize });
       } catch {
         return { ok: false, code: "ai-unavailable" };
       }

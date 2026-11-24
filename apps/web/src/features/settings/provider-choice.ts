@@ -72,7 +72,10 @@ export function switchAiChoice(fields: AiChoiceFields, choice: AiChoice): AiChoi
  */
 export const HOSTED_CONTEXT_SIZE = 128_000;
 
-/** The value the context size field starts from for a server on its own: Ollama's usual setup. */
+/** The context size Ollama starts from: enough for a CV and a posting, light on memory. */
+export const OLLAMA_CONTEXT_SIZE = 16_384;
+
+/** The value the context size field starts from for another server: a common setup. */
 export const LOCAL_CONTEXT_SIZE = 8192;
 
 /** True when the user sets the context size: Ollama and other OpenAI-compatible servers. */
@@ -80,11 +83,32 @@ export function choiceSetsContextSize(choice: AiChoice): boolean {
   return choice === "ollama" || choice === "openai-compatible";
 }
 
+/** The context size a choice starts from when the user picks it. */
+export function defaultContextSize(choice: AiChoice): number {
+  if (choice === "ollama") return OLLAMA_CONTEXT_SIZE;
+  if (choice === "openai-compatible") return LOCAL_CONTEXT_SIZE;
+  return HOSTED_CONTEXT_SIZE;
+}
+
 /**
- * The context size to save for a choice. A server keeps the size typed for it; a value left from
+ * The context size to save for a choice. A server keeps the size chosen for it; a value left from
  * a hosted provider never carries over to one, since it would hide that texts are too long.
  */
 export function contextSizeFor(choice: AiChoice, typed: number): number {
   if (!choiceSetsContextSize(choice)) return HOSTED_CONTEXT_SIZE;
-  return typed === HOSTED_CONTEXT_SIZE ? LOCAL_CONTEXT_SIZE : typed;
+  return typed === HOSTED_CONTEXT_SIZE ? defaultContextSize(choice) : typed;
+}
+
+/** Context sizes the Ollama slider stops at, in tokens, before it is cut at the model's limit. */
+const CONTEXT_STEPS = [4096, 8192, 16_384, 32_768, 65_536, 131_072, 262_144, 524_288, 1_048_576];
+
+/** Without a known model limit, the slider stops here. */
+export const UNKNOWN_MODEL_CONTEXT = 131_072;
+
+/** The slider's stops up to a model's limit; a limit between two stops is a stop of its own. */
+export function contextSteps(modelLimit: number | null): number[] {
+  const limit = modelLimit ?? UNKNOWN_MODEL_CONTEXT;
+  const steps = CONTEXT_STEPS.filter((step) => step <= limit);
+  if (steps.at(-1) !== limit) steps.push(limit);
+  return steps;
 }

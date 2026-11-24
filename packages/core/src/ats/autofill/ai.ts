@@ -86,7 +86,10 @@ export async function mapFormFields(
 ): Promise<AutofillMapOutcome> {
   if (input.fields.length === 0) return { ok: true, answers: [] };
   try {
-    const model = createAiModel(input.config, { fetch: options.fetch });
+    const model = createAiModel(
+      { ...input.config, contextSize: input.contextSize },
+      { fetch: options.fetch },
+    );
     const result = await generateStructured({
       model: model.model,
       capabilities: model.capabilities,
