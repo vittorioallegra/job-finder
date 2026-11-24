@@ -34,11 +34,12 @@
     "profileMissing": "Importa il tuo CV per ordinare le offerte in base a te.",
     "profileAction": "Configura il profilo",
     "profileEdit": "Modifica profilo",
-    "companiesTitle": "Aziende",
-    "companiesCount_one": "{{count}} azienda seguita",
-    "companiesCount_other": "{{count}} aziende seguite",
-    "companiesEmpty": "Trova aziende con bacheche da scansionare.",
-    "companiesAction": "Gestisci aziende",
+    "searchTitle": "Cosa cerchi",
+    "searchReady_one": "{{roles}} · {{count}} azienda trovata",
+    "searchReady_other": "{{roles}} · {{count}} aziende trovate",
+    "searchEmpty": "Indica quali ruoli cerchi: l'app trova le aziende che assumono per quei ruoli.",
+    "searchAction": "Indica cosa cerchi",
+    "searchEdit": "Modifica cosa cerchi",
     "jobsTitle": "Offerte",
     "jobsBody": "Scansiona le bacheche e vedi le offerte ordinate per affinità.",
     "jobsAction": "Apri le offerte",
@@ -151,7 +152,7 @@
       }
     },
     "search": {
-      "intro": "Quando cerchi dalla pagina Aziende, l'app cerca sul web le bacheche di lavoro delle aziende che corrispondono alle tue parole chiave. Serve almeno un servizio di ricerca.",
+      "intro": "L'app cerca sul web le bacheche delle aziende che assumono per i ruoli del tuo profilo, e quando cerchi dalla pagina Fonti. Serve almeno un servizio di ricerca.",
       "duckduckgo": "Cerca con DuckDuckGo",
       "duckduckgoHint": "Gratuito e senza chiave. Basta per iniziare, ma a volte blocca le ricerche automatiche.",
       "keyedTitle": "Servizi con chiave (facoltativi)",
@@ -544,7 +545,7 @@
       "companies": {
         "include": "Solo queste aziende",
         "exclude": "Escludi queste aziende",
-        "none": "Prima aggiungi un'azienda nella schermata Aziende."
+        "none": "Ancora nessuna azienda: arrivano da cosa cerchi nel profilo, o dalla pagina Fonti."
       },
       "minScore": "Affinità minima (da 0 a 100)",
       "minScoreHint": "Se impostata, gli annunci senza punteggio sono esclusi.",

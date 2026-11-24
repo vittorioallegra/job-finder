@@ -1,6 +1,6 @@
 // protects=the jobs screen lists open jobs with their affinity score and explanation (unscored jobs marked as not scored), starts a scan only when companies exist, opens with the profile's preferences as the filter, finds companies from the profile (also on ?discover=1), follows its progress in the log and cancels it by run id, says when a scan is already running, asks for consent before scoring with a cloud provider, shows the AI unavailable state while keeping the jobs listed, and shows an error with a retry when the lists cannot be read;
 // fails_when=an open job is not shown, a scan starts with no companies, a scored job shows no score or an unscored one shows a number, scoring starts with a cloud provider before the consent box is ticked, an AI failure hides the jobs, a second scan starts while one is running without a message, progress or the cancel is not wired to the run id, or a failed read shows a blank page;
-// no_claim=layout, keyboard focus order, the real provider's answers and the real engine run are not checked here; the core ranking tests and the engine and ingestion tests cover the scoring and the run, and company entry is tested on the Companies screen.
+// no_claim=layout, keyboard focus order, the real provider's answers and the real engine run are not checked here; the core ranking tests and the engine and ingestion tests cover the scoring and the run, and company entry is tested on the Sources screen.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
@@ -89,7 +89,9 @@ describe("jobs screen", () => {
 
     expect(container.textContent).toContain("No open jobs yet.");
     expect(container.textContent).toContain("Nothing has been scanned yet.");
-    expect(container.textContent).toContain("Add a company on the Companies screen first.");
+    expect(container.textContent).toContain(
+      "No company yet: they come from what you are looking for",
+    );
     expect(button(container, "Scan companies").disabled).toBe(true);
   });
 

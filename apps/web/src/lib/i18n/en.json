@@ -34,11 +34,12 @@
     "profileMissing": "Import your CV so jobs can be ranked for you.",
     "profileAction": "Set up profile",
     "profileEdit": "Edit profile",
-    "companiesTitle": "Companies",
-    "companiesCount_one": "{{count}} company tracked",
-    "companiesCount_other": "{{count}} companies tracked",
-    "companiesEmpty": "Find companies with boards you can scan.",
-    "companiesAction": "Manage companies",
+    "searchTitle": "What you are looking for",
+    "searchReady_one": "{{roles}} · {{count}} company found",
+    "searchReady_other": "{{roles}} · {{count}} companies found",
+    "searchEmpty": "Say which roles you want: the app finds the companies hiring for them.",
+    "searchAction": "Say what you are looking for",
+    "searchEdit": "Change what you are looking for",
     "jobsTitle": "Jobs",
     "jobsBody": "Scan the boards and see openings ranked by affinity.",
     "jobsAction": "Open jobs",
@@ -151,7 +152,7 @@
       }
     },
     "search": {
-      "intro": "When you search on the Companies page, the app looks on the web for the job boards of companies that match your keywords. It needs at least one search service.",
+      "intro": "The app looks on the web for the job boards of companies hiring for the roles in your profile, and when you search on the Sources page. It needs at least one search service.",
       "duckduckgo": "Search with DuckDuckGo",
       "duckduckgoHint": "Free and without a key. Enough to start, but it sometimes blocks automated searches.",
       "keyedTitle": "Services with a key (optional)",
@@ -544,7 +545,7 @@
       "companies": {
         "include": "Only these companies",
         "exclude": "Leave out these companies",
-        "none": "Add a company on the Companies screen first."
+        "none": "No company yet: they come from what you are looking for, or from the Sources page."
       },
       "minScore": "Minimum affinity (0 to 100)",
       "minScoreHint": "When set, jobs without a score are left out.",

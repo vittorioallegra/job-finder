@@ -1,4 +1,4 @@
-import { Briefcase, Building2, KanbanSquare, UserRound, type LucideIcon } from "lucide-react";
+import { Briefcase, KanbanSquare, Target, UserRound, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -10,6 +10,8 @@ import { useBridge } from "../../lib/bridge/BridgeContext";
 
 interface Overview {
   hasProfile: boolean;
+  /** The roles "what you are looking for" names; they decide which companies are searched. */
+  roles: string[];
   companies: number;
   activeApplications: number;
 }
@@ -34,6 +36,7 @@ export function HomeScreen() {
           kind: "ready",
           overview: {
             hasProfile: profile !== null,
+            roles: profile?.profile.preferences.roles ?? [],
             companies: companies.length,
             activeApplications: applications.filter((a) => !CLOSED_STATUSES.has(a.status)).length,
           },
@@ -82,16 +85,19 @@ export function HomeScreen() {
           />
           <StepCard
             step={2}
-            icon={Building2}
-            title={t("home.companiesTitle")}
+            icon={Target}
+            title={t("home.searchTitle")}
             body={
-              state.overview.companies > 0
-                ? t("home.companiesCount", { count: state.overview.companies })
-                : t("home.companiesEmpty")
+              state.overview.roles.length > 0
+                ? t("home.searchReady", {
+                    roles: state.overview.roles.join(", "),
+                    count: state.overview.companies,
+                  })
+                : t("home.searchEmpty")
             }
-            done={state.overview.companies > 0}
-            to="/companies"
-            action={t("home.companiesAction")}
+            done={state.overview.roles.length > 0}
+            to={state.overview.hasProfile ? "/profile" : "/onboarding"}
+            action={state.overview.roles.length > 0 ? t("home.searchEdit") : t("home.searchAction")}
           />
           <StepCard
             step={3}
@@ -101,7 +107,7 @@ export function HomeScreen() {
             done={false}
             to="/jobs"
             action={t("home.jobsAction")}
-            primary={state.overview.hasProfile && state.overview.companies > 0}
+            primary={state.overview.hasProfile && state.overview.roles.length > 0}
           />
           <StepCard
             icon={KanbanSquare}
