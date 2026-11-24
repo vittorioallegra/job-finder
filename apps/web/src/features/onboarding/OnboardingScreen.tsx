@@ -215,8 +215,7 @@ function AiStep({ bridge, settings, onSaved, onContinue }: AiStepProps) {
     setDirty(true);
   }, []);
 
-  async function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function saveFields(): Promise<boolean> {
     setMessage("saving");
     try {
       const next = await bridge.settings.update({
@@ -225,9 +224,16 @@ function AiStep({ bridge, settings, onSaved, onContinue }: AiStepProps) {
       setDirty(false);
       setMessage("saved");
       onSaved(next);
+      return true;
     } catch {
       setMessage("error");
+      return false;
     }
+  }
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await saveFields();
   }
 
   return (
@@ -265,7 +271,10 @@ function AiStep({ bridge, settings, onSaved, onContinue }: AiStepProps) {
           </Button>
         </div>
       </form>
-      <AiConnectionTest bridge={bridge} />
+      <AiConnectionTest
+        bridge={bridge}
+        saveChanges={() => (dirty ? saveFields() : Promise.resolve(true))}
+      />
       <div className="flex justify-end border-t border-app-border pt-4">
         <Button onClick={onContinue} disabled={dirty || message === "saving"}>
           {t("onboarding.ai.continue")}

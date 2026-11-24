@@ -58,6 +58,7 @@
     "saving": "Saving…",
     "saved": "Settings saved.",
     "saveFailed": "Settings could not be saved.",
+    "unsaved": "Unsaved changes.",
     "invalid": "Some values are out of range or incomplete. Nothing was saved.",
     "sections": {
       "ai": "AI provider",
@@ -85,15 +86,16 @@
       "apiKey": "API key",
       "test": {
         "action": "Test connection",
-        "hint": "Tests the saved provider, model and key.",
+        "hint": "Saves your changes, then tests the provider, model and key.",
         "testing": "Testing…",
         "connected": "Connected to {{model}}.",
         "unavailable": "AI unavailable: {{reason}}.",
+        "unavailableDetail": "AI unavailable: {{reason}} ({{detail}}).",
         "reasons": {
           "not-configured": "the model, key or base URL is missing",
           "invalid-key": "the provider rejected the API key",
           "model-not-found": "the provider does not know this model",
-          "rate-limited": "the provider is rate limiting requests",
+          "rate-limited": "the provider is rate limiting requests or the account is out of credit",
           "unreachable": "the provider could not be reached",
           "invalid-output": "the provider answered in an unexpected format",
           "unknown": "unexpected error",

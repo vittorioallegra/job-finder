@@ -16,8 +16,12 @@ export const AI_TEST_FAILURE_CODES = [
 ] as const;
 export type AiTestFailureCode = (typeof AI_TEST_FAILURE_CODES)[number];
 
-/** Outcome of "test connection" with the saved AI settings. Never carries the key or a provider error body. */
-export type AiTestResult = { ok: true; model: string } | { ok: false; code: AiTestFailureCode };
+/**
+ * Outcome of "test connection" with the saved AI settings. Never carries the key or a provider
+ * error body; `detail` is at most an HTTP status and the provider's error identifiers.
+ */
+export type AiTestResult =
+  { ok: true; model: string } | { ok: false; code: AiTestFailureCode; detail?: string };
 
 /**
  * What a cloud consent is given for: the hosted provider, or the OpenAI-compatible provider at one

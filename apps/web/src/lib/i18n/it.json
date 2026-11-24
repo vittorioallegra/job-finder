@@ -58,6 +58,7 @@
     "saving": "Salvataggio…",
     "saved": "Impostazioni salvate.",
     "saveFailed": "Impossibile salvare le impostazioni.",
+    "unsaved": "Modifiche non salvate.",
     "invalid": "Alcuni valori sono fuori dai limiti o incompleti. Nulla è stato salvato.",
     "sections": {
       "ai": "Provider AI",
@@ -85,15 +86,16 @@
       "apiKey": "Chiave API",
       "test": {
         "action": "Verifica connessione",
-        "hint": "Verifica il provider, il modello e la chiave salvati.",
+        "hint": "Salva le modifiche, poi verifica provider, modello e chiave.",
         "testing": "Verifica in corso…",
         "connected": "Connesso a {{model}}.",
         "unavailable": "AI non disponibile: {{reason}}.",
+        "unavailableDetail": "AI non disponibile: {{reason}} ({{detail}}).",
         "reasons": {
           "not-configured": "mancano modello, chiave o URL base",
           "invalid-key": "il provider ha rifiutato la chiave API",
           "model-not-found": "il provider non riconosce questo modello",
-          "rate-limited": "il provider sta limitando le richieste",
+          "rate-limited": "il provider sta limitando le richieste o il credito dell'account è esaurito",
           "unreachable": "impossibile raggiungere il provider",
           "invalid-output": "il provider ha risposto in un formato inatteso",
           "unknown": "errore imprevisto",

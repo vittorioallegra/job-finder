@@ -61,7 +61,11 @@ export function createAiConnectionService(
         if (error instanceof EngineUnavailableError) {
           return { ok: false, code: "engine-unavailable" };
         }
-        return { ok: false, code: "unknown" };
+        // Only the error's class name: its message could quote a provider response.
+        const name = error instanceof Error ? error.name : "";
+        return /^[A-Za-z0-9_.-]{1,64}$/.test(name)
+          ? { ok: false, code: "unknown", detail: name }
+          : { ok: false, code: "unknown" };
       }
     },
     async listModels({ source, baseUrl }) {

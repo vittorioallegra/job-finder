@@ -11,13 +11,26 @@ type AiTestState =
   | { status: "done"; result: AiTestResult }
   | { status: "error" };
 
+interface AiConnectionTestProps {
+  bridge: JobFinderBridge;
+  /**
+   * Saves the form's unsaved changes before the test, which reads the saved settings. Resolves
+   * false when nothing could be saved; the test then does not run, and the form shows why.
+   */
+  saveChanges?: () => Promise<boolean>;
+}
+
 /** Runs the engine-side test of the saved AI settings. Shows loading, connected, or AI unavailable with a reason. */
-export function AiConnectionTest({ bridge }: { bridge: JobFinderBridge }) {
+export function AiConnectionTest({ bridge, saveChanges }: AiConnectionTestProps) {
   const { t } = useTranslation();
   const [state, setState] = useState<AiTestState>({ status: "idle" });
 
   async function run() {
     setState({ status: "testing" });
+    if (saveChanges && !(await saveChanges())) {
+      setState({ status: "idle" });
+      return;
+    }
     try {
       setState({ status: "done", result: await bridge.ai.testConnection() });
     } catch {
@@ -31,10 +44,12 @@ export function AiConnectionTest({ bridge }: { bridge: JobFinderBridge }) {
   } else if (state.status === "done" && state.result.ok) {
     message = t("settings.ai.test.connected", { model: state.result.model });
   } else if (state.status === "done" || state.status === "error") {
-    const code = state.status === "done" && !state.result.ok ? state.result.code : "unknown";
-    message = t("settings.ai.test.unavailable", {
-      reason: t(`settings.ai.test.reasons.${code}`),
-    });
+    const failure = state.status === "done" && !state.result.ok ? state.result : null;
+    const reason = t(`settings.ai.test.reasons.${failure?.code ?? "unknown"}`);
+    // The detail (an HTTP status and the provider's error identifiers) helps tell causes apart.
+    message = failure?.detail
+      ? t("settings.ai.test.unavailableDetail", { reason, detail: failure.detail })
+      : t("settings.ai.test.unavailable", { reason });
   }
 
   return (

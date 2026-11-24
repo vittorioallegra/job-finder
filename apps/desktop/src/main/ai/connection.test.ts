@@ -114,7 +114,11 @@ describe("AI connection service", () => {
       },
     });
 
-    await expect(service.testConnection()).resolves.toEqual({ ok: false, code: "unknown" });
+    await expect(service.testConnection()).resolves.toEqual({
+      ok: false,
+      code: "unknown",
+      detail: "Error",
+    });
     expect(seen).toEqual([null]);
   });
 

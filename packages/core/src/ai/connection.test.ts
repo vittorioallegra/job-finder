@@ -1,5 +1,5 @@
 // protects=testAiConnection reports success with the model name, or a failure code that the settings screen can explain, without a request leaving the process;
-// fails_when=a rejected key is reported as connected, a network failure is reported as a missing model, or a missing key still sends a request;
+// fails_when=a rejected key is reported as connected, the detail carries provider error text, a network failure is reported as a missing model, or a missing key still sends a request;
 // no_claim=the scripted fetch stands in for the provider, so the real endpoint, its latency and its model list are not checked.
 import { describe, expect, it } from "vitest";
 import { testAiConnection } from "./connection";
@@ -44,7 +44,68 @@ describe("testAiConnection", () => {
       { provider: "anthropic", model: "claude-test", baseUrl: "", apiKey: "test-key" },
       { fetch: fetchImpl },
     );
-    expect(result).toEqual({ ok: false, code: "invalid-key" });
+    expect(result).toEqual({
+      ok: false,
+      code: "invalid-key",
+      detail: "HTTP 401 authentication_error",
+    });
+  });
+
+  it("names the HTTP status and the provider's error identifiers, never its message", async () => {
+    const fetchImpl: typeof fetch = async () =>
+      new Response(
+        JSON.stringify({
+          error: {
+            message: "Unsupported value: 'max_completion_tokens' for sk-secret-in-text",
+            type: "invalid_request_error",
+            param: "max_completion_tokens",
+            code: "unsupported_value",
+          },
+        }),
+        { status: 400, headers: { "content-type": "application/json" } },
+      );
+    const result = await testAiConnection(
+      { provider: "openai", model: "gpt-test", baseUrl: "", apiKey: "test-key" },
+      { fetch: fetchImpl },
+    );
+    expect(result).toEqual({
+      ok: false,
+      code: "unknown",
+      detail: "HTTP 400 unsupported_value invalid_request_error max_completion_tokens",
+    });
+    expect(JSON.stringify(result)).not.toContain("sk-secret");
+  });
+
+  it("asks once and explains the answer, such as an account out of credit", async () => {
+    let calls = 0;
+    const fetchImpl: typeof fetch = async () => {
+      calls += 1;
+      return new Response(
+        JSON.stringify({ error: { type: "insufficient_quota", code: "insufficient_quota" } }),
+        { status: 429, headers: { "content-type": "application/json" } },
+      );
+    };
+    const result = await testAiConnection(
+      { provider: "openai", model: "gpt-test", baseUrl: "", apiKey: "test-key" },
+      { fetch: fetchImpl },
+    );
+    expect(result).toEqual({
+      ok: false,
+      code: "rate-limited",
+      detail: "HTTP 429 insufficient_quota",
+    });
+    expect(calls).toBe(1);
+  });
+
+  it("reports a provider that does not answer in time as unreachable", async () => {
+    const fetchImpl: typeof fetch = async () => {
+      throw new DOMException("The operation timed out.", "TimeoutError");
+    };
+    const result = await testAiConnection(
+      { provider: "openai", model: "gpt-test", baseUrl: "", apiKey: "test-key" },
+      { fetch: fetchImpl },
+    );
+    expect(result).toEqual({ ok: false, code: "unreachable", detail: "timeout" });
   });
 
   it("reports unreachable when the connection fails", async () => {

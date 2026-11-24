@@ -1,5 +1,5 @@
-// protects=the settings screen loads the saved values, saves only valid changes through the bridge, retries after a failed read, and never shows a stored key value; Linux shows the keyring opt-in and hides launch at login; the AI connection test shows the model or the AI unavailable reason; Ollama is set up from its installed models without a key field;
-// fails_when=a value is sent without validation, a key value is rendered, a failed read shows a blank form, Linux shows launch at login, a failed AI test shows no reason, Ollama asks for a key, saves an unusable provider or hides why its models are missing;
+// protects=the settings screen loads the saved values, saves only valid changes through the bridge, retries after a failed read, and never shows a stored key value; Linux shows the keyring opt-in and hides launch at login; the AI connection test saves the changes on screen first, then shows the model or the AI unavailable reason; Ollama is set up from its installed models without a key field;
+// fails_when=a value is sent without validation, a key value is rendered, a failed read shows a blank form, Linux shows launch at login, a failed AI test shows no reason, the test reads settings older than the screen, Ollama asks for a key, saves an unusable provider or hides why its models are missing;
 // no_claim=visual layout, keyboard focus order and the real OS keychain are not checked here.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -320,6 +320,69 @@ describe("settings screen", () => {
     await act(async () => {});
     expect(testConnection).toHaveBeenCalledTimes(1);
     expect(container.textContent).toContain("AI unavailable: the provider rejected the API key.");
+  });
+
+  it("adds the technical detail to an unexpected failure", async () => {
+    await render(
+      createMemoryBridge({ aiTest: { ok: false, code: "unknown", detail: "HTTP 400 bad_param" } }),
+    );
+    await act(async () => {
+      button(container, "Test connection").click();
+    });
+    await act(async () => {});
+    expect(container.textContent).toContain(
+      "AI unavailable: unexpected error (HTTP 400 bad_param).",
+    );
+  });
+
+  it("saves the changes on screen before testing the connection", async () => {
+    const memory = createMemoryBridge({ aiTest: { ok: true, model: "claude-test" } });
+    const calls: string[] = [];
+    const update = vi.fn(async (patch: Parameters<typeof memory.settings.update>[0]) => {
+      calls.push("update");
+      return memory.settings.update(patch);
+    });
+    const testConnection = vi.fn(async () => {
+      calls.push("test");
+      return memory.ai.testConnection();
+    });
+    await render({
+      ...memory,
+      settings: { ...memory.settings, update },
+      ai: { ...memory.ai, testConnection },
+    });
+    await act(async () => {
+      setInputValue(field(container, "Context size"), "16384");
+    });
+    expect(container.textContent).toContain("Unsaved changes.");
+    await act(async () => {
+      button(container, "Test connection").click();
+    });
+    await act(async () => {});
+    expect(calls).toEqual(["update", "test"]);
+    expect(update.mock.calls[0]?.[0].ai?.contextSize).toBe(16384);
+    expect(container.textContent).not.toContain("Unsaved changes.");
+
+    await act(async () => {
+      button(container, "Test connection").click();
+    });
+    await act(async () => {});
+    expect(calls).toEqual(["update", "test", "test"]);
+  });
+
+  it("does not test when the changes on screen cannot be saved", async () => {
+    const memory = createMemoryBridge();
+    const testConnection = vi.fn(memory.ai.testConnection);
+    await render({ ...memory, ai: { ...memory.ai, testConnection } });
+    await act(async () => {
+      setInputValue(field(container, "Context size"), "1");
+    });
+    await act(async () => {
+      button(container, "Test connection").click();
+    });
+    await act(async () => {});
+    expect(testConnection).not.toHaveBeenCalled();
+    expect(container.textContent).toContain("Nothing was saved.");
   });
 
   it("reports the model when the connection test passes", async () => {

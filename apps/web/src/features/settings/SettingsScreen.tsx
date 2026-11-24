@@ -101,6 +101,8 @@ type SaveState = "idle" | "saving" | "saved" | "invalid" | "error";
 function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormProps) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState<SettingsDraft>(() => draftFromSettings(initialSettings));
+  const [savedDraft, setSavedDraft] = useState<SettingsDraft>(draft);
+  const unsaved = JSON.stringify(draft) !== JSON.stringify(savedDraft);
   const [secrets, setSecrets] = useState<SecretsStatus>(initialSecrets);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [allowBasicText, setAllowBasicText] = useState(initialSettings.secrets.allowBasicText);
@@ -126,21 +128,29 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
     setSaveState("idle");
   }, []);
 
-  async function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  /** Saves the whole form; resolves whether the saved settings now match it. */
+  async function saveDraft(): Promise<boolean> {
     const patch = patchFromDraft(draft);
     if (!patch) {
       setSaveState("invalid");
-      return;
+      return false;
     }
     setSaveState("saving");
     try {
       const next = await bridge.settings.update(patch);
+      setSavedDraft(draft);
       await i18n.changeLanguage(resolveUiLanguage(next.ui.language));
       setSaveState("saved");
+      return true;
     } catch {
       setSaveState("error");
+      return false;
     }
+  }
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await saveDraft();
   }
 
   async function toggleBasicText(allowed: boolean) {
@@ -197,7 +207,11 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
           value={draft.aiContextSize}
           onChange={(event) => change("aiContextSize", event.target.value)}
         />
-        <AiConnectionTest bridge={bridge} />
+        {/* The test reads the saved settings, so the changes on screen are saved first. */}
+        <AiConnectionTest
+          bridge={bridge}
+          saveChanges={() => (unsaved ? saveDraft() : Promise.resolve(true))}
+        />
       </Card>
 
       <Card as="section" aria-labelledby="settings-search" className="flex flex-col gap-4">
@@ -313,6 +327,7 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
           {saveState === "saved" ? t("settings.saved") : null}
           {saveState === "invalid" ? t("settings.invalid") : null}
           {saveState === "error" ? t("settings.saveFailed") : null}
+          {saveState === "idle" && unsaved ? t("settings.unsaved") : null}
         </p>
         <Button type="submit" disabled={saveState === "saving"}>
           {saveState === "saving" ? t("settings.saving") : t("settings.save")}
