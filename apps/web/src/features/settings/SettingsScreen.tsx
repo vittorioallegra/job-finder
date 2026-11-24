@@ -357,7 +357,7 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
           {saveState === "error" ? t("settings.saveFailed") : null}
           {saveState === "idle" && unsaved ? t("settings.unsaved") : null}
         </p>
-        <Button type="submit" disabled={saveState === "saving"}>
+        <Button type="submit" disabled={saveState === "saving" || !unsaved}>
           {saveState === "saving" ? t("settings.saving") : t("settings.save")}
         </Button>
       </div>

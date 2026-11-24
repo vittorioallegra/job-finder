@@ -331,10 +331,15 @@
       "anyLocation": "Any place.",
       "workModes": "Work mode",
       "employmentTypes": "Contract",
-      "seniorities": "Level"
+      "contracts": {
+        "employee": "Employee",
+        "freelance": "Freelance or contractor",
+        "internship": "Internship"
+      }
     },
     "searchChanged": "You changed the roles or places you are looking for.",
-    "searchChangedAction": "Find companies for them"
+    "searchChangedAction": "Find companies for them",
+    "unsaved": "Unsaved changes."
   },
   "onboarding": {
     "title": "Set up your profile",

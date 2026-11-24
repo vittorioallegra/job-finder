@@ -7,7 +7,8 @@ function withUnknown<T extends string>(chosen: readonly T[]): (T | "unknown")[] 
 
 /**
  * The filter the jobs list opens with: the profile's roles (a company's board lists every opening,
- * so the title must name one of them), work modes, contracts and levels. Places chose which
+ * so the title must name one of them), work modes and contracts. The level is left to the
+ * affinity score, which reads the experience. Places chose which
  * companies to scan; the affinity score ranks the rest.
  */
 export function filterFromPreferences(preferences: JobPreferences | null): JobFilter {
@@ -17,6 +18,5 @@ export function filterFromPreferences(preferences: JobPreferences | null): JobFi
     roles: [...preferences.roles],
     workModes: withUnknown(preferences.workModes),
     employmentTypes: withUnknown(preferences.employmentTypes),
-    seniorities: withUnknown(preferences.seniorities),
   };
 }

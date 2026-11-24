@@ -3,8 +3,6 @@ import { useTranslation } from "react-i18next";
 import {
   LANGUAGE_LEVELS,
   PREFERENCE_LIMITS,
-  PREFERRED_EMPLOYMENT_TYPES,
-  PREFERRED_SENIORITIES,
   PREFERRED_WORK_MODES,
   PROFILE_LIMITS,
   SALARY_PERIODS,
@@ -22,21 +20,30 @@ import { ChipsInput } from "./ChipsInput";
 import { MonthYearInput } from "./MonthYearInput";
 import { SkillChips } from "./SkillChips";
 import { profileFromDraft, type ProfileDraft } from "./profile-draft";
+import { CONTRACT_GROUP_IDS, contractGroupsOf, employmentTypesOf } from "./contract-groups";
 
 type SaveState = "idle" | "saving" | "saved" | "invalid" | "error";
 
 export interface ProfileEditorProps {
   initialDraft: ProfileDraft;
+  /**
+   * False when the draft is not stored yet (a CV just read in setup): Save is enabled from the
+   * start. Otherwise Save waits for a change.
+   */
+  stored?: boolean;
   /** Called with the stored record after a successful save. */
   onSaved?: (record: ProfileRecord) => void;
 }
 
 /** Edits every profile field. Nothing is saved until the form is submitted and passes the schema. */
-export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
+export function ProfileEditor({ initialDraft, stored = true, onSaved }: ProfileEditorProps) {
   const { t } = useTranslation();
   const bridge = useBridge();
   const [draft, setDraft] = useState<ProfileDraft>(initialDraft);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  // The draft as last stored, or null before the first save of a new profile.
+  const [savedDraft, setSavedDraft] = useState<ProfileDraft | null>(stored ? initialDraft : null);
+  const unsaved = savedDraft === null || JSON.stringify(draft) !== JSON.stringify(savedDraft);
 
   function set<K extends keyof ProfileDraft>(key: K, value: ProfileDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -61,6 +68,7 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
     setSaveState("saving");
     try {
       const record = await bridge.profile.save(profile);
+      setSavedDraft(draft);
       setSaveState("saved");
       onSaved?.(record);
     } catch {
@@ -135,7 +143,7 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
             max={PREFERENCE_LIMITS.locations}
           />
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <ChoiceGroup
             legend={t("profile.preferences.workModes")}
             options={PREFERRED_WORK_MODES.map((value) => ({
@@ -147,21 +155,12 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
           />
           <ChoiceGroup
             legend={t("profile.preferences.employmentTypes")}
-            options={PREFERRED_EMPLOYMENT_TYPES.map((value) => ({
+            options={CONTRACT_GROUP_IDS.map((value) => ({
               value,
-              label: t(`jobs.filters.values.employment.${value}`),
+              label: t(`profile.preferences.contracts.${value}`),
             }))}
-            selected={preferences.employmentTypes}
-            onChange={(employmentTypes) => setPreferences({ employmentTypes })}
-          />
-          <ChoiceGroup
-            legend={t("profile.preferences.seniorities")}
-            options={PREFERRED_SENIORITIES.map((value) => ({
-              value,
-              label: t(`jobs.filters.values.seniority.${value}`),
-            }))}
-            selected={preferences.seniorities}
-            onChange={(seniorities) => setPreferences({ seniorities })}
+            selected={contractGroupsOf(preferences.employmentTypes)}
+            onChange={(groups) => setPreferences({ employmentTypes: employmentTypesOf(groups) })}
           />
         </div>
       </Section>
@@ -477,8 +476,9 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
           {saveState === "saved" ? t("profile.saved") : null}
           {saveState === "invalid" ? t("profile.invalid") : null}
           {saveState === "error" ? t("profile.saveFailed") : null}
+          {saveState === "idle" && unsaved && savedDraft !== null ? t("profile.unsaved") : null}
         </p>
-        <Button type="submit" disabled={saveState === "saving"}>
+        <Button type="submit" disabled={saveState === "saving" || !unsaved}>
           {saveState === "saving" ? t("profile.saving") : t("profile.save")}
         </Button>
       </div>

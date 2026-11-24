@@ -331,10 +331,15 @@
       "anyLocation": "Qualsiasi luogo.",
       "workModes": "Modalità di lavoro",
       "employmentTypes": "Contratto",
-      "seniorities": "Livello"
+      "contracts": {
+        "employee": "Dipendente",
+        "freelance": "Freelance o a progetto",
+        "internship": "Stage"
+      }
     },
     "searchChanged": "Hai cambiato i ruoli o i luoghi che cerchi.",
-    "searchChangedAction": "Cerca le aziende per questi"
+    "searchChangedAction": "Cerca le aziende per questi",
+    "unsaved": "Modifiche non salvate."
   },
   "onboarding": {
     "title": "Configura il profilo",

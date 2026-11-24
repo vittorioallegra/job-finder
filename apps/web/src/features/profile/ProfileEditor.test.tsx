@@ -1,4 +1,4 @@
-// protects=the profile editor saves a valid edit through the bridge, refuses an invalid email before any save, adds or removes entries without losing the others, edits dates with month and year pickers (ongoing as present), skills as chips, language levels as a selector and an optional grade, and shows no pronouns field;
+// protects=the profile editor saves a valid edit through the bridge, refuses an invalid email before any save, adds or removes entries without losing the others, edits dates with month and year pickers (ongoing as present), skills as chips, language levels as a selector and an optional grade, shows no pronouns field, enables Save only with unsaved changes, and groups contracts as employee, freelance and internship;
 // fails_when=an edited headline is not sent, an invalid email reaches the bridge, the save reports success when it failed, or removing one entry drops another;
 // no_claim=visual layout, keyboard focus order and the stored record's version are not checked here; the bridge is an in-memory double.
 import { act } from "react";
@@ -226,6 +226,40 @@ describe("profile editor", () => {
         preferences: expect.objectContaining({
           roles: ["Backend Engineer", "Tech Lead"],
           workModes: ["remote"],
+        }),
+      }),
+    );
+  });
+
+  it("enables Save only with unsaved changes, and says so until they are saved", async () => {
+    const bridge = createMemoryBridge({ profile: sample() });
+    await render(bridge, sample());
+    expect(button(container, "Save profile").disabled).toBe(true);
+    expect(container.textContent).not.toContain("Unsaved changes.");
+
+    await act(async () => setValue(control(container, "Headline"), "Staff Engineer"));
+    expect(button(container, "Save profile").disabled).toBe(false);
+    expect(container.textContent).toContain("Unsaved changes.");
+
+    await act(async () => button(container, "Save profile").click());
+    expect(button(container, "Save profile").disabled).toBe(true);
+    expect(container.textContent).toContain("Profile saved.");
+  });
+
+  it("offers employee, freelance and internship as contracts, and no level", async () => {
+    const bridge = createMemoryBridge({ profile: sample() });
+    const save = vi.spyOn(bridge.profile, "save");
+    await render(bridge, sample());
+    expect(container.textContent).not.toContain("Level");
+    const employee = [...container.querySelectorAll("label")]
+      .find((label) => label.textContent?.trim() === "Employee")
+      ?.querySelector<HTMLInputElement>("input");
+    await act(async () => employee!.click());
+    await act(async () => button(container, "Save profile").click());
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        preferences: expect.objectContaining({
+          employmentTypes: ["full_time", "part_time", "temporary"],
         }),
       }),
     );
