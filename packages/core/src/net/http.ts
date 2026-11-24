@@ -360,13 +360,11 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
         };
       }
       await response.body?.cancel();
-      if (status === 401 || status === 403) {
-        return { expiresAt: now() + robotsTtlMs, allows: blockAll };
-      }
       if (status >= 500) {
         return { expiresAt: now() + robotsFailureTtlMs, allows: blockAll };
       }
-      // 404, 410 and other 4xx mean "no robots.txt": everything is allowed (RFC 9309).
+      // Any 4xx, 401 and 403 included, means the file is unavailable, and RFC 9309 (2.3.1.3) lets
+      // a crawler access the origin then. Ashby's public job API answers 401 for its robots.txt.
       return { expiresAt: now() + robotsTtlMs, allows: allowAll };
     } catch {
       return { expiresAt: now() + robotsFailureTtlMs, allows: blockAll };

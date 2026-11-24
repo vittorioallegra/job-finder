@@ -1,5 +1,5 @@
 // protects=the HTTP client sends POST bodies and extra headers without caching them, sends the generic user agent, honours robots.txt (cached per origin, failures blocking), spaces requests per host, retries 429 and 5xx with backoff and Retry-After, caches 2xx responses for the TTL, rewrites origins to the fixture base URL, and never fetches non-http URLs or cancelled requests;
-// fails_when=a page is fetched despite a robots disallow, robots.txt is read once per request, a host gets two requests within the interval, a 404 is retried, a body over the limit is returned, or a fixture-rewritten request reaches the real host;
+// fails_when=a page is fetched despite a robots disallow or a robots.txt server error, a 401 or 403 robots.txt blocks the origin, robots.txt is read once per request, a host gets two requests within the interval, a 404 is retried, a body over the limit is returned, or a fixture-rewritten request reaches the real host;
 // no_claim=real network behaviour of job sites, DNS and TLS, and the rate of the production 1 req/s default under real timers are not exercised; the fixture server test covers the real fetch path on loopback only.
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -149,11 +149,23 @@ describe("http client", () => {
     expect(calls.filter((call) => call.url.endsWith("/robots.txt"))).toHaveLength(1);
   });
 
-  it("blocks an origin whose robots.txt answers 401 or 403", async () => {
-    const { fetch, calls } = scriptedFetch(site(403, () => html("ok")));
+  it("allows an origin whose robots.txt answers 401 or 403, as RFC 9309 says for any 4xx", async () => {
+    for (const status of [401, 403]) {
+      const { fetch, calls } = scriptedFetch(site(status, () => html("ok")));
+      const client = createHttpClient({ fetch, intervalMs: 1, sleep: recordSleep });
+
+      const result = await client.get("https://api.example.test/posting-api/job-board/acme");
+
+      expect(result).toMatchObject({ ok: true });
+      expect(calls.filter((call) => !call.url.endsWith("/robots.txt"))).toHaveLength(1);
+    }
+  });
+
+  it("blocks an origin whose robots.txt fails with a server error", async () => {
+    const { fetch, calls } = scriptedFetch(site(503, () => html("ok")));
     const client = createHttpClient({ fetch, intervalMs: 1, sleep: recordSleep });
 
-    const result = await client.get("https://locked.example.test/a");
+    const result = await client.get("https://down.example.test/a");
 
     expect(result).toMatchObject({ ok: false, code: "blocked-by-robots" });
     expect(calls.filter((call) => !call.url.endsWith("/robots.txt"))).toHaveLength(0);
