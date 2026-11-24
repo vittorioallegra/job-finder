@@ -152,18 +152,16 @@
       }
     },
     "search": {
-      "intro": "The app looks on the web for the job boards of companies hiring for the roles in your profile, and when you search on the Sources page. It needs at least one search service.",
-      "duckduckgo": "Search with DuckDuckGo",
+      "intro": "The app looks on the web for the job boards of companies hiring for the roles in your profile, and when you search on the Sources page. Pick the service it searches with: DuckDuckGo needs nothing; the others are more reliable and have a free plan with a key.",
+      "duckduckgo": "DuckDuckGo",
       "duckduckgoHint": "Free and without a key. Enough to start, but it sometimes blocks automated searches.",
-      "keyedTitle": "Services with a key (optional)",
-      "keyedIntro": "More reliable than DuckDuckGo. Each has a free plan: create a key on its site, turn the service on and paste the key.",
-      "use": "Use {{name}}",
       "keyLabel": "{{name}} key",
       "site": "Create a free key at {{site}}.",
       "brave": "Brave Search",
       "tavily": "Tavily",
       "serper": "Serper",
-      "needsKey": "Paste a key, or this service is skipped."
+      "needsKey": "Paste a key, or this service is skipped.",
+      "service": "Search service"
     },
     "language": {
       "label": "Interface language",
@@ -198,13 +196,7 @@
       "keyRemoved": "Key removed.",
       "keyFailed": "The key could not be saved.",
       "removeFailed": "The key could not be removed.",
-      "storageEncrypted": "Keys are encrypted with the system keychain.",
-      "storageBasicText": "Keys are stored on disk without keyring encryption, because you allowed it.",
-      "storageSessionOnly": "Keys are kept in memory and forgotten when the app quits.",
-      "optInTitle": "No system keyring found",
-      "optInBody": "Keys can be stored on disk only without keyring encryption. Until you allow that, they are kept for this session only.",
-      "optIn": "Allow storing keys on disk without keyring encryption",
-      "optInFailed": "That choice could not be saved."
+      "storagePlain": "Keys are kept in the app's data folder on this computer, without the system keychain."
     }
   },
   "profile": {

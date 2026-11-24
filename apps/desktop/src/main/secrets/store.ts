@@ -1,23 +1,9 @@
 import { eq } from "drizzle-orm";
 import { settings } from "@job-finder/core";
-import {
-  SECRET_NAMES,
-  type SecretName,
-  type SecretsStatus,
-  type SecretStorageInfo,
-} from "@job-finder/bridge";
+import { SECRET_NAMES, type SecretName, type SecretsStatus } from "@job-finder/bridge";
 import type { AppDb } from "../db/operations";
 
-/** The part of Electron's `safeStorage` this module uses. Tests pass a fake. */
-export interface SafeStorageLike {
-  isEncryptionAvailable(): boolean;
-  encryptString(plainText: string): Buffer;
-  decryptString(encrypted: Buffer): string;
-  /** Linux only: `basic_text`, `gnome_libsecret`, `kwallet`, `kwallet5`, `kwallet6` or `unknown`. */
-  getSelectedStorageBackend?(): string;
-}
-
-/** Where encrypted secret blobs are kept. The production adapter is the shared settings table. */
+/** Where secrets are kept. The production adapter is the shared settings table. */
 export interface SecretRows {
   read(key: string): Promise<string | null>;
   write(key: string, value: string): Promise<void>;
@@ -25,157 +11,65 @@ export interface SecretRows {
 }
 
 export interface SecretStoreOptions {
-  safeStorage: SafeStorageLike;
   rows: SecretRows;
-  /** Whether the user opted in to keys on disk without keyring encryption (Linux `basic_text`). */
-  isBasicTextAllowed(): Promise<boolean>;
-  /**
-   * The OS. On macOS and Windows asking safeStorage anything opens the keychain, which can show a
-   * password prompt, so the status shown in Settings does not ask it: only saving or using a key
-   * does. Linux asks for the status, since the keyring backend decides the opt-in.
-   */
-  platform?: NodeJS.Platform;
 }
 
 export interface SecretStore {
-  /** Renderer-facing status: storage mode and set / not set per key. Never a value. */
+  /** Renderer-facing status: set / not set per key. Never a value. */
   status(): Promise<SecretsStatus>;
   set(name: SecretName, value: string): Promise<SecretsStatus>;
   clear(name: SecretName): Promise<SecretsStatus>;
   /** Main-process only (engine and AI layer). Never passed to the renderer. */
   read(name: SecretName): Promise<string | null>;
-  /** Moves keys held in memory to disk once the Linux opt-in is granted. */
-  onBasicTextAllowedChanged(): Promise<void>;
 }
 
-/** The settings row that holds a secret's ciphertext. */
+/** The settings row that holds a secret. */
 export const secretRowKey = (name: SecretName): string => `secret.${name}`;
-const rowKey = secretRowKey;
 
 /**
- * Chooses how secrets are kept. Linux `basic_text` (no keyring) is stored on disk only after the
- * user opts in; without the opt-in, and whenever encryption is unavailable, keys stay in memory.
+ * Marks a stored key. Rows without it were encrypted with the system keychain by earlier
+ * versions: they read as not set, and saving the key again replaces them.
  */
-export function resolveSecretStorage(
-  safeStorage: SafeStorageLike,
-  basicTextAllowed: boolean,
-): SecretStorageInfo {
-  const available = safeStorage.isEncryptionAvailable();
-  const backend = safeStorage.getSelectedStorageBackend?.();
-  if (backend === "basic_text") {
-    if (!basicTextAllowed) {
-      return { mode: "session-only", optInRequired: true };
-    }
-    return { mode: available ? "basic-text" : "session-only", optInRequired: false };
-  }
-  if (backend === "unknown" || !available) {
-    return { mode: "session-only", optInRequired: false };
-  }
-  return { mode: "encrypted", optInRequired: false };
-}
+const PLAIN_PREFIX = "plain:";
 
+/**
+ * Keeps the API keys as plain text in the app's database, in the user's data folder. The system
+ * keychain is not used, so the system never asks for a password to read them (an unsigned app
+ * would be asked again after every update). The renderer only ever sees whether a key is set.
+ */
 export function createSecretStore(options: SecretStoreOptions): SecretStore {
-  const { safeStorage, rows } = options;
-  const inMemory = new Map<SecretName, string>();
-  const checksForStatus = (options.platform ?? process.platform) === "linux";
-  // The last answer from safeStorage, kept so the status can show it without asking again.
-  let checked: SecretStorageInfo | null = null;
+  const { rows } = options;
 
-  async function storage(): Promise<SecretStorageInfo> {
-    checked = resolveSecretStorage(safeStorage, await options.isBasicTextAllowed());
-    return checked;
-  }
-
-  /** The storage for the status: encrypted, unless saving or reading a key found otherwise. */
-  async function storageForStatus(): Promise<SecretStorageInfo> {
-    if (checksForStatus) return storage();
-    return checked ?? { mode: "encrypted", optInRequired: false };
+  async function read(name: SecretName): Promise<string | null> {
+    const stored = await rows.read(secretRowKey(name));
+    return stored !== null && stored.startsWith(PLAIN_PREFIX)
+      ? stored.slice(PLAIN_PREFIX.length)
+      : null;
   }
 
   async function status(): Promise<SecretsStatus> {
-    const info = await storageForStatus();
-    const onDisk = info.mode !== "session-only";
     const keys = {} as Record<SecretName, boolean>;
     for (const name of SECRET_NAMES) {
-      keys[name] = inMemory.has(name) || (onDisk && (await rows.read(rowKey(name))) !== null);
+      keys[name] = (await read(name)) !== null;
     }
-    return { storage: info, keys };
-  }
-
-  async function writeToDisk(name: SecretName, value: string): Promise<void> {
-    const cipher = safeStorage.encryptString(value).toString("base64");
-    await rows.write(rowKey(name), cipher);
+    return { keys };
   }
 
   return {
     status,
-
+    read,
     async set(name, value) {
-      const info = await storage();
-      if (info.mode === "session-only") {
-        inMemory.set(name, value);
-        if (info.optInRequired) {
-          await rows.remove(rowKey(name));
-        }
-      } else {
-        await writeToDisk(name, value);
-        inMemory.delete(name);
-      }
+      await rows.write(secretRowKey(name), `${PLAIN_PREFIX}${value}`);
       return status();
     },
-
     async clear(name) {
-      inMemory.delete(name);
-      await rows.remove(rowKey(name));
+      await rows.remove(secretRowKey(name));
       return status();
-    },
-
-    async read(name) {
-      const held = inMemory.get(name);
-      if (held !== undefined) {
-        return held;
-      }
-      const info = await storage();
-      if (info.mode === "session-only") {
-        return null;
-      }
-      const cipher = await rows.read(rowKey(name));
-      if (cipher === null) {
-        return null;
-      }
-      return safeStorage.decryptString(Buffer.from(cipher, "base64"));
-    },
-
-    async onBasicTextAllowedChanged() {
-      const info = await storage();
-      if (info.mode === "session-only") {
-        if (info.optInRequired) {
-          // The user withdrew the opt-in: nothing may stay on disk. Keys move to memory for this
-          // session when they can be read back, and the rows are deleted either way.
-          for (const name of SECRET_NAMES) {
-            const cipher = await rows.read(rowKey(name));
-            if (cipher === null) continue;
-            if (!inMemory.has(name)) {
-              try {
-                inMemory.set(name, safeStorage.decryptString(Buffer.from(cipher, "base64")));
-              } catch {
-                // Unreadable blob: dropping it is all that is left to do.
-              }
-            }
-            await rows.remove(rowKey(name));
-          }
-        }
-        return;
-      }
-      for (const [name, value] of inMemory) {
-        await writeToDisk(name, value);
-        inMemory.delete(name);
-      }
     },
   };
 }
 
-/** Production adapter: secret blobs are rows in the shared settings table, keyed `secret.<name>`. */
+/** Production adapter: secrets are rows in the shared settings table, keyed `secret.<name>`. */
 export function createSettingsSecretRows(db: AppDb): SecretRows {
   return {
     async read(key) {

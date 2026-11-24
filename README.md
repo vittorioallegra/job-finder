@@ -103,9 +103,11 @@ keyed search providers:
 - Brave Search, Tavily or Serper. Each offers a free tier with a key. Check the provider's
   current limits before you rely on them.
 
-Turn the provider's toggle on in Settings and save its key. Keys are kept in the operating
-system's keychain (on Linux without a keyring, only after you opt in in Settings). A key is
-sent only to the provider it belongs to. It is never shown in the interface or written to logs.
+Choose the search service in Settings (one at a time; DuckDuckGo needs no key) and save its key.
+Keys are kept as plain text in the app's database in your user data folder, not in the system
+keychain, so no password is asked to read them; anything that can read your user folder can read
+them too. A key is sent only to the provider it belongs to. It is never shown in the interface or
+written to logs.
 
 ## Privacy
 
@@ -181,7 +183,7 @@ and nothing that identifies you.
 
 - The interface cannot reach the network itself: its content security policy allows connections
   to the app only.
-- The database, your keys (in the keychain), the logs, the generated PDFs and the desktop
+- The database, your keys (in the database), the logs, the generated PDFs and the desktop
   notifications, tray and launch-at-login setting stay on your computer.
 
 **Local network**

@@ -152,18 +152,16 @@
       }
     },
     "search": {
-      "intro": "L'app cerca sul web le bacheche delle aziende che assumono per i ruoli del tuo profilo, e quando cerchi dalla pagina Fonti. Serve almeno un servizio di ricerca.",
-      "duckduckgo": "Cerca con DuckDuckGo",
+      "intro": "L'app cerca sul web le bacheche delle aziende che assumono per i ruoli del tuo profilo, e quando cerchi dalla pagina Fonti. Scegli il servizio con cui cerca: DuckDuckGo non richiede nulla; gli altri sono più affidabili e hanno un piano gratuito con chiave.",
+      "duckduckgo": "DuckDuckGo",
       "duckduckgoHint": "Gratuito e senza chiave. Basta per iniziare, ma a volte blocca le ricerche automatiche.",
-      "keyedTitle": "Servizi con chiave (facoltativi)",
-      "keyedIntro": "Più affidabili di DuckDuckGo. Ognuno ha un piano gratuito: crea una chiave sul suo sito, attiva il servizio e incolla la chiave.",
-      "use": "Usa {{name}}",
       "keyLabel": "Chiave di {{name}}",
       "site": "Crea una chiave gratuita su {{site}}.",
       "brave": "Brave Search",
       "tavily": "Tavily",
       "serper": "Serper",
-      "needsKey": "Incolla una chiave, altrimenti questo servizio non viene usato."
+      "needsKey": "Incolla una chiave, altrimenti questo servizio non viene usato.",
+      "service": "Servizio di ricerca"
     },
     "language": {
       "label": "Lingua dell'interfaccia",
@@ -198,13 +196,7 @@
       "keyRemoved": "Chiave rimossa.",
       "keyFailed": "Impossibile salvare la chiave.",
       "removeFailed": "Impossibile rimuovere la chiave.",
-      "storageEncrypted": "Le chiavi sono cifrate con il portachiavi di sistema.",
-      "storageBasicText": "Le chiavi sono salvate su disco senza cifratura del portachiavi, perché l'hai consentito.",
-      "storageSessionOnly": "Le chiavi restano in memoria e vengono dimenticate alla chiusura dell'app.",
-      "optInTitle": "Nessun portachiavi di sistema trovato",
-      "optInBody": "Le chiavi possono essere salvate su disco solo senza cifratura del portachiavi. Finché non lo consenti, restano solo per questa sessione.",
-      "optIn": "Consenti di salvare le chiavi su disco senza cifratura del portachiavi",
-      "optInFailed": "Impossibile salvare questa scelta."
+      "storagePlain": "Le chiavi sono salvate nella cartella dei dati dell'app su questo computer, senza il portachiavi di sistema."
     }
   },
   "profile": {

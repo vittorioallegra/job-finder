@@ -1,4 +1,4 @@
-// protects=the settings screen loads the saved values, saves only valid changes through the bridge, retries after a failed read, and never shows a stored key value; Linux shows the keyring opt-in and hides launch at login; the AI connection test saves the changes on screen first, then shows the model or the AI unavailable reason; Ollama is set up from its installed models without a key field, with a context slider up to the model's limit; each provider keeps its own key; the context size shows only for a server and a search key only while its service is on;
+// protects=the settings screen loads the saved values, saves only valid changes through the bridge, retries after a failed read, and never shows a stored key value; Linux hides launch at login; keys are kept without the system keychain; the AI connection test saves the changes on screen first, then shows the model or the AI unavailable reason; Ollama is set up from its installed models without a key field, with a context slider up to the model's limit; each provider keeps its own key; the context size shows only for a server and a search key only while its service is on;
 // fails_when=a value is sent without validation, a key value is rendered, a failed read shows a blank form, Linux shows launch at login, a failed AI test shows no reason, the test reads settings older than the screen, Ollama asks for a key, saves an unusable provider or hides why its models are missing;
 // no_claim=visual layout, keyboard focus order and the real OS keychain are not checked here.
 import { act } from "react";
@@ -340,27 +340,18 @@ describe("settings screen", () => {
 
     expect(container.textContent).not.toContain("Brave Search key");
     await act(async () => {
-      (field(container, "Use Brave Search") as HTMLInputElement).click();
+      (field(container, "Brave Search") as HTMLInputElement).click();
     });
     expect(container.textContent).toContain("Brave Search key");
     expect(container.textContent).toContain("Paste a key, or this service is skipped.");
+    // One service at a time: choosing Brave leaves DuckDuckGo off.
+    expect((field(container, "DuckDuckGo") as HTMLInputElement).checked).toBe(false);
   });
 
-  it("shows the Linux keyring opt-in and hides launch at login", async () => {
-    const memory = createMemoryBridge({
-      platform: "linux",
-      storage: { mode: "session-only", optInRequired: true },
-    });
-    const update = vi.fn(memory.settings.update);
-    await render({ ...memory, settings: { ...memory.settings, update } });
-    expect(container.textContent).toContain("No system keyring found");
+  it("hides launch at login on Linux, and asks no keyring there", async () => {
+    await render(createMemoryBridge({ platform: "linux" }));
     expect(container.textContent).not.toContain("Launch at login");
-    const optIn = field(container, "Allow storing keys") as HTMLInputElement;
-    await act(async () => {
-      optIn.click();
-    });
-    await act(async () => {});
-    expect(update).toHaveBeenCalledWith({ secrets: { allowBasicText: true } });
+    expect(container.textContent).not.toContain("keyring");
   });
 
   it("shows launch at login outside Linux", async () => {

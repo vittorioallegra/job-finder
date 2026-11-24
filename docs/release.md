@@ -58,8 +58,7 @@ system warns the first time you open them.
 - open System Settings, Privacy & Security, and choose Open Anyway next to the Job Finder message; or
 - run `xattr -dr com.apple.quarantine "/Applications/Job Finder.app"` in Terminal.
 
-Each release is signed differently, so macOS may ask again for keychain access that the app uses
-to store API keys.
+The app does not use the keychain for API keys, so a new release never asks for keychain access.
 
 **Windows.** SmartScreen shows "Windows protected your PC". Choose More info, then Run anyway.
 

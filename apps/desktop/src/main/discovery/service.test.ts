@@ -64,7 +64,7 @@ describe("discovery service", () => {
     expect(result).toEqual(found);
   });
 
-  it("passes a keyed provider only when its toggle is on and a key is saved", async () => {
+  it("passes a keyed provider only when its toggle is on and a key is saved, leaving DuckDuckGo out then", async () => {
     const asked: Asked[] = [];
     const service = createDiscoveryService({
       engine: () => engineAnswering(async () => found, asked),
@@ -75,7 +75,7 @@ describe("discovery service", () => {
     await service.search({ keywords: ["x"], locations: [] });
 
     expect(asked[0]?.config).toEqual({
-      duckduckgo: true,
+      duckduckgo: false,
       keyed: [{ provider: "brave", apiKey: "brave-key" }],
     });
   });

@@ -63,7 +63,8 @@ export function patchFromDraft(draft: SettingsDraft): AppSettingsPatch | null {
       }),
       contextSize: contextSizeFor(draft.aiProvider, Number(draft.aiContextSize)),
     },
-    search: { ...draft.search },
+    // One service at a time: older settings with several switched on keep the chosen one only.
+    search: searchFor(chosenSearch(draft.search)),
     ui: { language: draft.language },
     notifications: { enabled: draft.notifications },
     scheduler: { intervalHours: Number(draft.intervalHours) },
@@ -72,4 +73,17 @@ export function patchFromDraft(draft: SettingsDraft): AppSettingsPatch | null {
   };
   const parsed = AppSettingsPatchSchema.safeParse(patch);
   return parsed.success ? patch : null;
+}
+
+/** Keyed search services, in the order the settings list them. */
+const KEYED_SEARCH_PROVIDERS: readonly SearchProvider[] = ["brave", "tavily", "serper"];
+
+/** The one search service in use: the first keyed one switched on, else DuckDuckGo. */
+export function chosenSearch(search: Record<SearchProvider, boolean>): SearchProvider {
+  return KEYED_SEARCH_PROVIDERS.find((provider) => search[provider]) ?? "duckduckgo";
+}
+
+/** The search settings with only `provider` switched on. */
+export function searchFor(provider: SearchProvider): Record<SearchProvider, boolean> {
+  return { duckduckgo: false, brave: false, tavily: false, serper: false, [provider]: true };
 }

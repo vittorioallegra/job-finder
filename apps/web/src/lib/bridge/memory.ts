@@ -27,7 +27,6 @@ import {
   ProfileSchema,
   type ProfileRecord,
   type SecretName,
-  type SecretStorageInfo,
   type ScoreStartResult,
   type SecretsStatus,
 } from "@job-finder/bridge";
@@ -35,7 +34,6 @@ import {
 export interface MemoryBridgeOptions {
   platform?: string;
   settings?: AppSettings;
-  storage?: SecretStorageInfo;
   /** Outcome of "test connection". Defaults to AI unavailable, since there is no engine here. */
   profileDiscovery?: ProfileDiscoveryResult;
   aiTest?: AiTestResult;
@@ -68,13 +66,12 @@ export interface MemoryBridgeOptions {
  */
 export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinderBridge {
   let settings: AppSettings = structuredClone(options.settings ?? DEFAULT_APP_SETTINGS);
-  const storage: SecretStorageInfo = options.storage ?? { mode: "encrypted", optInRequired: false };
   const keys = Object.fromEntries(SECRET_NAMES.map((name) => [name, false])) as Record<
     SecretName,
     boolean
   >;
 
-  const status = async (): Promise<SecretsStatus> => ({ storage, keys: { ...keys } });
+  const status = async (): Promise<SecretsStatus> => ({ keys: { ...keys } });
   const companies: CompanyRecord[] = structuredClone(options.companies ?? []);
   const jobs: JobListItem[] = structuredClone(options.jobs ?? []);
   const savedSearches: SavedSearch[] = structuredClone(options.savedSearches ?? []);

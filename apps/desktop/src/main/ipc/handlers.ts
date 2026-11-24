@@ -116,9 +116,6 @@ export async function handleInvoke(
     case "settings:update": {
       const patch = payload as AppSettingsPatch;
       const next = await services.settings.update(patch);
-      if (patch.secrets?.allowBasicText !== undefined) {
-        await services.secrets.onBasicTextAllowedChanged();
-      }
       services.afterSettingsUpdate(next);
       return next;
     }

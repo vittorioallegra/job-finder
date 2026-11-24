@@ -120,12 +120,7 @@ export function SecretField({ bridge, name, label, secrets, onStatus }: SecretFi
     }
   }
 
-  const storageNote =
-    secrets.storage.mode === "encrypted"
-      ? t("settings.secrets.storageEncrypted")
-      : secrets.storage.mode === "basic-text"
-        ? t("settings.secrets.storageBasicText")
-        : t("settings.secrets.storageSessionOnly");
+  const storageNote = t("settings.secrets.storagePlain");
 
   return (
     <div className="flex flex-col gap-2">

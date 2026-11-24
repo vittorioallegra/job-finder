@@ -6,7 +6,6 @@ import {
   Notification,
   nativeImage,
   powerMonitor,
-  safeStorage,
   net,
   protocol,
   session,
@@ -49,7 +48,7 @@ import { startEngineSupervisor, type EngineSupervisor } from "./engine/superviso
 import { createFileLogger } from "./logging/file-logger";
 import { originOf } from "./security/origin";
 import { createSecretStore, createSettingsSecretRows } from "./secrets/store";
-import { migrateLegacyAiKey, readAiKey } from "./ai/keys";
+import { readAiKey } from "./ai/keys";
 import { createSettingsRepository } from "./settings/repository";
 import { APP_HOST, APP_SCHEME, resolveAppRequest } from "./protocol/app-protocol";
 import { INGEST_PROGRESS_CHANNEL } from "@job-finder/bridge";
@@ -207,12 +206,7 @@ if (gotSingleInstanceLock) {
       quitting = true;
     });
     const secretRows = createSettingsSecretRows(database.db);
-    await migrateLegacyAiKey(secretRows, (await settingsRepository.get()).ai);
-    const secretStore = createSecretStore({
-      safeStorage,
-      rows: secretRows,
-      isBasicTextAllowed: async () => (await settingsRepository.get()).secrets.allowBasicText,
-    });
+    const secretStore = createSecretStore({ rows: secretRows });
     let supervisor: EngineSupervisor | null = null;
     const ingestion = createIngestionService({
       onBoardGone: (companyId) => {

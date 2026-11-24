@@ -1,22 +1,11 @@
-// protects=secrets are encrypted on disk when safeStorage is available, kept in memory only when it is not, Linux basic_text is written only after the opt-in, the renderer-facing status never carries a value, and on macOS showing the status never opens the keychain;
-// fails_when=opening Settings on macOS asks the keychain, a key is written in plain text, written to disk without the opt-in, reported as set after clear, or returned by status;
-// no_claim=the real OS keychain and its prompts are not exercised here; the fake safeStorage only checks the call contract.
+// protects=keys are stored in the app's rows without the system keychain, read back in main, reported to the renderer only as set or not set, and a key encrypted by an earlier version reads as not set until it is saved again;
+// fails_when=a stored key is not read back, status carries a value, a cleared key still reads as set, or an old keychain row is passed off as a key;
+// no_claim=the database adapter is covered by the repository tests; file permissions of the data folder are the operating system's.
 import { describe, expect, it } from "vitest";
-import { createSecretStore, resolveSecretStorage, type SafeStorageLike } from "./store";
+import { createSecretStore, secretRowKey } from "./store";
 
-function fakeSafeStorage(options: { available?: boolean; backend?: string } = {}): SafeStorageLike {
-  return {
-    isEncryptionAvailable: () => options.available ?? true,
-    encryptString: (plainText) => Buffer.from(`enc:${plainText}`, "utf8"),
-    decryptString: (encrypted) => encrypted.toString("utf8").replace(/^enc:/, ""),
-    ...(options.backend === undefined
-      ? {}
-      : { getSelectedStorageBackend: () => options.backend as string }),
-  };
-}
-
-function memoryRows() {
-  const rows = new Map<string, string>();
+function memoryRows(initial: Record<string, string> = {}) {
+  const rows = new Map(Object.entries(initial));
   return {
     rows,
     read: async (key: string) => rows.get(key) ?? null,
@@ -25,152 +14,31 @@ function memoryRows() {
   };
 }
 
-function storeWith(options: {
-  safeStorage: SafeStorageLike;
-  basicTextAllowed?: boolean;
-  rows?: ReturnType<typeof memoryRows>;
-}) {
-  const rows = options.rows ?? memoryRows();
-  const store = createSecretStore({
-    safeStorage: options.safeStorage,
-    rows,
-    isBasicTextAllowed: async () => options.basicTextAllowed ?? false,
-    platform: "linux",
-  });
-  return { store, rows };
-}
-
 describe("secret store", () => {
-  it("on macOS shows the status without touching the keychain, and asks only to save or read a key", async () => {
-    let asked = 0;
-    const safeStorage = fakeSafeStorage();
-    const counted: SafeStorageLike = {
-      ...safeStorage,
-      isEncryptionAvailable: () => {
-        asked += 1;
-        return safeStorage.isEncryptionAvailable();
-      },
-    };
+  it("stores a key, reads it back in main and reports only that it is set", async () => {
     const rows = memoryRows();
-    const store = createSecretStore({
-      safeStorage: counted,
-      rows,
-      isBasicTextAllowed: async () => false,
-      platform: "darwin",
-    });
-    expect((await store.status()).storage).toEqual({ mode: "encrypted", optInRequired: false });
-    expect(asked).toBe(0);
-    await store.set("ai.apiKey.openai", "sk-test-value");
-    expect(asked).toBe(1);
-    expect((await store.status()).keys["ai.apiKey.openai"]).toBe(true);
-    expect(asked).toBe(1);
-  });
-
-  it("on macOS reports keys kept in memory once saving found no keychain", async () => {
-    const store = createSecretStore({
-      safeStorage: fakeSafeStorage({ available: false }),
-      rows: memoryRows(),
-      isBasicTextAllowed: async () => false,
-      platform: "darwin",
-    });
-    await store.set("ai.apiKey.openai", "sk-test-value");
-    const status = await store.status();
-    expect(status.storage.mode).toBe("session-only");
-    expect(status.keys["ai.apiKey.openai"]).toBe(true);
-  });
-
-  it("writes an encrypted blob, not the plain key, when encryption is available", async () => {
-    const { store, rows } = storeWith({ safeStorage: fakeSafeStorage() });
-    await store.set("ai.apiKey.openai", "sk-test-value");
-    const stored = [...rows.rows.values()];
-    expect(stored).toHaveLength(1);
-    expect(stored[0]).not.toContain("sk-test-value");
-    expect(await store.read("ai.apiKey.openai")).toBe("sk-test-value");
-    expect((await store.status()).storage).toEqual({ mode: "encrypted", optInRequired: false });
-  });
-
-  it("reports set or not set per key and never the value", async () => {
-    const { store } = storeWith({ safeStorage: fakeSafeStorage() });
-    await store.set("search.brave", "brave-secret-value");
-    const status = await store.status();
-    expect(status.keys["search.brave"]).toBe(true);
+    const store = createSecretStore({ rows });
+    const status = await store.set("search.tavily", "tvly-secret-value");
+    expect(await store.read("search.tavily")).toBe("tvly-secret-value");
+    expect(status.keys["search.tavily"]).toBe(true);
     expect(status.keys["ai.apiKey.openai"]).toBe(false);
-    expect(JSON.stringify(status)).not.toContain("brave-secret-value");
+    expect(JSON.stringify(status)).not.toContain("tvly-secret-value");
   });
 
-  it("keeps keys in memory only when encryption is unavailable", async () => {
-    const { store, rows } = storeWith({ safeStorage: fakeSafeStorage({ available: false }) });
-    await store.set("search.tavily", "tavily-value");
-    expect(rows.rows.size).toBe(0);
-    expect(await store.read("search.tavily")).toBe("tavily-value");
-    expect((await store.status()).storage.mode).toBe("session-only");
-  });
-
-  it("does not write basic_text keys to disk before the Linux opt-in", async () => {
-    const safeStorage = fakeSafeStorage({ backend: "basic_text" });
-    const { store, rows } = storeWith({ safeStorage, basicTextAllowed: false });
-    await store.set("ai.apiKey.openai", "sk-linux-value");
-    expect(rows.rows.size).toBe(0);
-    const status = await store.status();
-    expect(status.storage).toEqual({ mode: "session-only", optInRequired: true });
-    expect(status.keys["ai.apiKey.openai"]).toBe(true);
-  });
-
-  it("moves in-memory keys to disk once the opt-in is granted", async () => {
-    const safeStorage = fakeSafeStorage({ backend: "basic_text" });
-    let allowed = false;
-    const rows = memoryRows();
-    const store = createSecretStore({
-      safeStorage,
-      rows,
-      isBasicTextAllowed: async () => allowed,
-    });
-    await store.set("ai.apiKey.openai", "sk-linux-value");
-    expect(rows.rows.size).toBe(0);
-    allowed = true;
-    await store.onBasicTextAllowedChanged();
-    expect(rows.rows.size).toBe(1);
-    expect(await store.read("ai.apiKey.openai")).toBe("sk-linux-value");
-  });
-
-  it("removes the keys from disk when the Linux opt-in is withdrawn", async () => {
-    // protects=withdrawing the basic_text opt-in deletes the stored keys and keeps them for the session; fails_when=a key stays in the database after the opt-in is turned off or is reported as not set while still stored; no_claim=the Settings screen;
-    let allowed = true;
-    const rows = memoryRows();
-    const store = createSecretStore({
-      safeStorage: fakeSafeStorage({ backend: "basic_text" }),
-      rows,
-      isBasicTextAllowed: async () => allowed,
-    });
-    await store.set("ai.apiKey.openai", "sk-linux-value");
-    expect(rows.rows.size).toBe(1);
-
-    allowed = false;
-    await store.onBasicTextAllowedChanged();
-
-    expect(rows.rows.size).toBe(0);
-    expect((await store.status()).keys["ai.apiKey.openai"]).toBe(true);
-    expect(await store.read("ai.apiKey.openai")).toBe("sk-linux-value");
-  });
-
-  it("removes both the memory copy and the disk blob on clear", async () => {
-    const { store, rows } = storeWith({ safeStorage: fakeSafeStorage() });
-    await store.set("ai.apiKey.openai", "sk-test-value");
+  it("forgets a cleared key", async () => {
+    const store = createSecretStore({ rows: memoryRows() });
+    await store.set("ai.apiKey.openai", "sk-test");
     const status = await store.clear("ai.apiKey.openai");
     expect(status.keys["ai.apiKey.openai"]).toBe(false);
-    expect(rows.rows.size).toBe(0);
     expect(await store.read("ai.apiKey.openai")).toBeNull();
   });
-});
 
-describe("resolveSecretStorage", () => {
-  it("treats an unknown backend as session-only and macOS-style encryption as encrypted", () => {
-    expect(resolveSecretStorage(fakeSafeStorage({ backend: "unknown" }), true).mode).toBe(
-      "session-only",
-    );
-    expect(resolveSecretStorage(fakeSafeStorage(), false)).toEqual({
-      mode: "encrypted",
-      optInRequired: false,
-    });
+  it("treats a key encrypted with the keychain by an earlier version as not set", async () => {
+    const rows = memoryRows({ [secretRowKey("search.tavily")]: "djEwAAAAciphertext==" });
+    const store = createSecretStore({ rows });
+    expect(await store.read("search.tavily")).toBeNull();
+    expect((await store.status()).keys["search.tavily"]).toBe(false);
+    await store.set("search.tavily", "tvly-new");
+    expect(await store.read("search.tavily")).toBe("tvly-new");
   });
 });

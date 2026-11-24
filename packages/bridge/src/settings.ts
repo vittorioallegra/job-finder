@@ -73,8 +73,6 @@ const appSection = z.strictObject({
 
 const updatesSection = z.strictObject({ checkEnabled: z.boolean() });
 
-const secretsSection = z.strictObject({ allowBasicText: z.boolean() });
-
 /** Each section is stored as one JSON row in the settings table, so a section is the unit of validation. */
 export const SETTINGS_SECTIONS = {
   ai: aiSection,
@@ -84,7 +82,6 @@ export const SETTINGS_SECTIONS = {
   scheduler: schedulerSection,
   app: appSection,
   updates: updatesSection,
-  secrets: secretsSection,
 } as const;
 
 export const AppSettingsSchema = z
@@ -109,7 +106,6 @@ export const AppSettingsPatchSchema = z
     scheduler: schedulerSection.partial(),
     app: appSection.partial(),
     updates: updatesSection.partial(),
-    secrets: secretsSection.partial(),
   })
   .partial();
 
@@ -125,7 +121,6 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   scheduler: { intervalHours: 24 },
   app: { closeBehavior: "ask", launchAtLogin: false },
   updates: { checkEnabled: true },
-  secrets: { allowBasicText: false },
 };
 
 /** Merges a patch into settings section by section and validates the result. Throws on invalid input. */

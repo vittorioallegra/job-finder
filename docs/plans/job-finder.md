@@ -394,6 +394,8 @@ Approved: yes (2026-11-23)
 - Step 7: one request per second per host (p-queue, concurrency 1, interval cap 1). robots.txt fetches and retries count against that queue; the backoff wait happens outside it.
 - Step 7: robots.txt: 2xx is parsed; 5xx, network errors, timeouts and oversize files block the origin for five minutes; every 4xx allows everything. The final URL of a redirect is checked too.
 - 2026-11-24: robots.txt answered with 401 or 403 now allows the origin, as RFC 9309 (2.3.1.3) says for any 4xx. Blocking on them stopped every Ashby board: its public job posting API answers 401 for `/robots.txt`.
+- 2026-11-24: API keys are stored as plain text in the settings table instead of safeStorage. The keychain asked for the password after every update of the unsigned app; the user chose convenience over encryption at rest. No migration: keys encrypted before read as not set and are entered again.
+- 2026-11-24: Company search uses one service at a time (DuckDuckGo by default); with a usable key, DuckDuckGo is left out.
 - Step 7: retries for 429, 5xx and network errors: up to three attempts, waits of 1 s then 2 s, or `Retry-After` capped at 60 s. Timeouts (20 s) and caller cancellations are not retried. Bodies over 5 MiB are refused.
 - Step 7: the response cache is in memory only (2xx GET, 10 minutes, 200 entries). No table: the plan has no persistent HTTP cache.
 - Step 7: the runtime exposes `renderPage(url)`: it resolves the URL, checks robots.txt, then asks main over the port (`page-render`). Main's supervisor forwards it to the page loader and answers with `page-render-result`.

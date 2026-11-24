@@ -1,4 +1,4 @@
-// protects=every IPC call passes the top-level app-origin sender check and the payload schema before reaching a service, the settings update triggers the Linux opt-in follow-up and the settings hook, and the app status channels reach the app service;
+// protects=every IPC call passes the top-level app-origin sender check and the payload schema before reaching a service, the settings update triggers the settings hook, and the app status channels reach the app service;
 // fails_when=a call from a sub-frame or foreign origin reaches a service, an invalid payload is passed on, or a channel in the contract is not registered;
 // no_claim=Electron's own sender identity and the preload's exposure are not exercised here.
 import { describe, expect, it } from "vitest";
@@ -56,9 +56,6 @@ function spyServices() {
       throw new Error("unexpected");
     },
     read: async () => null,
-    onBasicTextAllowedChanged: async () => {
-      calls.push("secrets.onBasicTextAllowedChanged");
-    },
   } as unknown as SecretStore;
   const ai = {
     testConnection: async () => {
@@ -264,18 +261,6 @@ describe("IPC sender and payload guard", () => {
     const result = await handleInvoke("settings:get", services, topFrame(), undefined, APP_ORIGIN);
     expect(result).toEqual(DEFAULT_APP_SETTINGS);
     expect(calls).toEqual(["settings.get"]);
-  });
-
-  it("re-checks the Linux opt-in after a settings update that names it", async () => {
-    const { services, calls } = spyServices();
-    await handleInvoke(
-      "settings:update",
-      services,
-      topFrame(),
-      { secrets: { allowBasicText: true } },
-      APP_ORIGIN,
-    );
-    expect(calls).toEqual(["settings.update", "secrets.onBasicTextAllowedChanged"]);
   });
 
   it("answers the app status channels from the app service and runs the settings hook after an update", async () => {

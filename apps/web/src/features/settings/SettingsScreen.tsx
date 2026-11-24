@@ -14,9 +14,16 @@ import { Button } from "../../components/ui/Button";
 import { Card, CardTitle } from "../../components/ui/Card";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { CheckboxInput } from "../../components/ui/CheckboxInput";
+import { RadioInput } from "../../components/ui/RadioInput";
 import { SelectInput, type SelectOption } from "../../components/ui/SelectInput";
 import { TextInput } from "../../components/ui/TextInput";
-import { draftFromSettings, patchFromDraft, type SettingsDraft } from "./draft";
+import {
+  chosenSearch,
+  draftFromSettings,
+  patchFromDraft,
+  searchFor,
+  type SettingsDraft,
+} from "./draft";
 import { AiConnectionTest, SecretField } from "./AiControls";
 import { AiProviderFields } from "./AiProviderFields";
 import { defaultContextSize, type AiChoiceFields } from "./provider-choice";
@@ -110,11 +117,11 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
   const { t } = useTranslation();
   const [draft, setDraft] = useState<SettingsDraft>(() => draftFromSettings(initialSettings));
   const [savedDraft, setSavedDraft] = useState<SettingsDraft>(draft);
+  const searchService = chosenSearch(draft.search);
   const unsaved = JSON.stringify(draft) !== JSON.stringify(savedDraft);
   const [secrets, setSecrets] = useState<SecretsStatus>(initialSecrets);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   useAutoDismiss(saveState === "saved", () => setSaveState("idle"));
-  const [allowBasicText, setAllowBasicText] = useState(initialSettings.secrets.allowBasicText);
   const isLinux = bridge.platform === "linux";
 
   function change<K extends keyof SettingsDraft>(key: K, value: SettingsDraft[K]) {
@@ -174,16 +181,6 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
     await saveDraft();
   }
 
-  async function toggleBasicText(allowed: boolean) {
-    try {
-      const next = await bridge.settings.update({ secrets: { allowBasicText: allowed } });
-      setAllowBasicText(next.secrets.allowBasicText);
-      setSecrets(await bridge.secrets.status());
-    } catch {
-      setSaveState("error");
-    }
-  }
-
   const languageOptions: SelectOption[] = [
     { value: "system", label: t("settings.language.system") },
     { value: "en", label: t("settings.language.en") },
@@ -227,36 +224,31 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
       <Card as="section" aria-labelledby="settings-search" className="flex flex-col gap-4">
         <CardTitle id="settings-search">{t("settings.sections.search")}</CardTitle>
         <p className="text-sm text-app-muted">{t("settings.search.intro")}</p>
-        <CheckboxInput
-          label={t("settings.search.duckduckgo")}
-          hint={t("settings.search.duckduckgoHint")}
-          checked={draft.search.duckduckgo}
-          onChange={(event) =>
-            change("search", { ...draft.search, duckduckgo: event.target.checked })
-          }
-        />
-        <div className="flex flex-col gap-4 border-t border-app-border pt-4">
-          <div className="flex flex-col gap-1">
-            <h3 className="text-sm font-semibold text-app-fg">{t("settings.search.keyedTitle")}</h3>
-            <p className="text-sm text-app-muted">{t("settings.search.keyedIntro")}</p>
-          </div>
+        <fieldset className="flex flex-col gap-4">
+          <legend className="sr-only">{t("settings.search.service")}</legend>
+          <RadioInput
+            name="search-service"
+            label={t("settings.search.duckduckgo")}
+            hint={t("settings.search.duckduckgoHint")}
+            checked={searchService === "duckduckgo"}
+            onChange={() => change("search", searchFor("duckduckgo"))}
+          />
           {KEYED_SEARCH.map(({ provider, site }) => {
             const name = t(`settings.search.${provider}`);
             const keyName: SecretName = `search.${provider}`;
-            const enabled = draft.search[provider];
+            const chosen = searchService === provider;
             return (
               <div key={provider} className="flex flex-col gap-3">
-                <CheckboxInput
-                  label={t("settings.search.use", { name })}
+                <RadioInput
+                  name="search-service"
+                  label={name}
                   hint={t("settings.search.site", { site })}
-                  checked={enabled}
-                  onChange={(event) =>
-                    change("search", { ...draft.search, [provider]: event.target.checked })
-                  }
+                  checked={chosen}
+                  onChange={() => change("search", searchFor(provider))}
                 />
-                {/* The key matters only while the service is on, so it shows only then. */}
-                {enabled ? (
-                  <div className="ml-7 flex flex-col gap-2 border-l-2 border-app-border pl-4">
+                {/* The key matters only for the chosen service, so it shows only then. */}
+                {chosen ? (
+                  <div className="ml-6 flex flex-col gap-2 border-l-2 border-app-border pl-4">
                     <SecretField
                       bridge={bridge}
                       name={keyName}
@@ -272,7 +264,7 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
               </div>
             );
           })}
-        </div>
+        </fieldset>
       </Card>
 
       <Card as="section" aria-labelledby="settings-language" className="flex flex-col gap-4">
@@ -336,18 +328,6 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
           onChange={(event) => change("checkUpdates", event.target.checked)}
         />
       </Card>
-
-      {isLinux && secrets.storage.optInRequired ? (
-        <Card as="section" aria-labelledby="settings-keyring" className="flex flex-col gap-3">
-          <CardTitle id="settings-keyring">{t("settings.secrets.optInTitle")}</CardTitle>
-          <p className="text-sm text-app-muted">{t("settings.secrets.optInBody")}</p>
-          <CheckboxInput
-            label={t("settings.secrets.optIn")}
-            checked={allowBasicText}
-            onChange={(event) => void toggleBasicText(event.target.checked)}
-          />
-        </Card>
-      ) : null}
 
       <div className="sticky bottom-4 flex items-center justify-end gap-4 rounded-2xl border border-app-border bg-app-surface/95 px-5 py-3 shadow-pop backdrop-blur">
         <p

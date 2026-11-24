@@ -15,22 +15,8 @@ export const SECRET_NAMES = [
 ] as const;
 export type SecretName = (typeof SECRET_NAMES)[number];
 
-/**
- * How secrets are kept. `encrypted`: OS keychain via safeStorage, on disk. `basic-text`: Linux
- * without a keyring, on disk, only after the user opted in. `session-only`: memory until quit.
- */
-export const SECRET_STORAGE_MODES = ["encrypted", "basic-text", "session-only"] as const;
-export type SecretStorageMode = (typeof SECRET_STORAGE_MODES)[number];
-
-export interface SecretStorageInfo {
-  mode: SecretStorageMode;
-  /** True when keys would be kept on disk only after the user opts in (Linux `basic_text`). */
-  optInRequired: boolean;
-}
-
-/** What the renderer may see about secrets: storage mode and whether each key is set, never its value. */
+/** What the renderer may see about secrets: whether each key is set, never its value. */
 export interface SecretsStatus {
-  storage: SecretStorageInfo;
   keys: Record<SecretName, boolean>;
 }
 
@@ -42,6 +28,3 @@ export const SecretSetRequestSchema = z.strictObject({
 export const SecretClearRequestSchema = z.strictObject({
   name: z.enum(SECRET_NAMES),
 });
-
-/** The single AI key of earlier versions; main moves it to the saved provider's own key once. */
-export const LEGACY_AI_KEY_ROW = "secret.ai.apiKey";

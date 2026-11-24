@@ -54,9 +54,11 @@ export function createDiscoveryService(options: DiscoveryServiceOptions): Discov
           const apiKey = await options.secrets.read(KEYED_SECRETS[provider]);
           if (apiKey) keyed.push({ provider, apiKey });
         }
+        // One service at a time: with a usable key, DuckDuckGo stays out (settings saved before
+        // the choice became single may still have both switched on).
         const outcome = await current.discoverCompanies(
           { keywords: request.keywords, locations: request.locations },
-          { duckduckgo: search.duckduckgo, keyed },
+          { duckduckgo: search.duckduckgo && keyed.length === 0, keyed },
         );
         if (!outcome.ok) return { ok: false, code: outcome.code };
         // The note about a blocked keyless search suggests adding a key: it is left out once a key
