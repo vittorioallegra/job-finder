@@ -62,7 +62,7 @@
     "invalid": "Some values are out of range or incomplete. Nothing was saved.",
     "sections": {
       "ai": "AI provider",
-      "search": "Job search",
+      "search": "Finding companies",
       "language": "Language",
       "notifications": "Notifications",
       "scheduler": "Scheduler",
@@ -81,8 +81,8 @@
       "model": "Model",
       "baseUrl": "Base URL",
       "baseUrlHint": "The address of the server's OpenAI-compatible API, for example http://localhost:1234/v1 for LM Studio.",
-      "contextSize": "Context size (tokens)",
-      "contextSizeHint": "How much text is sent to the model in one request.",
+      "contextSize": "Longest text per request (tokens)",
+      "contextSizeHint": "How many tokens the server reads in one request; its own settings say so. The app uses it to spot texts that are too long: a longer posting is not scored and a longer CV is flagged, instead of being cut without notice.",
       "apiKey": "API key",
       "test": {
         "action": "Test connection",
@@ -102,7 +102,7 @@
           "engine-unavailable": "the AI worker is not running"
         }
       },
-      "contextSizeHintOllama": "Ollama uses the context size it was started with. Start it with OLLAMA_CONTEXT_LENGTH at least this large, or longer texts are cut without warning.",
+      "contextSizeHintOllama": "Set it to the context Ollama was started with (the OLLAMA_CONTEXT_LENGTH variable). The app uses it to spot texts that are too long: a longer posting is not scored and a longer CV is flagged, instead of being cut without notice.",
       "help": {
         "anthropic": "Claude models, in the cloud. Create an API key in the Anthropic Console and paste it below. Your CV and job texts are sent to Anthropic.",
         "openai": "GPT models, in the cloud. Create an API key on the OpenAI platform and paste it below. Your CV and job texts are sent to OpenAI.",
@@ -147,12 +147,18 @@
       }
     },
     "search": {
-      "duckduckgo": "DuckDuckGo",
-      "duckduckgoHint": "Free, no key needed.",
+      "intro": "When you search on the Companies page, the app looks on the web for the job boards of companies that match your keywords. It needs at least one search service.",
+      "duckduckgo": "Search with DuckDuckGo",
+      "duckduckgoHint": "Free and without a key. Enough to start, but it sometimes blocks automated searches.",
+      "keyedTitle": "Services with a key (optional)",
+      "keyedIntro": "More reliable than DuckDuckGo. Each has a free plan: create a key on its site, turn the service on and paste the key.",
+      "use": "Use {{name}}",
+      "keyLabel": "{{name}} key",
+      "site": "Create a free key at {{site}}.",
       "brave": "Brave Search",
       "tavily": "Tavily",
       "serper": "Serper",
-      "keyHint": "Recommended: a free-tier key. Used only while this provider is enabled."
+      "needsKey": "Paste a key, or this service is skipped."
     },
     "language": {
       "label": "Interface language",

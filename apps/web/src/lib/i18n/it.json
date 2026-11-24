@@ -62,7 +62,7 @@
     "invalid": "Alcuni valori sono fuori dai limiti o incompleti. Nulla è stato salvato.",
     "sections": {
       "ai": "Provider AI",
-      "search": "Ricerca di lavoro",
+      "search": "Ricerca di aziende",
       "language": "Lingua",
       "notifications": "Notifiche",
       "scheduler": "Pianificatore",
@@ -81,8 +81,8 @@
       "model": "Modello",
       "baseUrl": "URL base",
       "baseUrlHint": "L'indirizzo dell'API compatibile con OpenAI del server, per esempio http://localhost:1234/v1 per LM Studio.",
-      "contextSize": "Dimensione del contesto (token)",
-      "contextSizeHint": "Quanto testo viene inviato al modello in una singola richiesta.",
+      "contextSize": "Testo massimo per richiesta (token)",
+      "contextSizeHint": "Quanti token il server legge in una richiesta: lo dice la sua configurazione. L'app lo usa per riconoscere i testi troppo lunghi: un'offerta più lunga non viene valutata e un CV più lungo viene segnalato, invece di finire tagliato senza avviso.",
       "apiKey": "Chiave API",
       "test": {
         "action": "Verifica connessione",
@@ -102,7 +102,7 @@
           "engine-unavailable": "il processo AI non è in esecuzione"
         }
       },
-      "contextSizeHintOllama": "Ollama usa la dimensione del contesto con cui è stato avviato. Avvialo con OLLAMA_CONTEXT_LENGTH almeno pari a questo valore, altrimenti i testi lunghi vengono tagliati senza avviso.",
+      "contextSizeHintOllama": "Mettilo uguale al contesto con cui avvii Ollama (la variabile OLLAMA_CONTEXT_LENGTH). L'app lo usa per riconoscere i testi troppo lunghi: un'offerta più lunga non viene valutata e un CV più lungo viene segnalato, invece di finire tagliato senza avviso.",
       "help": {
         "anthropic": "Modelli Claude, nel cloud. Crea una chiave API nella Console di Anthropic e incollala qui sotto. Il CV e i testi delle offerte vengono inviati ad Anthropic.",
         "openai": "Modelli GPT, nel cloud. Crea una chiave API sulla piattaforma OpenAI e incollala qui sotto. Il CV e i testi delle offerte vengono inviati a OpenAI.",
@@ -147,12 +147,18 @@
       }
     },
     "search": {
-      "duckduckgo": "DuckDuckGo",
-      "duckduckgoHint": "Gratuito, non serve una chiave.",
+      "intro": "Quando cerchi dalla pagina Aziende, l'app cerca sul web le bacheche di lavoro delle aziende che corrispondono alle tue parole chiave. Serve almeno un servizio di ricerca.",
+      "duckduckgo": "Cerca con DuckDuckGo",
+      "duckduckgoHint": "Gratuito e senza chiave. Basta per iniziare, ma a volte blocca le ricerche automatiche.",
+      "keyedTitle": "Servizi con chiave (facoltativi)",
+      "keyedIntro": "Più affidabili di DuckDuckGo. Ognuno ha un piano gratuito: crea una chiave sul suo sito, attiva il servizio e incolla la chiave.",
+      "use": "Usa {{name}}",
+      "keyLabel": "Chiave di {{name}}",
+      "site": "Crea una chiave gratuita su {{site}}.",
       "brave": "Brave Search",
       "tavily": "Tavily",
       "serper": "Serper",
-      "keyHint": "Consigliato: una chiave del piano gratuito. Usata solo mentre il fornitore è attivo."
+      "needsKey": "Incolla una chiave, altrimenti questo servizio non viene usato."
     },
     "language": {
       "label": "Lingua dell'interfaccia",

@@ -25,6 +25,7 @@ import {
   aiChoiceFromSettings,
   aiSettingsFromChoice,
   type AiChoiceFields,
+  contextSizeFor,
 } from "../settings/provider-choice";
 import { draftFromExtraction, draftFromProfile, type ProfileDraft } from "../profile/profile-draft";
 import { ProfileEditor } from "../profile/ProfileEditor";
@@ -219,7 +220,10 @@ function AiStep({ bridge, settings, onSaved, onContinue }: AiStepProps) {
     setMessage("saving");
     try {
       const next = await bridge.settings.update({
-        ai: { ...aiSettingsFromChoice(fields), contextSize: settings.ai.contextSize },
+        ai: {
+          ...aiSettingsFromChoice(fields),
+          contextSize: contextSizeFor(fields.choice, settings.ai.contextSize),
+        },
       });
       setDirty(false);
       setMessage("saved");

@@ -18,7 +18,7 @@ import { TextInput } from "../../components/ui/TextInput";
 import { draftFromSettings, patchFromDraft, type SettingsDraft } from "./draft";
 import { AiConnectionTest, SecretField } from "./AiControls";
 import { AiProviderFields } from "./AiProviderFields";
-import type { AiChoiceFields } from "./provider-choice";
+import { choiceSetsContextSize, type AiChoiceFields } from "./provider-choice";
 
 type LoadState =
   | { status: "loading" }
@@ -95,6 +95,13 @@ interface SettingsFormProps {
   initialSecrets: SecretsStatus;
   bridge: JobFinderBridge;
 }
+
+/** Search services that need a key, with the site where a free key is made. */
+const KEYED_SEARCH = [
+  { provider: "brave", site: "api-dashboard.search.brave.com" },
+  { provider: "tavily", site: "app.tavily.com" },
+  { provider: "serper", site: "serper.dev" },
+] as const;
 
 type SaveState = "idle" | "saving" | "saved" | "invalid" | "error";
 
@@ -194,20 +201,23 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
             />
           )}
         />
-        <TextInput
-          label={t("settings.ai.contextSize")}
-          hint={
-            draft.aiProvider === "ollama"
-              ? t("settings.ai.contextSizeHintOllama")
-              : t("settings.ai.contextSizeHint")
-          }
-          type="number"
-          inputMode="numeric"
-          min={SETTING_LIMITS.contextSizeMin}
-          max={SETTING_LIMITS.contextSizeMax}
-          value={draft.aiContextSize}
-          onChange={(event) => change("aiContextSize", event.target.value)}
-        />
+        {/* Hosted providers read far more than any text the app sends; only a server needs it. */}
+        {choiceSetsContextSize(draft.aiProvider) ? (
+          <TextInput
+            label={t("settings.ai.contextSize")}
+            hint={
+              draft.aiProvider === "ollama"
+                ? t("settings.ai.contextSizeHintOllama")
+                : t("settings.ai.contextSizeHint")
+            }
+            type="number"
+            inputMode="numeric"
+            min={SETTING_LIMITS.contextSizeMin}
+            max={SETTING_LIMITS.contextSizeMax}
+            value={draft.aiContextSize}
+            onChange={(event) => change("aiContextSize", event.target.value)}
+          />
+        ) : null}
         {/* The test reads the saved settings, so the changes on screen are saved first. */}
         <AiConnectionTest
           bridge={bridge}
@@ -217,6 +227,7 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
 
       <Card as="section" aria-labelledby="settings-search" className="flex flex-col gap-4">
         <CardTitle id="settings-search">{t("settings.sections.search")}</CardTitle>
+        <p className="text-sm text-app-muted">{t("settings.search.intro")}</p>
         <CheckboxInput
           label={t("settings.search.duckduckgo")}
           hint={t("settings.search.duckduckgoHint")}
@@ -225,25 +236,44 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
             change("search", { ...draft.search, duckduckgo: event.target.checked })
           }
         />
-        {(["brave", "tavily", "serper"] as const).map((provider) => (
-          <div key={provider} className="flex flex-col gap-3 rounded-xl bg-app-sunken/60 p-4">
-            <CheckboxInput
-              label={t(`settings.search.${provider}`)}
-              hint={t("settings.search.keyHint")}
-              checked={draft.search[provider]}
-              onChange={(event) =>
-                change("search", { ...draft.search, [provider]: event.target.checked })
-              }
-            />
-            <SecretField
-              bridge={bridge}
-              name={`search.${provider}` as SecretName}
-              label={t(`settings.search.${provider}`)}
-              secrets={secrets}
-              onStatus={setSecrets}
-            />
+        <div className="flex flex-col gap-4 border-t border-app-border pt-4">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-sm font-semibold text-app-fg">{t("settings.search.keyedTitle")}</h3>
+            <p className="text-sm text-app-muted">{t("settings.search.keyedIntro")}</p>
           </div>
-        ))}
+          {KEYED_SEARCH.map(({ provider, site }) => {
+            const name = t(`settings.search.${provider}`);
+            const keyName: SecretName = `search.${provider}`;
+            const enabled = draft.search[provider];
+            return (
+              <div key={provider} className="flex flex-col gap-3">
+                <CheckboxInput
+                  label={t("settings.search.use", { name })}
+                  hint={t("settings.search.site", { site })}
+                  checked={enabled}
+                  onChange={(event) =>
+                    change("search", { ...draft.search, [provider]: event.target.checked })
+                  }
+                />
+                {/* The key matters only while the service is on, so it shows only then. */}
+                {enabled ? (
+                  <div className="ml-7 flex flex-col gap-2 border-l-2 border-app-border pl-4">
+                    <SecretField
+                      bridge={bridge}
+                      name={keyName}
+                      label={t("settings.search.keyLabel", { name })}
+                      secrets={secrets}
+                      onStatus={setSecrets}
+                    />
+                    {secrets.keys[keyName] ? null : (
+                      <p className="text-sm text-app-danger">{t("settings.search.needsKey")}</p>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
       </Card>
 
       <Card as="section" aria-labelledby="settings-language" className="flex flex-col gap-4">

@@ -6,7 +6,14 @@ import {
   type SearchProvider,
   type UiLanguage,
 } from "@job-finder/bridge";
-import { aiChoiceFromSettings, aiSettingsFromChoice, type AiChoice } from "./provider-choice";
+import {
+  aiChoiceFromSettings,
+  aiSettingsFromChoice,
+  choiceSetsContextSize,
+  contextSizeFor,
+  LOCAL_CONTEXT_SIZE,
+  type AiChoice,
+} from "./provider-choice";
 
 /** Form state. Numbers stay strings while typing and are parsed only when saving. */
 export interface SettingsDraft {
@@ -29,7 +36,12 @@ export function draftFromSettings(settings: AppSettings): SettingsDraft {
     aiProvider: aiChoiceFromSettings(settings.ai),
     aiModel: settings.ai.model,
     aiBaseUrl: settings.ai.baseUrl,
-    aiContextSize: String(settings.ai.contextSize),
+    // A hosted provider's size is set by the app; a switch to a server starts from the usual one.
+    aiContextSize: String(
+      choiceSetsContextSize(aiChoiceFromSettings(settings.ai))
+        ? settings.ai.contextSize
+        : LOCAL_CONTEXT_SIZE,
+    ),
     search: { ...settings.search },
     language: settings.ui.language,
     notifications: settings.notifications.enabled,
@@ -49,7 +61,7 @@ export function patchFromDraft(draft: SettingsDraft): AppSettingsPatch | null {
         model: draft.aiModel,
         baseUrl: draft.aiBaseUrl,
       }),
-      contextSize: Number(draft.aiContextSize),
+      contextSize: contextSizeFor(draft.aiProvider, Number(draft.aiContextSize)),
     },
     search: { ...draft.search },
     ui: { language: draft.language },

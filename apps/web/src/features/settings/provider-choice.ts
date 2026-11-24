@@ -64,3 +64,27 @@ export function switchAiChoice(fields: AiChoiceFields, choice: AiChoice): AiChoi
     choice === "gemini" ? GEMINI_BASE_URL : choice === "ollama" ? OLLAMA_BASE_URL : "";
   return { choice, model: "", baseUrl };
 }
+
+/**
+ * Hosted providers (Anthropic, OpenAI, Gemini) read far more than any CV or posting; their context
+ * size is set to this and not shown. Ollama and other servers read only what they were started
+ * with, so the user sets it there.
+ */
+export const HOSTED_CONTEXT_SIZE = 128_000;
+
+/** The value the context size field starts from for a server on its own: Ollama's usual setup. */
+export const LOCAL_CONTEXT_SIZE = 8192;
+
+/** True when the user sets the context size: Ollama and other OpenAI-compatible servers. */
+export function choiceSetsContextSize(choice: AiChoice): boolean {
+  return choice === "ollama" || choice === "openai-compatible";
+}
+
+/**
+ * The context size to save for a choice. A server keeps the size typed for it; a value left from
+ * a hosted provider never carries over to one, since it would hide that texts are too long.
+ */
+export function contextSizeFor(choice: AiChoice, typed: number): number {
+  if (!choiceSetsContextSize(choice)) return HOSTED_CONTEXT_SIZE;
+  return typed === HOSTED_CONTEXT_SIZE ? LOCAL_CONTEXT_SIZE : typed;
+}

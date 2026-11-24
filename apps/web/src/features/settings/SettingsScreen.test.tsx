@@ -1,4 +1,4 @@
-// protects=the settings screen loads the saved values, saves only valid changes through the bridge, retries after a failed read, and never shows a stored key value; Linux shows the keyring opt-in and hides launch at login; the AI connection test saves the changes on screen first, then shows the model or the AI unavailable reason; Ollama is set up from its installed models without a key field; each provider keeps its own key;
+// protects=the settings screen loads the saved values, saves only valid changes through the bridge, retries after a failed read, and never shows a stored key value; Linux shows the keyring opt-in and hides launch at login; the AI connection test saves the changes on screen first, then shows the model or the AI unavailable reason; Ollama is set up from its installed models without a key field; each provider keeps its own key; the context size shows only for a server and a search key only while its service is on;
 // fails_when=a value is sent without validation, a key value is rendered, a failed read shows a blank form, Linux shows launch at login, a failed AI test shows no reason, the test reads settings older than the screen, Ollama asks for a key, saves an unusable provider or hides why its models are missing;
 // no_claim=visual layout, keyboard focus order and the real OS keychain are not checked here.
 import { act } from "react";
@@ -316,6 +316,22 @@ describe("settings screen", () => {
     expect(container.textContent).toContain("A key is saved.");
   });
 
+  it("asks for the context size only for a server, and for a search key only while its service is on", async () => {
+    await render(createMemoryBridge());
+    expect(container.textContent).not.toContain("Longest text per request");
+    await act(async () => {
+      setInputValue(field(container, "Provider"), "ollama");
+    });
+    expect(container.textContent).toContain("Longest text per request");
+
+    expect(container.textContent).not.toContain("Brave Search key");
+    await act(async () => {
+      (field(container, "Use Brave Search") as HTMLInputElement).click();
+    });
+    expect(container.textContent).toContain("Brave Search key");
+    expect(container.textContent).toContain("Paste a key, or this service is skipped.");
+  });
+
   it("shows the Linux keyring opt-in and hides launch at login", async () => {
     const memory = createMemoryBridge({
       platform: "linux",
@@ -380,7 +396,7 @@ describe("settings screen", () => {
       ai: { ...memory.ai, testConnection },
     });
     await act(async () => {
-      setInputValue(field(container, "Context size"), "16384");
+      setInputValue(field(container, "Check saved searches every"), "48");
     });
     expect(container.textContent).toContain("Unsaved changes.");
     await act(async () => {
@@ -388,7 +404,7 @@ describe("settings screen", () => {
     });
     await act(async () => {});
     expect(calls).toEqual(["update", "test"]);
-    expect(update.mock.calls[0]?.[0].ai?.contextSize).toBe(16384);
+    expect(update.mock.calls[0]?.[0].scheduler?.intervalHours).toBe(48);
     expect(container.textContent).not.toContain("Unsaved changes.");
 
     await act(async () => {
@@ -403,7 +419,7 @@ describe("settings screen", () => {
     const testConnection = vi.fn(memory.ai.testConnection);
     await render({ ...memory, ai: { ...memory.ai, testConnection } });
     await act(async () => {
-      setInputValue(field(container, "Context size"), "1");
+      setInputValue(field(container, "Check saved searches every"), "0");
     });
     await act(async () => {
       button(container, "Test connection").click();
