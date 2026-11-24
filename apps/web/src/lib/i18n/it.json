@@ -327,6 +327,10 @@
       "consent": "Acconsento all'invio del testo del mio CV a {{provider}}.",
       "import": "Importa CV",
       "importing": "Lettura del CV…",
+      "importingLocal": "Il modello AI sta leggendo il CV e compilando il profilo. Un modello su questo computer può impiegare qualche minuto.",
+      "importingCloud": "Il modello AI sta leggendo il CV e compilando il profilo. Di solito ci vuole meno di un minuto.",
+      "elapsed_one": "{{count}} secondo trascorso",
+      "elapsed_other": "{{count}} secondi trascorsi",
       "manual": "Inserisci il profilo a mano",
       "failed": "Non è stato possibile importare il CV: {{reason}}.",
       "reasons": {

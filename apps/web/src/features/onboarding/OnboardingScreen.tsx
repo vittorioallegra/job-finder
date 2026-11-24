@@ -1,7 +1,7 @@
 import { useAiConsent } from "../../lib/useAiConsent";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { FileUp } from "lucide-react";
+import { FileUp, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router";
 import {
   CV_UPLOAD_MAX_BYTES,
@@ -415,15 +415,14 @@ function CvStep({ bridge, settings, onImported, onManual }: CvStepProps) {
           {t("onboarding.cv.manual")}
         </Button>
         <Button onClick={() => void runImport()} disabled={!canImport}>
-          {state.status === "importing" ? t("onboarding.cv.importing") : t("onboarding.cv.import")}
+          {state.status === "importing" ? (
+            <Loader2 aria-hidden className="size-4 animate-spin" />
+          ) : null}
+          {t("onboarding.cv.import")}
         </Button>
       </div>
 
-      {state.status === "importing" ? (
-        <p role="status" className="text-sm text-app-muted">
-          {t("onboarding.cv.importing")}
-        </p>
-      ) : null}
+      {state.status === "importing" ? <ImportProgress local={!cloud} /> : null}
 
       {state.status === "failed" ? (
         <p role="alert" className="text-sm text-app-danger">
@@ -435,5 +434,33 @@ function CvStep({ bridge, settings, onImported, onManual }: CvStepProps) {
         </p>
       ) : null}
     </Card>
+  );
+}
+
+/** How long the import has run, so a slow local model still shows that work goes on. */
+function ImportProgress({ local }: { local: boolean }) {
+  const { t } = useTranslation();
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const started = Date.now();
+    const timer = setInterval(() => setSeconds(Math.floor((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <div
+      role="status"
+      className="flex items-start gap-3 rounded-2xl bg-app-sunken/60 p-4 text-sm text-app-fg"
+    >
+      <Loader2 aria-hidden className="mt-0.5 size-4 shrink-0 animate-spin text-app-accent" />
+      <div className="flex flex-col gap-1">
+        <p className="font-medium">{t("onboarding.cv.importing")}</p>
+        <p className="text-app-muted">
+          {local ? t("onboarding.cv.importingLocal") : t("onboarding.cv.importingCloud")}
+        </p>
+        <p className="tabular-nums text-app-muted">
+          {t("onboarding.cv.elapsed", { count: seconds })}
+        </p>
+      </div>
+    </div>
   );
 }

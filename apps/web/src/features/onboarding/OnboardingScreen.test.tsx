@@ -1,11 +1,16 @@
-// protects=onboarding saves the AI provider before Continue unlocks, with the same context controls as Settings, asks for consent before a CV goes to a cloud provider but not to a local endpoint, shows AI unavailable when the engine fails, and opens the review with the extracted draft;
+// protects=onboarding saves the AI provider before Continue unlocks, with the same context controls as Settings, asks for consent before a CV goes to a cloud provider but not to a local endpoint, shows AI unavailable when the engine fails, shows one progress message with a spinner while the CV is read, and opens the review with the extracted draft;
 // fails_when=Continue unlocks with unsaved AI edits, a cloud import is enabled without consent, a local endpoint asks for consent, an engine failure shows no reason, or the extracted draft is not shown for review;
 // no_claim=the real file dialog, the engine's extraction quality and the OS keychain are not exercised; the bridge is an in-memory double.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { DEFAULT_APP_SETTINGS, type AppSettings, type CvImportResult } from "@job-finder/bridge";
+import {
+  DEFAULT_APP_SETTINGS,
+  type AppSettings,
+  type CvImportResult,
+  type JobFinderBridge,
+} from "@job-finder/bridge";
 import { BridgeProvider } from "../../lib/bridge/BridgeContext";
 import { createMemoryBridge } from "../../lib/bridge/memory";
 import { i18n } from "../../lib/i18n";
@@ -89,8 +94,12 @@ describe("onboarding", () => {
     container.remove();
   });
 
-  async function render(options: BridgeOptions) {
-    const bridge = createMemoryBridge(options);
+  async function render(
+    options: BridgeOptions,
+    adjust?: (bridge: JobFinderBridge) => JobFinderBridge,
+  ) {
+    const memory = createMemoryBridge(options);
+    const bridge = adjust ? adjust(memory) : memory;
     await act(async () => {
       root.render(
         <MemoryRouter>
@@ -175,6 +184,29 @@ describe("onboarding", () => {
     expect(container.querySelector('[role="alert"]')?.textContent).toBe(
       "AI unavailable: the AI worker is not running.",
     );
+  });
+
+  it("shows one progress message with a spinner and the time so far while the CV is read", async () => {
+    await render(
+      { settings: withAi({ model: "test-model", provider: "anthropic" }) },
+      (bridge) => ({
+        ...bridge,
+        profile: { ...bridge.profile, importCv: () => new Promise<CvImportResult>(() => {}) },
+      }),
+    );
+    await act(async () => button(container, "Save provider").click());
+    await act(async () => button(container, "Continue to the CV").click());
+    await act(async () => chooseFile(container));
+    await act(async () => tickConsent(container));
+    await act(async () => button(container, "Import CV").click());
+
+    const importButton = button(container, "Import CV");
+    expect(importButton.disabled).toBe(true);
+    expect(importButton.querySelector(".animate-spin")).not.toBeNull();
+    const status = container.querySelector('[role="status"]');
+    expect(status?.textContent).toContain("Reading your CV…");
+    expect(status?.textContent).toContain("0 seconds so far");
+    expect(container.textContent?.split("Reading your CV…").length).toBe(2);
   });
 
   it("opens the review with the extracted headline", async () => {
