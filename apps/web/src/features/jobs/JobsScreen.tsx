@@ -5,7 +5,6 @@ import {
   DEFAULT_JOB_FILTER,
   aiConsentTarget,
   isCloudAiEndpoint,
-  JobFilterSchema,
   type CompanyRecord,
   type IngestEvent,
   type IngestStartFailureCode,
@@ -13,11 +12,10 @@ import {
   type JobListItem,
   type JobSort,
   type LatestRun,
-  type SavedSearch,
   type ScoreStartResult,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
-import { Briefcase, Building2, RefreshCw, SlidersHorizontal, Sparkles } from "lucide-react";
+import { Briefcase, Building2, RefreshCw, Sparkles } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button, buttonClass } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -28,9 +26,6 @@ import { ScoreRing } from "../../components/ui/ScoreRing";
 import { CheckboxInput } from "../../components/ui/CheckboxInput";
 import { JobDetail } from "./JobDetail";
 import { useAiConsent } from "../../lib/useAiConsent";
-import { JobFilters } from "./JobFilters";
-import { SavedSearches, type SavedSearchesState } from "./SavedSearches";
-import { draftFromFilter, EMPTY_DRAFT, filterFromDraft, type FilterDraft } from "./filter-draft";
 import { filterFromPreferences } from "./preferences-filter";
 
 interface Lists {
@@ -72,18 +67,11 @@ export function JobsScreen() {
   const [scoring, setScoring] = useState(false);
   const [scoreResult, setScoreResult] = useState<ScoreStartResult | null>(null);
 
-  // The form's draft, and the filter and order the results show.
-  const [draft, setDraft] = useState<FilterDraft>(EMPTY_DRAFT);
-  const [filterInvalid, setFilterInvalid] = useState(false);
+  // The filter and order the results show. The filter comes from the profile's "what you are looking for".
   const [applied, setApplied] = useState<JobFilter>(DEFAULT_JOB_FILTER);
-  // The filter from the profile's "what you are looking for": the list opens with it, Reset returns to it.
-  const [baseFilter, setBaseFilter] = useState<JobFilter>(DEFAULT_JOB_FILTER);
   const [sort, setSort] = useState<JobSort>("affinity");
   const [refreshing, setRefreshing] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
-
-  const [saved, setSaved] = useState<SavedSearchesState>({ status: "loading" });
-  const [savedFailed, setSavedFailed] = useState(false);
 
   const readJobs = useCallback(
     (filter: JobFilter, order: JobSort) => bridge.jobs.list({ filter, sort: order }),
@@ -126,18 +114,8 @@ export function JobsScreen() {
 
   /** Opens the list with the profile's filter, as loaded. */
   function applyBase(base: JobFilter) {
-    setBaseFilter(base);
     setApplied(base);
-    setDraft(draftFromFilter(base));
   }
-
-  const readSaved = useCallback(async () => {
-    try {
-      setSaved({ status: "ready", searches: await bridge.savedSearches.list() });
-    } catch {
-      setSaved({ status: "error" });
-    }
-  }, [bridge]);
 
   useEffect(() => {
     let active = true;
@@ -152,7 +130,6 @@ export function JobsScreen() {
       .catch(() => {});
     void loadAll().then(({ state, latest, base }) => {
       if (!active) return;
-      void readSaved();
       applyBase(base);
       setLoad(state);
       setEvents(latest?.events ?? []);
@@ -161,7 +138,7 @@ export function JobsScreen() {
     return () => {
       active = false;
     };
-  }, [bridge, loadAll, readSaved, t]);
+  }, [bridge, loadAll, t]);
 
   useEffect(
     () =>
@@ -181,26 +158,16 @@ export function JobsScreen() {
     [bridge, readLists, applied, sort],
   );
 
-  // A notification opens `?new=1` (new jobs only) and optionally `saved=<id>` (that saved search).
-  // The link is cleared once applied, so the filter is set once per click. The apply step reads the
-  // current state through a ref, so the effect runs only when the link or the load state changes.
+  // A notification opens `?new=1` (new jobs only). The link is cleared once applied, so the filter is
+  // set once per click. The apply step reads the current state through a ref, so the effect runs only
+  // when the link or the load state changes.
   const [params, setParams] = useSearchParams();
   const wantsNew = params.get("new") === "1";
-  const wantedSaved = params.get("saved");
   const applyLink = useRef<() => void>(() => {});
   useEffect(() => {
     applyLink.current = () => {
-      const search =
-        wantedSaved === null
-          ? undefined
-          : saved.status === "ready"
-            ? saved.searches.find((item) => item.id === wantedSaved)
-            : undefined;
-      const base = search ? JobFilterSchema.parse(search.filter) : applied;
-      const filter: JobFilter = wantsNew ? { ...base, newOnly: true } : base;
+      const filter: JobFilter = { ...applied, newOnly: true };
       setParams({}, { replace: true });
-      setDraft(draftFromFilter(filter));
-      setFilterInvalid(false);
       setApplied(filter);
       void readJobs(filter, sort).then(
         (jobs) =>
@@ -210,10 +177,9 @@ export function JobsScreen() {
     };
   });
   useEffect(() => {
-    if (!wantsNew && wantedSaved === null) return;
-    if (load.status !== "ready" || saved.status !== "ready") return;
+    if (!wantsNew || load.status !== "ready") return;
     applyLink.current();
-  }, [load.status, saved.status, wantsNew, wantedSaved]);
+  }, [load.status, wantsNew]);
 
   function retry() {
     setLoad({ status: "loading" });
@@ -223,7 +189,6 @@ export function JobsScreen() {
       setEvents(latest?.events ?? []);
       setActiveRunId(latest?.run.status === "running" ? latest.run.id : null);
     });
-    void readSaved();
   }
 
   /** Reloads the job list for a filter and order, keeping the companies already read. */
@@ -239,59 +204,9 @@ export function JobsScreen() {
     }
   }
 
-  function applyDraft() {
-    const result = filterFromDraft(draft);
-    setFilterInvalid(!result.ok);
-    if (!result.ok) return;
-    setApplied(result.filter);
-    void refreshJobs(result.filter, sort);
-  }
-
-  function resetFilters() {
-    setDraft(draftFromFilter(baseFilter));
-    setFilterInvalid(false);
-    setApplied(baseFilter);
-    void refreshJobs(baseFilter, sort);
-  }
-
   function changeSort(next: JobSort) {
     setSort(next);
     void refreshJobs(applied, next);
-  }
-
-  function applySaved(search: SavedSearch) {
-    const filter = JobFilterSchema.parse(search.filter);
-    setDraft(draftFromFilter(filter));
-    setFilterInvalid(false);
-    setApplied(filter);
-    void refreshJobs(filter, sort);
-  }
-
-  /** Stores the filters the results show, as a new search or in place of an existing one. */
-  async function storeSearch(name: string, id?: string) {
-    setSavedFailed(false);
-    try {
-      const stored = await bridge.savedSearches.save({ id, name, filter: applied });
-      if (stored === null) throw new Error("unknown search");
-      const current = await bridge.savedSearches.list();
-      setSaved({ status: "ready", searches: current });
-    } catch {
-      setSavedFailed(true);
-    }
-  }
-
-  async function deleteSearch(search: SavedSearch) {
-    setSavedFailed(false);
-    try {
-      await bridge.savedSearches.delete({ id: search.id });
-      setSaved((previous) =>
-        previous.status === "ready"
-          ? { status: "ready", searches: previous.searches.filter((item) => item.id !== search.id) }
-          : previous,
-      );
-    } catch {
-      setSavedFailed(true);
-    }
   }
 
   function jobsChanged() {
@@ -590,37 +505,6 @@ export function JobsScreen() {
                 </p>
               ) : null}
             </div>
-
-            <details className="rounded-2xl border border-app-border bg-app-surface shadow-card">
-              <summary className="flex cursor-pointer items-center gap-2 px-5 py-3 text-sm font-medium select-none">
-                <SlidersHorizontal aria-hidden="true" className="size-4" strokeWidth={1.8} />
-                {t("jobs.filtersToggle")}
-              </summary>
-              <div className="flex flex-col gap-4 border-t border-app-border p-5">
-                <JobFilters
-                  draft={draft}
-                  onChange={setDraft}
-                  companies={load.companies}
-                  onApply={applyDraft}
-                  onReset={resetFilters}
-                  invalid={filterInvalid}
-                />
-                <SavedSearches
-                  state={saved}
-                  saveable={!filterInvalid}
-                  onApply={applySaved}
-                  onCreate={(name) => void storeSearch(name)}
-                  onReplace={(search) => void storeSearch(search.name, search.id)}
-                  onDelete={(search) => void deleteSearch(search)}
-                  onRetry={() => void readSaved()}
-                />
-              </div>
-            </details>
-            {savedFailed ? (
-              <p role="alert" className="text-sm text-app-danger">
-                {t("jobs.saved.saveFailed")}
-              </p>
-            ) : null}
 
             {load.jobs.length === 0 ? (
               <EmptyState

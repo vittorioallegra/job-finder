@@ -89,9 +89,6 @@ describe("jobs screen", () => {
 
     expect(container.textContent).toContain("No open jobs yet.");
     expect(container.textContent).toContain("Nothing has been scanned yet.");
-    expect(container.textContent).toContain(
-      "No company yet: they come from what you are looking for",
-    );
     expect(button(container, "Scan companies").disabled).toBe(true);
   });
 

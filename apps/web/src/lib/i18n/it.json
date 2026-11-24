@@ -478,29 +478,6 @@
       "applicationStatus": "Candidatura: {{status}}"
     },
     "filters": {
-      "roles": "Ruoli nel titolo",
-      "rolesHint": "Separati da virgola. Un'offerta corrisponde se il titolo ne nomina uno; parole di livello come Senior non contano.",
-      "heading": "Filtri",
-      "keywords": "Parole chiave (una qualsiasi, separate da virgola)",
-      "keywordsHint": "Cercate nel titolo e nella descrizione.",
-      "excludedKeywords": "Escludi annunci con queste parole (separate da virgola)",
-      "places": "Luoghi",
-      "placesHint": "Paesi, aree o città, per esempio Italia, UE o Milano.",
-      "locationText": "Città o regione",
-      "countryCode": "Codice paese",
-      "countryCodeHint": "Due lettere, per esempio IT o DE.",
-      "remoteScope": "Ambito remoto contiene",
-      "remoteScopeHint": "Per esempio EU o US.",
-      "language": "Lingua dell'annuncio",
-      "languageHint": "Due lettere, per esempio en o it.",
-      "postedWithin": {
-        "label": "Pubblicati entro",
-        "any": "Qualsiasi data",
-        "24h": "24 ore",
-        "3d": "3 giorni",
-        "7d": "7 giorni",
-        "30d": "30 giorni"
-      },
       "visa": {
         "label": "Sponsorizzazione visto",
         "any": "Qualsiasi",
@@ -508,10 +485,6 @@
         "no": "Non offerta",
         "unknown": "Non indicata"
       },
-      "workModes": "Modalità di lavoro",
-      "employmentTypes": "Tipo di impiego",
-      "seniorities": "Seniority",
-      "sources": "Fonte",
       "values": {
         "employment": {
           "full_time": "Tempo pieno",
@@ -536,44 +509,7 @@
           "day": "giorno",
           "hour": "ora"
         }
-      },
-      "salary": {
-        "legend": "Stipendio minimo",
-        "amount": "Importo",
-        "currency": "Valuta",
-        "period": "Per",
-        "hideWithout": "Nascondi annunci senza stipendio in questa valuta e periodo",
-        "hideWithoutHint": "Se non è attivo, restano gli annunci senza stipendio o con uno in altra valuta o periodo."
-      },
-      "companies": {
-        "include": "Solo queste aziende",
-        "exclude": "Escludi queste aziende",
-        "none": "Ancora nessuna azienda: arrivano da cosa cerchi nel profilo, o dalla pagina Fonti."
-      },
-      "minScore": "Affinità minima (da 0 a 100)",
-      "minScoreHint": "Se impostata, gli annunci senza punteggio sono esclusi.",
-      "hideDismissed": "Nascondi gli annunci scartati",
-      "newOnly": "Solo annunci nuovi (non ancora aperti)",
-      "apply": "Applica filtri",
-      "reset": "Reimposta filtri",
-      "invalid": "Controlla i filtri: un numero, un codice paese o un codice lingua non è valido.",
-      "hideApplied": "Nascondi gli annunci già candidati"
-    },
-    "saved": {
-      "heading": "Ricerche salvate",
-      "loading": "Caricamento delle ricerche salvate…",
-      "loadFailed": "Non è stato possibile caricare le ricerche salvate.",
-      "retry": "Riprova",
-      "empty": "Nessuna ricerca salvata.",
-      "apply": "Applica",
-      "applyNamed": "Applica la ricerca salvata {{name}}",
-      "replace": "Sostituisci con i filtri attuali",
-      "replaceNamed": "Sostituisci {{name}} con i filtri attuali",
-      "delete": "Elimina",
-      "deleteNamed": "Elimina la ricerca salvata {{name}}",
-      "name": "Nome per i filtri attuali",
-      "save": "Salva i filtri attuali",
-      "saveFailed": "Non è stato possibile salvare la ricerca."
+      }
     },
     "sort": {
       "label": "Ordine",
@@ -621,7 +557,6 @@
     "openApplications": "Apri candidature",
     "subtitle_one": "{{count}} offerta aperta · {{fresh}} nuove",
     "subtitle_other": "{{count}} offerte aperte · {{fresh}} nuove",
-    "filtersToggle": "Filtri e ricerche salvate",
     "discover": {
       "companies_one": "Le offerte arrivano da {{count}} azienda.",
       "companies_other": "Le offerte arrivano da {{count}} aziende.",
