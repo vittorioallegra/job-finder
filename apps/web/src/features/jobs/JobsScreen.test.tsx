@@ -259,7 +259,7 @@ describe("jobs screen", () => {
     expect(container.textContent).toContain("Not scored yet");
   });
 
-  it("opens with the profile's work modes as the filter, keeping jobs that do not say", async () => {
+  it("opens with the profile's roles and work modes as the filter, keeping jobs that do not say their mode", async () => {
     const memory = createMemoryBridge({
       companies: [acme],
       jobs: [posting],
@@ -271,6 +271,7 @@ describe("jobs screen", () => {
     const list = vi.fn(memory.jobs.list);
     await render({ ...memory, jobs: { ...memory.jobs, list } });
     expect(list.mock.calls[0]?.[0].filter.workModes).toEqual(["remote", "unknown"]);
+    expect(list.mock.calls[0]?.[0].filter.roles).toEqual(["Backend Engineer"]);
     expect(container.textContent).toContain("Find new companies");
   });
 

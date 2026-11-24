@@ -1,4 +1,4 @@
-// protects=each job filter includes and excludes the expected jobs over a fixed fixture set in SQLite, the combinations narrow the results, the affinity order puts unscored jobs last and the newest order uses the posting date when there is one, and dismissed, closed and unknown jobs stay out;
+// protects=roles match the title without level words or hyphens, each job filter includes and excludes the expected jobs over a fixed fixture set in SQLite, the combinations narrow the results, the affinity order puts unscored jobs last and the newest order uses the posting date when there is one, and dismissed, closed and unknown jobs stay out;
 // fails_when=a filter includes a job it should exclude or drops one it should keep, a LIKE wildcard in a keyword matches everything, a salary is compared across currencies or periods, a job without a posting date is dated wrongly, a dismissed or closed job is listed, or the score order is wrong;
 // no_claim=the screen's filter form and the scoring run are not covered here; the core filter schema tests and the scoring service tests cover them, and the fixture set is small, not a sample of real postings;
 import { mkdtempSync } from "node:fs";
@@ -276,6 +276,15 @@ describe("job filters over the fixture set", () => {
     );
     expect(await titles({ excludedKeywords: ["terraform"] })).not.toContain("Platform Engineer");
     expect(await titles({ excludedKeywords: ["kubernetes"] })).not.toContain("Data Engineer");
+  });
+
+  it("matches roles against the title, without level words and whatever the hyphens or spaces", async () => {
+    expect(await titles({ roles: ["Senior Front-end Developer"] })).toEqual(["Frontend Developer"]);
+    expect(await titles({ roles: ["Backend Engineer", "Data Engineer"] })).toEqual(
+      ["Backend Engineer", "Data Engineer"].sort(),
+    );
+    // The description does not count: a role is what the job is called.
+    expect(await titles({ roles: ["Kubernetes"] })).toEqual([]);
   });
 
   it("treats LIKE wildcards in a keyword as plain characters", async () => {

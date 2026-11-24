@@ -13,6 +13,8 @@ type FilterVisa = NonNullable<JobFilter["visaSponsorship"]>;
  * `JobFilter`, so an invalid number or code is reported by the form instead of being dropped.
  */
 export interface FilterDraft {
+  /** Roles the title must name, comma-separated. */
+  roles: string;
   keywords: string;
   excludedKeywords: string;
   locationText: string;
@@ -57,6 +59,7 @@ export function toggle<T>(list: readonly T[], value: T): T[] {
 
 export function draftFromFilter(filter: JobFilter): FilterDraft {
   return {
+    roles: filter.roles.join(", "),
     keywords: filter.keywords.join(", "),
     excludedKeywords: filter.excludedKeywords.join(", "),
     locationText: filter.locationText,
@@ -88,6 +91,7 @@ export function filterFromDraft(
 ): { ok: true; filter: JobFilter } | { ok: false } {
   const salaryMin = draft.salaryMin.trim();
   const parsed = JobFilterSchema.safeParse({
+    roles: splitTerms(draft.roles),
     keywords: splitTerms(draft.keywords),
     excludedKeywords: splitTerms(draft.excludedKeywords),
     locationText: draft.locationText.trim(),

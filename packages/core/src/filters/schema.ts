@@ -42,6 +42,11 @@ export const SalaryFilterSchema = z.strictObject({
  * or the description; excluded keywords remove a job when any of them appears there.
  */
 export const JobFilterSchema = z.strictObject({
+  /**
+   * Roles: a job matches when its title names any of them (see `roleTitleTerms`). The profile's
+   * roles fill this in, so the list shows the jobs of the roles looked for, not every opening.
+   */
+  roles: z.array(term).max(10).default([]),
   keywords: z.array(term).max(10).default([]),
   excludedKeywords: z.array(term).max(10).default([]),
   /** Matched against the city and region of each location, and the location as written. */

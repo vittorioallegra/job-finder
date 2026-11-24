@@ -479,6 +479,8 @@
       "applicationStatus": "Candidatura: {{status}}"
     },
     "filters": {
+      "roles": "Ruoli nel titolo",
+      "rolesHint": "Separati da virgola. Un'offerta corrisponde se il titolo ne nomina uno; parole di livello come Senior non contano.",
       "heading": "Filtri",
       "keywords": "Parole chiave (una qualsiasi, separate da virgola)",
       "keywordsHint": "Cercate nel titolo e nella descrizione.",

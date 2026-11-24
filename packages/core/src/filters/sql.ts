@@ -8,6 +8,38 @@ export function likePattern(term: string): string {
   return `%${term.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
 }
 
+/** Leading level words a role may carry; the title matches the role without them. */
+const LEVEL_PREFIXES = new Set([
+  "senior",
+  "sr",
+  "junior",
+  "jr",
+  "principal",
+  "staff",
+  "mid",
+  "intern",
+]);
+
+/**
+ * The words a job title must contain to match a role, lower case and without hyphens or spaces
+ * inside words: "Senior Front-end Engineer" gives ["frontend", "engineer"], so "Frontend Engineer
+ * (React)" and "Front End Engineer, Payments" both match. A leading level word is dropped, since
+ * the level filter covers it; a role that is only a level word keeps it.
+ */
+export function roleTitleTerms(role: string): string[] {
+  const words = role
+    .toLowerCase()
+    .replace(/[-_/]/g, "")
+    .split(/[^\p{L}\p{N}+#.]+/u)
+    .filter((word) => word !== "");
+  let start = 0;
+  while (start < words.length - 1 && LEVEL_PREFIXES.has(words[start] ?? "")) start += 1;
+  return words.slice(start);
+}
+
+/** The title as `roleTitleTerms` compares it: lower case, with hyphens and spaces removed. */
+const comparableTitle = sql`replace(replace(replace(lower(${jobs.title}), '-', ''), ' ', ''), '/', '')`;
+
 /**
  * The SQL condition of a filter on the `jobs` table, or undefined when the filter narrows nothing.
  * `now` anchors the posted-within window. Flags, scores and sources are read through subqueries, so
@@ -15,6 +47,18 @@ export function likePattern(term: string): string {
  */
 export function jobFilterCondition(filter: JobFilter, now: number): SQL | undefined {
   const parts: SQL[] = [];
+
+  const roles = filter.roles.map(roleTitleTerms).filter((words) => words.length > 0);
+  if (roles.length > 0) {
+    const anyRole = roles.map(
+      (words) =>
+        sql`(${sql.join(
+          words.map((word) => sql`${comparableTitle} like ${likePattern(word)} escape '\\'`),
+          sql` and `,
+        )})`,
+    );
+    parts.push(sql`(${sql.join(anyRole, sql` or `)})`);
+  }
 
   if (filter.keywords.length > 0) {
     const anyKeyword = filter.keywords.map((keyword) => {

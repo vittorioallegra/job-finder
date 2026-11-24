@@ -479,6 +479,8 @@
       "applicationStatus": "Application: {{status}}"
     },
     "filters": {
+      "roles": "Roles in the title",
+      "rolesHint": "Comma-separated. A job matches when its title names one of them; level words like Senior are left aside.",
       "heading": "Filters",
       "keywords": "Keywords (any of them, comma separated)",
       "keywordsHint": "Matched in the title and the description.",

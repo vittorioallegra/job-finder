@@ -98,6 +98,12 @@ export function JobFilters({
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <TextInput
+          label={t("jobs.filters.roles")}
+          hint={t("jobs.filters.rolesHint")}
+          value={draft.roles}
+          onChange={(event) => set("roles", event.target.value)}
+        />
+        <TextInput
           label={t("jobs.filters.keywords")}
           hint={t("jobs.filters.keywordsHint")}
           value={draft.keywords}
