@@ -1,3 +1,4 @@
+import PQueue from "p-queue";
 import { getAdapter } from "../ats";
 import type { AdapterResult, AtsAdapter, AtsId } from "../ats";
 import type { HttpClient } from "../net";
@@ -61,6 +62,8 @@ export interface RunIngestionOptions {
   scanCareers?: (target: CareersScanTarget) => Promise<AdapterResult>;
   /** Postings written per batch. */
   batchSize?: number;
+  /** Companies scanned at the same time. */
+  companyConcurrency?: number;
   /** Scans only this company (a retry from the Companies screen). Unset: every company. */
   companyId?: string;
 }
@@ -82,6 +85,9 @@ type CompanyResult =
  * storage error, abort) returns no jobs for that company and closes nothing, and the run moves
  * on to the next company, so one broken board never stops the others.
  */
+/** Companies scanned at once; requests to one host are still spaced by the HTTP client. */
+const COMPANY_CONCURRENCY = 4;
+
 export async function runIngestion(options: RunIngestionOptions): Promise<IngestRunOutcome> {
   const { runId, store, http, signal } = options;
   const now = options.now ?? (() => Date.now());
@@ -149,34 +155,40 @@ export async function runIngestion(options: RunIngestionOptions): Promise<Ingest
       (company) => options.companyId === undefined || company.id === options.companyId,
     );
     outcome = "succeeded";
-    for (const company of companies) {
-      if (signal.aborted) {
-        outcome = "cancelled";
-        break;
-      }
-      const companyName = company.name;
-      await record({ kind: "company-started", companyId: company.id, companyName });
-      const result = await scanCompany(company);
-      if (result.kind === "scanned") {
-        await record({
-          kind: "company-scanned",
-          companyId: company.id,
-          companyName,
-          jobCount: result.jobCount,
-          closedCount: result.closedCount,
-        });
-      } else if (result.kind === "failed") {
-        await record({
-          kind: "company-failed",
-          companyId: company.id,
-          companyName,
-          code: result.code,
-        });
-      } else {
-        outcome = "cancelled";
-        break;
-      }
-    }
+    // Companies are scanned a few at a time: most of a scan is waiting for the network. The HTTP
+    // client still queues requests per host, so boards on one host stay at its polite rate.
+    const queue = new PQueue({ concurrency: options.companyConcurrency ?? COMPANY_CONCURRENCY });
+    await Promise.all(
+      companies.map((company) =>
+        queue.add(async () => {
+          if (signal.aborted) {
+            outcome = "cancelled";
+            return;
+          }
+          const companyName = company.name;
+          await record({ kind: "company-started", companyId: company.id, companyName });
+          const result = await scanCompany(company);
+          if (result.kind === "scanned") {
+            await record({
+              kind: "company-scanned",
+              companyId: company.id,
+              companyName,
+              jobCount: result.jobCount,
+              closedCount: result.closedCount,
+            });
+          } else if (result.kind === "failed") {
+            await record({
+              kind: "company-failed",
+              companyId: company.id,
+              companyName,
+              code: result.code,
+            });
+          } else {
+            outcome = "cancelled";
+          }
+        }),
+      ),
+    );
     if (signal.aborted) outcome = "cancelled";
   } catch {
     outcome = "failed";

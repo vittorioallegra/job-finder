@@ -52,6 +52,8 @@ interface RunOptions {
   /** Called for each batch, with the company the batch belongs to. */
   onPersist?: (plan: BatchPlan, companyId: string) => void;
   companyId?: string;
+  /** Defaults to one at a time, so the log order is the company order. */
+  companyConcurrency?: number;
   scanCareers?: (target: { name: string; careersUrl: string }) => Promise<AdapterResult>;
 }
 
@@ -119,6 +121,7 @@ async function run(
     newId: () => `id-${++counter}`,
     adapterFor: () => adapter,
     batchSize: options.batchSize ?? 50,
+    companyConcurrency: options.companyConcurrency ?? 1,
     companyId: options.companyId,
     scanCareers: options.scanCareers,
   });
@@ -313,6 +316,22 @@ describe("runIngestion", () => {
     expect(trace.events).toContainEqual(
       expect.objectContaining({ kind: "company-scanned", jobCount: 0, closedCount: 3 }),
     );
+  });
+
+  it("scans several companies at the same time and still scans every one", async () => {
+    const { outcome, trace } = await run(
+      [company("co-a", "acme"), company("co-b", "other"), company("co-c", "third")],
+      {
+        acme: { ok: true, jobs: [job("1")] },
+        other: { ok: true, jobs: [job("2")] },
+        third: { ok: false, code: "timeout" },
+      },
+      { companyConcurrency: 3 },
+    );
+
+    expect(outcome).toBe("succeeded");
+    expect([...trace.requested].sort()).toEqual(["acme", "other", "third"]);
+    expect(trace.closed).toHaveLength(2);
   });
 
   it("writes a posting repeated inside one scan once", async () => {
