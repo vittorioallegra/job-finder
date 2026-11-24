@@ -59,7 +59,9 @@ export function createDiscoveryService(options: DiscoveryServiceOptions): Discov
           { duckduckgo: search.duckduckgo, keyed },
         );
         if (!outcome.ok) return { ok: false, code: outcome.code };
-        return outcome.searchBlocked
+        // The note about a blocked keyless search suggests adding a key: it is left out once a key
+        // is in use, since the results then come from the keyed provider.
+        return outcome.searchBlocked && keyed.length === 0
           ? { ok: true, candidates: outcome.candidates, searchBlocked: true }
           : { ok: true, candidates: outcome.candidates };
       } catch (error) {

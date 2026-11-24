@@ -93,16 +93,25 @@ describe("discovery service", () => {
     expect(asked[0]?.config.duckduckgo).toBe(false);
   });
 
-  it("returns a blocked-search note alongside the boards, and never a key", async () => {
-    const service = createDiscoveryService({
+  it("returns a blocked-search note alongside the boards only when no key is in use, and never a key", async () => {
+    const withoutKey = createDiscoveryService({
+      engine: () => engineAnswering(async () => ({ ...found, searchBlocked: true })),
+      settings: settingsWith(),
+      secrets: noKeys,
+    });
+    expect(await withoutKey.search({ keywords: ["x"], locations: [] })).toEqual({
+      ...found,
+      searchBlocked: true,
+    });
+
+    const withKey = createDiscoveryService({
       engine: () => engineAnswering(async () => ({ ...found, searchBlocked: true })),
       settings: settingsWith({ brave: true }),
       secrets: secretsWith({ "search.brave": "brave-secret-value" }),
     });
-
-    const result = await service.search({ keywords: ["x"], locations: [] });
-
-    expect(result).toEqual({ ...found, searchBlocked: true });
+    const result = await withKey.search({ keywords: ["x"], locations: [] });
+    // The results came from the key; the note would wrongly ask for one.
+    expect(result).toEqual(found);
     expect(JSON.stringify(result)).not.toContain("brave-secret-value");
   });
 
