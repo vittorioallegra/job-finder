@@ -32,8 +32,8 @@ const PROFILE = {
   education: [
     {
       institution: "Politecnico di Milano",
-      degree: "BSc",
-      field: "Computer Engineering",
+      degree: "BSc in Computer Engineering",
+      grade: "",
       startDate: "2014",
       endDate: "2017",
     },

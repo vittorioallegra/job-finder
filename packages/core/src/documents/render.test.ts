@@ -1,4 +1,4 @@
-// protects=the rendered document is a plain single-column page whose every user value is escaped, with the profile's contact line and the labels passed in, and the letter opens with its greeting;
+// protects=the rendered document is a plain single-column page whose every user value is escaped, with the profile's contact line and the labels passed in, stored dates shown as a CV writes them, and the letter opens with its greeting;
 // fails_when=a value from the profile or the document reaches the page unescaped, a table or script is emitted, the headings or language attribute are not the ones given, or a section with no content still gets a heading;
 // no_claim=the page is not checked in a PDF engine or an applicant tracking system; only its HTML structure and escaping are asserted;
 import { describe, expect, it } from "vitest";
@@ -14,6 +14,7 @@ const labels: DocumentLabels = {
   education: "Education",
   skills: "Skills",
   greeting: "Dear hiring team,",
+  present: "Present",
 };
 
 const contact = {
@@ -56,6 +57,42 @@ describe("renderDocumentHtml", () => {
     expect(html).toContain("<li>Cut &quot;billing&quot; latency by 40%</li>");
     expect(html).toContain("<li>TypeScript</li>");
     expect(html).toContain("<title>Maria &lt;Rossi&gt; — CV</title>");
+  });
+
+  it("shows stored dates as a CV writes them, and an ongoing end in the document's language", () => {
+    const html = renderDocumentHtml(
+      {
+        kind: "cv",
+        cv: {
+          summary: "",
+          experience: [
+            {
+              ...cvContent.cv.experience[0]!,
+              startDate: "2021-03",
+              endDate: "present",
+              bullets: [],
+            },
+          ],
+          education: [
+            {
+              source: 0,
+              institution: "Politecnico",
+              degree: "MSc in Computer Science",
+              grade: "110/110",
+              startDate: "2012",
+              endDate: "2014",
+            },
+          ],
+          skills: [],
+        },
+      },
+      contact,
+      { ...labels, present: "Presente" },
+      "it",
+    );
+    expect(html).toContain("Milano · 03/2021 – Presente");
+    expect(html).toContain("<h3>MSc in Computer Science</h3>");
+    expect(html).toContain("Politecnico · 110/110 · 2012 – 2014");
   });
 
   it("omits the headings of sections with no content", () => {

@@ -76,6 +76,7 @@ export function documentLabels(language: MainLanguage): DocumentLabels {
     education: t("documents.labels.education"),
     skills: t("documents.labels.skills"),
     greeting: t("documents.labels.greeting"),
+    present: t("documents.labels.present"),
   };
 }
 

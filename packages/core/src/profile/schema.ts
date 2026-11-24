@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formatProfileDate, parseLanguageLevel, parseProfileDate } from "./format";
 
 /**
  * Profile domain schema. Pure: no Node or Electron imports, so the renderer can load it through
@@ -57,13 +58,34 @@ export const ExperienceSchema = z.strictObject({
   bullets: z.array(z.string().trim().max(PROFILE_LIMITS.bulletText)).max(PROFILE_LIMITS.bullets),
 });
 
-export const EducationSchema = z.strictObject({
+const EducationShape = z.strictObject({
   institution: shortText,
   degree: shortText,
-  field: shortText,
+  /** The final mark, such as "110/110" or "First class"; optional. */
+  grade: shortText,
   startDate: dateText,
   endDate: dateText,
 });
+
+/**
+ * Profiles saved before the grade existed had a field of study instead. It joins the degree
+ * ("BSc" and "Computer Engineering" become "BSc, Computer Engineering"), so nothing is lost.
+ */
+function migrateEducation(value: unknown): unknown {
+  if (typeof value !== "object" || value === null || !("field" in value)) return value;
+  const { field, ...rest } = value as Record<string, unknown>;
+  const degree = typeof rest.degree === "string" ? rest.degree.trim() : "";
+  const subject = typeof field === "string" ? field.trim() : "";
+  const joined =
+    subject === "" || degree.includes(subject)
+      ? degree
+      : degree === ""
+        ? subject
+        : `${degree}, ${subject}`;
+  return { grade: "", ...rest, degree: joined };
+}
+
+export const EducationSchema = z.preprocess(migrateEducation, EducationShape);
 
 export const SkillSchema = z.strictObject({
   name: requiredShortText,
@@ -273,11 +295,11 @@ export const CvExtractionDraftSchema = withEmptyDefaults(
     ),
     education: looseList(
       withEmptyDefaults(
-        { institution: "", degree: "", field: "", ...EMPTY_DATES },
+        { institution: "", degree: "", grade: "", ...EMPTY_DATES },
         {
           institution: looseText,
           degree: looseText,
-          field: looseText,
+          grade: looseText,
           startDate: looseText,
           endDate: looseText,
         },
@@ -333,7 +355,11 @@ export function normalizeCvLink(value: string): string | null {
  */
 export function normalizeCvExtraction(draft: CvExtractionDraft): CvExtraction {
   const short = (value: string) => fit(value, PROFILE_LIMITS.shortText);
-  const date = (value: string) => fit(value, PROFILE_LIMITS.dateText);
+  // A date the parser reads is stored as YYYY-MM, YYYY or "present"; any other is kept as written.
+  const date = (value: string) => {
+    const parsed = parseProfileDate(value);
+    return parsed === null ? fit(value, PROFILE_LIMITS.dateText) : formatProfileDate(parsed);
+  };
   const email = fit(draft.contact.email, PROFILE_LIMITS.email);
   const extraction: CvExtraction = {
     contact: {
@@ -358,7 +384,7 @@ export function normalizeCvExtraction(draft: CvExtractionDraft): CvExtraction {
     education: draft.education.slice(0, 20).map((item) => ({
       institution: short(item.institution),
       degree: short(item.degree),
-      field: short(item.field),
+      grade: short(item.grade),
       startDate: date(item.startDate),
       endDate: date(item.endDate),
     })),
@@ -374,7 +400,10 @@ export function normalizeCvExtraction(draft: CvExtractionDraft): CvExtraction {
       .filter((item) => item.name !== "")
       .slice(0, PROFILE_LIMITS.skills),
     languages: draft.languages
-      .map((item) => ({ name: short(item.name), level: short(item.level) }))
+      .map((item) => ({
+        name: short(item.name),
+        level: parseLanguageLevel(item.level) ?? short(item.level),
+      }))
       .filter((item) => item.name !== "")
       .slice(0, 20),
     certifications: draft.certifications
@@ -395,3 +424,13 @@ export function normalizeCvExtraction(draft: CvExtractionDraft): CvExtraction {
   // The repairs above keep every value inside the strict schema; parsing proves it.
   return CvExtractionSchema.parse(extraction);
 }
+
+export {
+  LANGUAGE_LEVELS,
+  PRESENT,
+  formatProfileDate,
+  parseLanguageLevel,
+  parseProfileDate,
+  type LanguageLevel,
+  type ProfileDate,
+} from "./format";

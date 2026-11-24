@@ -21,7 +21,8 @@
       "experience": "Experience",
       "education": "Education",
       "skills": "Skills",
-      "greeting": "Dear hiring team,"
+      "greeting": "Dear hiring team,",
+      "present": "Present"
     }
   },
   "tray": {

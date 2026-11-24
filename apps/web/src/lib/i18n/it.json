@@ -241,21 +241,16 @@
       "phone": "Telefono",
       "location": "Luogo",
       "headline": "Titolo professionale",
-      "summary": "Riepilogo",
+      "summary": "Descrizione",
       "company": "Azienda",
       "jobTitle": "Ruolo",
       "startDate": "Inizio",
       "endDate": "Fine",
-      "bullets": "Risultati",
-      "bulletsHint": "Una per riga.",
+      "bullets": "Descrizione",
       "institution": "Istituto",
       "degree": "Titolo di studio",
-      "field": "Materia",
+      "grade": "Votazione (facoltativa)",
       "skillName": "Competenza",
-      "skillLevel": "Livello",
-      "levelHint": "Per esempio: base, intermedio, avanzato, esperto.",
-      "aliases": "Conosciuta anche come",
-      "aliasesHint": "Separa con le virgole.",
       "languageName": "Lingua",
       "languageLevel": "Livello",
       "certName": "Certificazione",
@@ -272,7 +267,6 @@
       "currencyHint": "Tre lettere, per esempio EUR.",
       "salaryPeriod": "Periodo",
       "relocate": "Disponibile al trasferimento",
-      "pronouns": "Pronomi",
       "question": "Domanda",
       "answer": "Risposta"
     },
@@ -297,6 +291,31 @@
       "link": "Aggiungi link",
       "workAuthorization": "Aggiungi autorizzazione al lavoro",
       "answer": "Aggiungi risposta standard"
+    },
+    "date": {
+      "month": "Mese",
+      "year": "Anno",
+      "noMonth": "Mese",
+      "noYear": "Anno",
+      "current": "In corso",
+      "fromCv": "Dal CV: «{{value}}». Scegli la data qui sopra."
+    },
+    "skillsEditor": {
+      "add": "Aggiungi una competenza",
+      "addHint": "Scrivi una competenza e premi Invio o la virgola.",
+      "remove": "Rimuovi {{name}}",
+      "empty": "Ancora nessuna competenza."
+    },
+    "languageLevels": {
+      "unset": "Non indicato",
+      "A1": "A1 · Principiante",
+      "A2": "A2 · Elementare",
+      "B1": "B1 · Intermedio",
+      "B2": "B2 · Intermedio superiore",
+      "C1": "C1 · Avanzato",
+      "C2": "C2 · Padronanza",
+      "native": "Madrelingua",
+      "fromCv": "{{value}} (dal CV)"
     }
   },
   "onboarding": {

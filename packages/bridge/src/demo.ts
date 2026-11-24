@@ -301,8 +301,8 @@ function demoProfile(): Profile {
     education: [
       {
         institution: "Example University",
-        degree: "MSc",
-        field: "Computer Engineering",
+        degree: "MSc in Computer Engineering",
+        grade: "",
         startDate: "2016",
         endDate: "2018",
       },

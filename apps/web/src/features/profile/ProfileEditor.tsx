@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  LANGUAGE_LEVELS,
   PROFILE_LIMITS,
   SALARY_PERIODS,
   type ProfileRecord,
@@ -12,6 +13,8 @@ import { Card, CardTitle } from "../../components/ui/Card";
 import { SelectInput, type SelectOption } from "../../components/ui/SelectInput";
 import { TextArea } from "../../components/ui/TextArea";
 import { TextInput } from "../../components/ui/TextInput";
+import { MonthYearInput } from "./MonthYearInput";
+import { SkillChips } from "./SkillChips";
 import { profileFromDraft, type ProfileDraft } from "./profile-draft";
 
 type SaveState = "idle" | "saving" | "saved" | "invalid" | "error";
@@ -68,7 +71,23 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
     { value: "yes", label: t("profile.relocate.yes") },
     { value: "no", label: t("profile.relocate.no") },
   ];
-  const levelHint = t("profile.fields.levelHint");
+  /** CEFR levels and native; a level from the CV the selector does not know stays as an option. */
+  function languageOptions(current: string): SelectOption[] {
+    const options: SelectOption[] = [
+      { value: "", label: t("profile.languageLevels.unset") },
+      ...LANGUAGE_LEVELS.map((level) => ({
+        value: level,
+        label: t(`profile.languageLevels.${level}`),
+      })),
+    ];
+    if (current !== "" && !options.some((option) => option.value === current)) {
+      options.push({
+        value: current,
+        label: t("profile.languageLevels.fromCv", { value: current }),
+      });
+    }
+    return options;
+  }
 
   return (
     <form onSubmit={save} className="flex flex-col gap-6" noValidate>
@@ -148,19 +167,13 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
                 value={item.location}
                 onChange={(event) => change({ location: event.target.value })}
               />
-              <TextInput
-                label={t("profile.fields.startDate")}
-                value={item.startDate}
-                onChange={(event) => change({ startDate: event.target.value })}
-              />
-              <TextInput
-                label={t("profile.fields.endDate")}
-                value={item.endDate}
-                onChange={(event) => change({ endDate: event.target.value })}
+              <DateRange
+                start={item.startDate}
+                end={item.endDate}
+                onChange={(dates) => change(dates)}
               />
               <TextArea
                 label={t("profile.fields.bullets")}
-                hint={t("profile.fields.bulletsHint")}
                 value={item.bullets}
                 onChange={(event) => change({ bullets: event.target.value })}
               />
@@ -173,7 +186,7 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
         <ListEditor
           items={draft.education}
           onItems={(items) => set("education", items)}
-          newItem={() => ({ institution: "", degree: "", field: "", startDate: "", endDate: "" })}
+          newItem={() => ({ institution: "", degree: "", grade: "", startDate: "", endDate: "" })}
           addLabel={t("profile.add.education")}
           entryLabel={(number) => t("profile.entry", { number })}
           removeLabel={(number) => t("profile.remove", { number })}
@@ -190,19 +203,15 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
                 onChange={(event) => change({ degree: event.target.value })}
               />
               <TextInput
-                label={t("profile.fields.field")}
-                value={item.field}
-                onChange={(event) => change({ field: event.target.value })}
+                label={t("profile.fields.grade")}
+                value={item.grade}
+                maxLength={PROFILE_LIMITS.shortText}
+                onChange={(event) => change({ grade: event.target.value })}
               />
-              <TextInput
-                label={t("profile.fields.startDate")}
-                value={item.startDate}
-                onChange={(event) => change({ startDate: event.target.value })}
-              />
-              <TextInput
-                label={t("profile.fields.endDate")}
-                value={item.endDate}
-                onChange={(event) => change({ endDate: event.target.value })}
+              <DateRange
+                start={item.startDate}
+                end={item.endDate}
+                onChange={(dates) => change(dates)}
               />
             </>
           )}
@@ -210,35 +219,7 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
       </Section>
 
       <Section id="profile-skills" title={t("profile.sections.skills")}>
-        <ListEditor
-          items={draft.skills}
-          onItems={(items) => set("skills", items)}
-          newItem={() => ({ name: "", level: "", aliases: "" })}
-          addLabel={t("profile.add.skill")}
-          entryLabel={(number) => t("profile.entry", { number })}
-          removeLabel={(number) => t("profile.remove", { number })}
-          renderFields={(item, change) => (
-            <>
-              <TextInput
-                label={t("profile.fields.skillName")}
-                value={item.name}
-                onChange={(event) => change({ name: event.target.value })}
-              />
-              <TextInput
-                label={t("profile.fields.skillLevel")}
-                hint={levelHint}
-                value={item.level}
-                onChange={(event) => change({ level: event.target.value })}
-              />
-              <TextInput
-                label={t("profile.fields.aliases")}
-                hint={t("profile.fields.aliasesHint")}
-                value={item.aliases}
-                onChange={(event) => change({ aliases: event.target.value })}
-              />
-            </>
-          )}
-        />
+        <SkillChips skills={draft.skills} onChange={(skills) => set("skills", skills)} />
       </Section>
 
       <Section id="profile-languages" title={t("profile.sections.languages")}>
@@ -256,9 +237,9 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
                 value={item.name}
                 onChange={(event) => change({ name: event.target.value })}
               />
-              <TextInput
+              <SelectInput
                 label={t("profile.fields.languageLevel")}
-                hint={levelHint}
+                options={languageOptions(item.level)}
                 value={item.level}
                 onChange={(event) => change({ level: event.target.value })}
               />
@@ -287,10 +268,10 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
                 value={item.issuer}
                 onChange={(event) => change({ issuer: event.target.value })}
               />
-              <TextInput
+              <MonthYearInput
                 label={t("profile.fields.date")}
                 value={item.date}
-                onChange={(event) => change({ date: event.target.value })}
+                onChange={(date) => change({ date })}
               />
             </>
           )}
@@ -385,12 +366,6 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
             setDefaults({ willingToRelocate: event.target.value as "" | "yes" | "no" })
           }
         />
-        <TextInput
-          label={t("profile.fields.pronouns")}
-          value={draft.applicationDefaults.pronouns}
-          maxLength={PROFILE_LIMITS.shortText}
-          onChange={(event) => setDefaults({ pronouns: event.target.value })}
-        />
       </Section>
 
       <Section id="profile-answers" title={t("profile.sections.answers")}>
@@ -433,6 +408,34 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
         </Button>
       </div>
     </form>
+  );
+}
+
+/** Start and end date side by side; the end date may be "still going on". */
+function DateRange({
+  start,
+  end,
+  onChange,
+}: {
+  start: string;
+  end: string;
+  onChange: (dates: { startDate?: string; endDate?: string }) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <MonthYearInput
+        label={t("profile.fields.startDate")}
+        value={start}
+        onChange={(startDate) => onChange({ startDate })}
+      />
+      <MonthYearInput
+        label={t("profile.fields.endDate")}
+        value={end}
+        onChange={(endDate) => onChange({ endDate })}
+        allowPresent
+      />
+    </div>
   );
 }
 

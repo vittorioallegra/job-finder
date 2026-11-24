@@ -1,5 +1,5 @@
 // protects=the document validator accepts a tailored CV and letter that use only the profile's own facts, and reports every employer, title, date, degree, skill name, source index and number that the profile does not support; in an Italian document the same facts pass, with each number read the same in en and it spelling, and translated employers or titles fail;
-// fails_when=an employer, title, date, institution, degree or field that differs from the profile passes, a skill name outside the profile's names and aliases passes, a bullet with a number its source bullet lacks passes, a number the profile lacks in the summary or a paragraph passes, an out-of-range or repeated profile item passes, "1.000" and "1,000" or "3,5" and "3.5" are read as different numbers, or a translated title passes;
+// fails_when=an employer, title, date, institution, degree or grade that differs from the profile passes, a skill name outside the profile's names and aliases passes, a bullet with a number its source bullet lacks passes, a number the profile lacks in the summary or a paragraph passes, an out-of-range or repeated profile item passes, "1.000" and "1,000" or "3,5" and "3.5" are read as different numbers, or a translated title passes;
 // no_claim=the validator does not judge style, length of prose, the language itself or whether the wording is accurate beyond these facts; prose that paraphrases the profile without new numbers is not checked further, and number words such as "tre" are not read;
 import { describe, expect, it } from "vitest";
 import { emptyProfile, type Profile } from "../profile/schema";
@@ -50,8 +50,8 @@ function profile(): Profile {
     education: [
       {
         institution: "Politecnico di Milano",
-        degree: "MSc",
-        field: "Computer Science",
+        degree: "MSc in Computer Science",
+        grade: "110/110",
         startDate: "2011",
         endDate: "2013",
       },
@@ -82,8 +82,8 @@ function cv(overrides: Partial<TailoredCv> = {}): TailoredCv {
       {
         source: 0,
         institution: "Politecnico di Milano",
-        degree: "MSc",
-        field: "Computer Science",
+        degree: "MSc in Computer Science",
+        grade: "110/110",
         startDate: "2011",
         endDate: "2013",
       },

@@ -65,6 +65,11 @@ export {
   emptyProfile,
   PROFILE_LIMITS,
   SALARY_PERIODS,
+  LANGUAGE_LEVELS,
+  PRESENT,
+  formatProfileDate,
+  parseLanguageLevel,
+  parseProfileDate,
 } from "@job-finder/core/profile";
 export type {
   CvExtraction,
@@ -73,4 +78,6 @@ export type {
   ProfileContact,
   ProfileExperience,
   SalaryPeriod,
+  LanguageLevel,
+  ProfileDate,
 } from "@job-finder/core/profile";

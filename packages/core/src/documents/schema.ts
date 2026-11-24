@@ -46,7 +46,7 @@ export const TailoredEducationSchema = z.strictObject({
   source,
   institution: shortText,
   degree: shortText,
-  field: shortText,
+  grade: shortText,
   startDate: dateText,
   endDate: dateText,
 });
@@ -145,7 +145,7 @@ export function profileText(profile: Profile): string {
     );
   }
   for (const item of profile.education) {
-    parts.push(item.institution, item.degree, item.field, item.startDate, item.endDate);
+    parts.push(item.institution, item.degree, item.grade, item.startDate, item.endDate);
   }
   for (const item of profile.skills) {
     parts.push(item.name, item.level, ...item.aliases);
@@ -225,7 +225,7 @@ export function validateTailoredCv(cv: TailoredCv, profile: Profile): DocumentIs
     const matches =
       entry.institution === item.institution &&
       entry.degree === item.degree &&
-      entry.field === item.field &&
+      entry.grade === item.grade &&
       entry.startDate === item.startDate &&
       entry.endDate === item.endDate;
     if (!matches) {

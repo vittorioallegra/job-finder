@@ -103,7 +103,7 @@ function profileLines(profile: ScoringFields): string[] {
   );
   const education = profile.education.map(
     (item) =>
-      `- ${item.degree} in ${item.field} at ${item.institution}${period(item.startDate, item.endDate)}`,
+      `- ${item.degree} at ${item.institution}${item.grade ? ` (grade ${item.grade})` : ""}${period(item.startDate, item.endDate)}`,
   );
   const skills = profile.skills.map(
     (item) =>

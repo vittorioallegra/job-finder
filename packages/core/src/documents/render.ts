@@ -1,4 +1,4 @@
-import type { Profile } from "../profile/schema";
+import { PRESENT, parseProfileDate, type Profile } from "../profile/schema";
 import type { DocumentContent, TailoredCv } from "./schema";
 
 /** Headings and titles of a rendered document, in the document's language (the caller translates them). */
@@ -11,6 +11,8 @@ export interface DocumentLabels {
   skills: string;
   /** The opening line of the cover letter, e.g. "Dear hiring team,". */
   greeting: string;
+  /** The end date of a role or course still going on, e.g. "Present". */
+  present: string;
 }
 
 const PRINT_STYLE = [
@@ -39,8 +41,18 @@ function joinPresent(parts: string[], separator: string): string {
   return parts.filter((part) => part !== "").join(separator);
 }
 
-function dateRange(start: string, end: string): string {
-  return joinPresent([start, end], " – ");
+/** A stored date as a CV shows it: `2021-03` as 03/2021, `present` in the document's language. */
+function showDate(value: string, labels: DocumentLabels): string {
+  const parsed = parseProfileDate(value);
+  if (parsed === null) return value;
+  if (parsed === PRESENT) return labels.present;
+  return parsed.month === null
+    ? String(parsed.year)
+    : `${String(parsed.month).padStart(2, "0")}/${parsed.year}`;
+}
+
+function dateRange(start: string, end: string, labels: DocumentLabels): string {
+  return joinPresent([showDate(start, labels), showDate(end, labels)], " – ");
 }
 
 function contactLine(contact: Profile["contact"]): string {
@@ -57,7 +69,10 @@ function cvBody(cv: TailoredCv, labels: DocumentLabels): string {
   if (cv.experience.length > 0) {
     const entries = cv.experience.map((entry) => {
       const heading = joinPresent([entry.title, entry.company], " — ");
-      const meta = joinPresent([entry.location, dateRange(entry.startDate, entry.endDate)], " · ");
+      const meta = joinPresent(
+        [entry.location, dateRange(entry.startDate, entry.endDate, labels)],
+        " · ",
+      );
       const bullets =
         entry.bullets.length > 0
           ? `<ul>${entry.bullets.map((bullet) => `<li>${escapeHtml(bullet.text)}</li>`).join("")}</ul>`
@@ -70,9 +85,9 @@ function cvBody(cv: TailoredCv, labels: DocumentLabels): string {
   }
   if (cv.education.length > 0) {
     const entries = cv.education.map((entry) => {
-      const heading = joinPresent([entry.degree, entry.field], " — ");
+      const heading = entry.degree;
       const meta = joinPresent(
-        [entry.institution, dateRange(entry.startDate, entry.endDate)],
+        [entry.institution, entry.grade, dateRange(entry.startDate, entry.endDate, labels)],
         " · ",
       );
       return `<article><h3>${escapeHtml(heading)}</h3>${meta ? `<p class="meta">${escapeHtml(meta)}</p>` : ""}</article>`;

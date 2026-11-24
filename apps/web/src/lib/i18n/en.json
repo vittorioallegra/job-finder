@@ -241,21 +241,16 @@
       "phone": "Phone",
       "location": "Location",
       "headline": "Headline",
-      "summary": "Summary",
+      "summary": "Description",
       "company": "Company",
       "jobTitle": "Job title",
       "startDate": "Start",
       "endDate": "End",
-      "bullets": "Achievements",
-      "bulletsHint": "One per line.",
+      "bullets": "Description",
       "institution": "Institution",
       "degree": "Degree",
-      "field": "Field of study",
+      "grade": "Grade (optional)",
       "skillName": "Skill",
-      "skillLevel": "Level",
-      "levelHint": "For example: basic, intermediate, advanced, expert.",
-      "aliases": "Also known as",
-      "aliasesHint": "Separate with commas.",
       "languageName": "Language",
       "languageLevel": "Level",
       "certName": "Certification",
@@ -272,7 +267,6 @@
       "currencyHint": "Three letters, such as EUR.",
       "salaryPeriod": "Period",
       "relocate": "Willing to relocate",
-      "pronouns": "Pronouns",
       "question": "Question",
       "answer": "Answer"
     },
@@ -297,6 +291,31 @@
       "link": "Add link",
       "workAuthorization": "Add work authorization",
       "answer": "Add standard answer"
+    },
+    "date": {
+      "month": "Month",
+      "year": "Year",
+      "noMonth": "Month",
+      "noYear": "Year",
+      "current": "Still going on",
+      "fromCv": "From the CV: “{{value}}”. Pick the date above."
+    },
+    "skillsEditor": {
+      "add": "Add a skill",
+      "addHint": "Type a skill and press Enter or a comma.",
+      "remove": "Remove {{name}}",
+      "empty": "No skills yet."
+    },
+    "languageLevels": {
+      "unset": "Not stated",
+      "A1": "A1 · Beginner",
+      "A2": "A2 · Elementary",
+      "B1": "B1 · Intermediate",
+      "B2": "B2 · Upper intermediate",
+      "C1": "C1 · Advanced",
+      "C2": "C2 · Proficient",
+      "native": "Native speaker",
+      "fromCv": "{{value}} (from the CV)"
     }
   },
   "onboarding": {

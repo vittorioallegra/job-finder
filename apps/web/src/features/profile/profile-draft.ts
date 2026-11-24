@@ -1,5 +1,8 @@
 import {
   ProfileSchema,
+  formatProfileDate,
+  parseLanguageLevel,
+  parseProfileDate,
   type CvExtraction,
   type Profile,
   type ProfileContact,
@@ -34,7 +37,7 @@ export interface ExperienceDraft {
 export interface EducationDraft {
   institution: string;
   degree: string;
-  field: string;
+  grade: string;
   startDate: string;
   endDate: string;
 }
@@ -82,6 +85,12 @@ export interface AnswerDraft {
   answer: string;
 }
 
+/** A date the pickers can show: a readable one in its stored form, any other as it was written. */
+function pickerDate(value: string): string {
+  const parsed = parseProfileDate(value);
+  return parsed === null ? value : formatProfileDate(parsed);
+}
+
 export function draftFromProfile(profile: Profile): ProfileDraft {
   const defaults = profile.applicationDefaults;
   return {
@@ -90,12 +99,25 @@ export function draftFromProfile(profile: Profile): ProfileDraft {
     summary: profile.summary,
     experience: profile.experience.map((item) => ({
       ...item,
+      startDate: pickerDate(item.startDate),
+      endDate: pickerDate(item.endDate),
       bullets: item.bullets.join("\n"),
     })),
-    education: profile.education.map((item) => ({ ...item })),
+    education: profile.education.map((item) => ({
+      ...item,
+      startDate: pickerDate(item.startDate),
+      endDate: pickerDate(item.endDate),
+    })),
     skills: profile.skills.map((item) => ({ ...item, aliases: item.aliases.join(", ") })),
-    languages: profile.languages.map((item) => ({ ...item })),
-    certifications: profile.certifications.map((item) => ({ ...item })),
+    // A level the selector knows ("C1 (IELTS 7.5)" reads as C1); any other stays as written.
+    languages: profile.languages.map((item) => ({
+      ...item,
+      level: parseLanguageLevel(item.level) ?? item.level,
+    })),
+    certifications: profile.certifications.map((item) => ({
+      ...item,
+      date: pickerDate(item.date),
+    })),
     links: profile.links.map((item) => ({ ...item })),
     applicationDefaults: {
       workAuthorization: defaults.workAuthorization.map((item) => ({ ...item })),
