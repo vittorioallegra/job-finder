@@ -17,6 +17,10 @@ export interface SchedulerDeps {
   now: () => number;
   settings: () => Promise<SchedulerSettings>;
   savedSearches: () => Promise<SavedSearch[]>;
+  /** Whether the profile says what to look for (at least one role). */
+  hasPreferences: () => Promise<boolean>;
+  /** Adds the companies the profile's preferences point to, without scanning; the run follows. */
+  discover: () => Promise<void>;
   /** When the last ingestion run that ended, however it ended; null before any run. */
   lastRunFinishedAt: () => Promise<number | null>;
   /** Starts an ingestion run over every company through the ingestion service. */
@@ -29,7 +33,10 @@ export interface SchedulerDeps {
 }
 
 export interface Scheduler {
-  /** Starts a run when saved searches exist and the interval has passed since the last run (or none ran). */
+  /**
+   * Starts a run when saved searches or profile preferences exist and the interval has passed since
+   * the last run (or none ran). With preferences, it first adds the companies they point to.
+   */
   check(): Promise<void>;
   /** Starts a run now, for the tray's "Search now". */
   runNow(): Promise<StartOutcome>;
@@ -60,11 +67,18 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       try {
         if (pending) return;
         const searches = await deps.savedSearches();
-        if (searches.length === 0) return;
+        const preferences = await deps.hasPreferences();
+        if (searches.length === 0 && !preferences) return;
         const { intervalHours } = await deps.settings();
         const last = await deps.lastRunFinishedAt();
         const due = last === null || deps.now() - last >= intervalHours * MS_PER_HOUR;
         if (!due) return;
+        if (preferences) {
+          // New companies first, so the run that follows scans them too. A failed search still scans.
+          await deps.discover().catch((error: unknown) => {
+            deps.log("warn", `company search before the scheduled run failed: ${String(error)}`);
+          });
+        }
         const outcome = await start();
         if (!outcome.ok && outcome.code === "engine-unavailable") {
           deps.log("warn", "scheduled run not started: engine unavailable");

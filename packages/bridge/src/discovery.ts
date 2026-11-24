@@ -16,6 +16,14 @@ export type DiscoverySearchRequest = z.input<typeof DiscoverySearchRequestSchema
 /** Why a search gave no result: the provider blocked it, it failed, or the engine was unreachable. */
 export type DiscoverySearchFailureCode = DiscoveryFailureCode | "engine-unavailable";
 
+/**
+ * The search for companies from the profile's "what you are looking for": `found` boards matched,
+ * `added` of them were new, and a scan started when any was. `no-roles`: the profile has no role yet.
+ */
+export type ProfileDiscoveryResult =
+  | { ok: true; found: number; added: number; runStarted: boolean; searchBlocked?: true }
+  | { ok: false; code: DiscoverySearchFailureCode | "no-roles" };
+
 /** `searchBlocked`: keyless search was refused, but the other sources still gave boards. */
 export type DiscoverySearchResult =
   | { ok: true; candidates: DiscoveryCandidate[]; searchBlocked?: true }

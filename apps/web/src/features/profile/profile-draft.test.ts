@@ -1,5 +1,5 @@
 // protects=the profile form converts to a valid profile and back without losing entries, drops blank rows, splits bullets and aliases, and refuses values the schema rejects;
-// fails_when=a filled entry is lost or changed by a round trip, a blank row is saved, a bullet or alias is kept joined, a non-numeric salary or malformed email is accepted, or a CV extraction overwrites application defaults;
+// fails_when=a filled entry is lost or changed by a round trip, a blank row is saved, a bullet or alias is kept joined, a non-numeric salary or malformed email is accepted, or a CV extraction overwrites application defaults or does not seed the roles and place looked for;
 // no_claim=whether the typed values are sensible for a real career is not judged; only the shape and bounds are.
 import { describe, expect, it } from "vitest";
 import { emptyProfile, type Profile } from "@job-finder/bridge";
@@ -105,5 +105,42 @@ describe("profile draft", () => {
     expect(draft.headline).toBe("Frontend Developer");
     expect(draft.applicationDefaults.salaryAmount).toBe("");
     expect(profileFromDraft(draft)?.applicationDefaults.salary.amount).toBeNull();
+  });
+
+  it("starts what you are looking for from the CV: headline and latest role, and the city", () => {
+    const draft = draftFromExtraction(
+      {
+        contact: { fullName: "Giulia", email: "", phone: "", location: "Torino, Italia" },
+        headline: "Senior Full-Stack Developer",
+        summary: "",
+        experience: [
+          {
+            company: "PayFlow",
+            title: "Tech Lead",
+            location: "",
+            startDate: "",
+            endDate: "",
+            bullets: [],
+          },
+          {
+            company: "ShopNow",
+            title: "Senior Software Engineer",
+            location: "",
+            startDate: "",
+            endDate: "",
+            bullets: [],
+          },
+        ],
+        education: [],
+        skills: [],
+        languages: [],
+        certifications: [],
+        links: [],
+      },
+      emptyProfile(),
+    );
+    expect(draft.preferences.roles).toEqual(["Senior Full-Stack Developer", "Tech Lead"]);
+    expect(draft.preferences.locations).toEqual(["Torino"]);
+    expect(profileFromDraft(draft)?.preferences.roles).toHaveLength(2);
   });
 });

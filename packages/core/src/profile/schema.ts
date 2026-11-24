@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { formatProfileDate, parseLanguageLevel, parseProfileDate } from "./format";
+import type { EmploymentType, SeniorityLevel, WorkMode } from "../normalize/job";
 
 /**
  * Profile domain schema. Pure: no Node or Electron imports, so the renderer can load it through
@@ -141,6 +142,49 @@ export const StandardAnswerSchema = z.strictObject({
   answer: z.string().trim().min(1).max(PROFILE_LIMITS.longText),
 });
 
+/** Choices "what you are looking for" offers: the job model's values, without `unknown`. */
+export const PREFERRED_WORK_MODES = [
+  "remote",
+  "hybrid",
+  "onsite",
+] as const satisfies readonly WorkMode[];
+export const PREFERRED_EMPLOYMENT_TYPES = [
+  "full_time",
+  "part_time",
+  "contract",
+  "freelance",
+  "internship",
+  "temporary",
+] as const satisfies readonly EmploymentType[];
+export const PREFERRED_SENIORITIES = [
+  "intern",
+  "junior",
+  "mid",
+  "senior",
+  "lead",
+] as const satisfies readonly SeniorityLevel[];
+
+/** At most this many roles and places; the company search combines each with each board domain. */
+export const PREFERENCE_LIMITS = { roles: 10, locations: 10 } as const;
+
+/**
+ * What the person is looking for. Roles and places drive the search for companies; work mode,
+ * contract and level filter the jobs list. Empty lists mean "any".
+ */
+export const JobPreferencesSchema = z.strictObject({
+  roles: z.array(requiredShortText).max(PREFERENCE_LIMITS.roles),
+  locations: z.array(requiredShortText).max(PREFERENCE_LIMITS.locations),
+  workModes: z.array(z.enum(PREFERRED_WORK_MODES)),
+  employmentTypes: z.array(z.enum(PREFERRED_EMPLOYMENT_TYPES)),
+  seniorities: z.array(z.enum(PREFERRED_SENIORITIES)),
+});
+
+export type JobPreferences = z.output<typeof JobPreferencesSchema>;
+
+export function emptyPreferences(): JobPreferences {
+  return { roles: [], locations: [], workModes: [], employmentTypes: [], seniorities: [] };
+}
+
 export const ProfileSchema = z.strictObject({
   contact: ContactSchema,
   headline: shortText,
@@ -153,6 +197,8 @@ export const ProfileSchema = z.strictObject({
   links: z.array(LinkSchema).max(10),
   applicationDefaults: ApplicationDefaultsSchema,
   standardAnswers: z.array(StandardAnswerSchema).max(PROFILE_LIMITS.listItems),
+  // Profiles saved before preferences existed have none: they read as "anything".
+  preferences: JobPreferencesSchema.default(emptyPreferences),
 });
 
 export type Profile = z.output<typeof ProfileSchema>;
@@ -182,6 +228,7 @@ export function emptyProfile(): Profile {
       pronouns: "",
     },
     standardAnswers: [],
+    preferences: emptyPreferences(),
   };
 }
 

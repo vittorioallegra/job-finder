@@ -13,7 +13,6 @@
       "label": "Principale",
       "home": "Home di Job Finder",
       "jobs": "Offerte",
-      "companies": "Aziende",
       "applications": "Candidature",
       "profile": "Profilo",
       "settings": "Impostazioni",
@@ -225,6 +224,7 @@
     "entry": "Voce {{number}}",
     "remove": "Rimuovi la voce {{number}}",
     "sections": {
+      "preferences": "Cosa cerchi",
       "contact": "Contatti",
       "summary": "Riepilogo",
       "experience": "Esperienza",
@@ -317,7 +317,23 @@
       "C2": "C2 · Padronanza",
       "native": "Madrelingua",
       "fromCv": "{{value}} (dal CV)"
-    }
+    },
+    "preferences": {
+      "intro": "L'app cerca le aziende che assumono per questi ruoli in questi luoghi, poi ordina le loro offerte in base al tuo profilo. Lascia vuota una parte per accettare qualsiasi cosa.",
+      "roles": "Ruoli",
+      "addRole": "Aggiungi un ruolo",
+      "rolesHint": "Per esempio: Backend Engineer, Tech Lead. Premi Invio o la virgola per aggiungerlo.",
+      "anyRole": "Ancora nessun ruolo: aggiungine almeno uno, così l'app sa quali aziende cercare.",
+      "locations": "Luoghi",
+      "addLocation": "Aggiungi un luogo",
+      "locationsHint": "Città, regioni o paesi, oppure Remote. Premi Invio o la virgola per aggiungerlo.",
+      "anyLocation": "Qualsiasi luogo.",
+      "workModes": "Modalità di lavoro",
+      "employmentTypes": "Contratto",
+      "seniorities": "Livello"
+    },
+    "searchChanged": "Hai cambiato i ruoli o i luoghi che cerchi.",
+    "searchChangedAction": "Cerca le aziende per questi"
   },
   "onboarding": {
     "title": "Configura il profilo",
@@ -376,7 +392,6 @@
     "loading": "Caricamento dei lavori…",
     "loadFailed": "Non è stato possibile caricare aziende e lavori.",
     "retry": "Riprova",
-    "openCompanies": "Gestisci aziende",
     "scan": {
       "heading": "Scansione",
       "start": "Scansiona aziende",
@@ -384,7 +399,6 @@
       "cancel": "Annulla scansione",
       "running": "Scansione in corso…",
       "idle": "Nessuna scansione in corso.",
-      "needCompanies": "Prima aggiungi un'azienda nella schermata Aziende.",
       "alreadyRunning": "Una scansione è già in corso.",
       "engineUnavailable": "Il motore in background non è disponibile. Riprova tra poco."
     },
@@ -603,11 +617,35 @@
     "openApplications": "Apri candidature",
     "subtitle_one": "{{count}} offerta aperta · {{fresh}} nuove",
     "subtitle_other": "{{count}} offerte aperte · {{fresh}} nuove",
-    "filtersToggle": "Filtri e ricerche salvate"
+    "filtersToggle": "Filtri e ricerche salvate",
+    "discover": {
+      "companies_one": "Le offerte arrivano da {{count}} azienda.",
+      "companies_other": "Le offerte arrivano da {{count}} aziende.",
+      "start": "Cerca nuove aziende",
+      "searching": "Ricerca…",
+      "searchingLong": "Sto cercando sul web le aziende che assumono per i tuoi ruoli. Può richiedere un minuto.",
+      "needRoles": "Indica nel profilo quali ruoli cerchi, e l'app trova le aziende che assumono per quei ruoli.",
+      "openProfile": "Apri il profilo",
+      "manage": "Gestisci le fonti",
+      "added_one": "Aggiunta {{count}} nuova azienda su {{found}} trovate.",
+      "added_other": "Aggiunte {{count}} nuove aziende su {{found}} trovate.",
+      "nothingNew_one": "Trovata {{count}} azienda, già nel tuo elenco.",
+      "nothingNew_other": "Trovate {{count}} aziende, tutte già nel tuo elenco.",
+      "none": "Nessuna azienda trovata per i tuoi ruoli e luoghi. Prova ruoli più ampi, o aggiungi una chiave di ricerca nelle Impostazioni.",
+      "scanning": "Sto leggendo le loro offerte.",
+      "blocked": "La ricerca senza chiave è stata bloccata; una chiave di ricerca gratuita nelle Impostazioni dà più risultati.",
+      "failure": {
+        "no-roles": "Aggiungi prima almeno un ruolo nel profilo.",
+        "search-blocked": "Il servizio di ricerca ha bloccato la richiesta. Aggiungi una chiave di ricerca gratuita nelle Impostazioni e riprova.",
+        "search-failed": "La ricerca non è riuscita. Riprova più tardi.",
+        "engine-unavailable": "Il motore in background non è in esecuzione. Riprova tra poco."
+      }
+    }
   },
   "companies": {
-    "title": "Aziende",
-    "backJobs": "Torna ai lavori",
+    "title": "Fonti",
+    "intro": "Le aziende di cui l'app legge le bacheche di lavoro. Le aggiunge da sola in base a cosa cerchi; qui puoi aggiungere un'azienda precisa o toglierne una che non ti interessa.",
+    "backJobs": "Torna alle offerte",
     "loading": "Caricamento delle aziende…",
     "loadFailed": "Non è stato possibile caricare le aziende.",
     "retry": "Riprova",

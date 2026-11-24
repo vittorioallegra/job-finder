@@ -173,7 +173,13 @@ export function OnboardingScreen() {
               {t("onboarding.review.contextWarning")}
             </p>
           ) : null}
-          <ProfileEditor initialDraft={draft} onSaved={() => navigate("/")} />
+          <ProfileEditor
+            initialDraft={draft}
+            // With roles to look for, setup ends on the jobs list, which starts the company search.
+            onSaved={(record) =>
+              navigate(record.profile.preferences.roles.length > 0 ? "/jobs?discover=1" : "/")
+            }
+          />
           <div>
             <Button variant="ghost" onClick={() => setStep("cv")}>
               <ArrowLeft aria-hidden className="size-4" />

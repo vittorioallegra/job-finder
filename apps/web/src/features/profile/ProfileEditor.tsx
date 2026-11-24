@@ -2,6 +2,10 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   LANGUAGE_LEVELS,
+  PREFERENCE_LIMITS,
+  PREFERRED_EMPLOYMENT_TYPES,
+  PREFERRED_SENIORITIES,
+  PREFERRED_WORK_MODES,
   PROFILE_LIMITS,
   SALARY_PERIODS,
   type ProfileRecord,
@@ -9,10 +13,12 @@ import {
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Button } from "../../components/ui/Button";
+import { CheckboxInput } from "../../components/ui/CheckboxInput";
 import { Card, CardTitle } from "../../components/ui/Card";
 import { SelectInput, type SelectOption } from "../../components/ui/SelectInput";
 import { TextArea } from "../../components/ui/TextArea";
 import { TextInput } from "../../components/ui/TextInput";
+import { ChipsInput } from "./ChipsInput";
 import { MonthYearInput } from "./MonthYearInput";
 import { SkillChips } from "./SkillChips";
 import { profileFromDraft, type ProfileDraft } from "./profile-draft";
@@ -89,8 +95,77 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
     return options;
   }
 
+  function setPreferences(patch: Partial<ProfileDraft["preferences"]>) {
+    setDraft((current) => ({ ...current, preferences: { ...current.preferences, ...patch } }));
+    setSaveState("idle");
+  }
+  const preferences = draft.preferences;
+
   return (
     <form onSubmit={save} className="flex flex-col gap-6" noValidate>
+      <Section id="profile-preferences" title={t("profile.sections.preferences")}>
+        <p className="text-sm text-app-muted">{t("profile.preferences.intro")}</p>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-medium text-app-fg">
+            {t("profile.preferences.roles")}
+          </span>
+          <ChipsInput
+            label={t("profile.preferences.roles")}
+            values={preferences.roles}
+            onChange={(roles) => setPreferences({ roles })}
+            addLabel={t("profile.preferences.addRole")}
+            hint={t("profile.preferences.rolesHint")}
+            emptyText={t("profile.preferences.anyRole")}
+            removeLabel={(name) => t("profile.skillsEditor.remove", { name })}
+            max={PREFERENCE_LIMITS.roles}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-medium text-app-fg">
+            {t("profile.preferences.locations")}
+          </span>
+          <ChipsInput
+            label={t("profile.preferences.locations")}
+            values={preferences.locations}
+            onChange={(locations) => setPreferences({ locations })}
+            addLabel={t("profile.preferences.addLocation")}
+            hint={t("profile.preferences.locationsHint")}
+            emptyText={t("profile.preferences.anyLocation")}
+            removeLabel={(name) => t("profile.skillsEditor.remove", { name })}
+            max={PREFERENCE_LIMITS.locations}
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <ChoiceGroup
+            legend={t("profile.preferences.workModes")}
+            options={PREFERRED_WORK_MODES.map((value) => ({
+              value,
+              label: t(`jobs.results.workMode.${value}`),
+            }))}
+            selected={preferences.workModes}
+            onChange={(workModes) => setPreferences({ workModes })}
+          />
+          <ChoiceGroup
+            legend={t("profile.preferences.employmentTypes")}
+            options={PREFERRED_EMPLOYMENT_TYPES.map((value) => ({
+              value,
+              label: t(`jobs.filters.values.employment.${value}`),
+            }))}
+            selected={preferences.employmentTypes}
+            onChange={(employmentTypes) => setPreferences({ employmentTypes })}
+          />
+          <ChoiceGroup
+            legend={t("profile.preferences.seniorities")}
+            options={PREFERRED_SENIORITIES.map((value) => ({
+              value,
+              label: t(`jobs.filters.values.seniority.${value}`),
+            }))}
+            selected={preferences.seniorities}
+            onChange={(seniorities) => setPreferences({ seniorities })}
+          />
+        </div>
+      </Section>
+
       <Section id="profile-contact" title={t("profile.sections.contact")} columns>
         <TextInput
           label={t("profile.fields.fullName")}
@@ -408,6 +483,39 @@ export function ProfileEditor({ initialDraft, onSaved }: ProfileEditorProps) {
         </Button>
       </div>
     </form>
+  );
+}
+
+/** A set of checkboxes; none ticked means "any". */
+function ChoiceGroup<T extends string>({
+  legend,
+  options,
+  selected,
+  onChange,
+}: {
+  legend: string;
+  options: { value: T; label: string }[];
+  selected: T[];
+  onChange: (selected: T[]) => void;
+}) {
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-1 text-[13px] font-medium text-app-fg">{legend}</legend>
+      {options.map((option) => (
+        <CheckboxInput
+          key={option.value}
+          label={option.label}
+          checked={selected.includes(option.value)}
+          onChange={(event) =>
+            onChange(
+              event.target.checked
+                ? [...selected, option.value]
+                : selected.filter((value) => value !== option.value),
+            )
+          }
+        />
+      ))}
+    </fieldset>
   );
 }
 

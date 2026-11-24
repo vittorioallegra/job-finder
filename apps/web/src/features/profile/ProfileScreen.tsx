@@ -21,6 +21,7 @@ export function ProfileScreen() {
   const { t } = useTranslation();
   const bridge = useBridge();
   const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [searchChanged, setSearchChanged] = useState(false);
 
   const load = useCallback(async (): Promise<LoadState> => {
     try {
@@ -80,8 +81,32 @@ export function ProfileScreen() {
         />
       ) : null}
 
+      {searchChanged ? (
+        <p role="note" className="rounded-xl bg-app-accent-soft p-3 text-sm text-app-fg">
+          {t("profile.searchChanged")}{" "}
+          <Link to="/jobs?discover=1" className="font-medium text-app-accent underline">
+            {t("profile.searchChangedAction")}
+          </Link>
+        </p>
+      ) : null}
+
       {state.status === "ready" ? (
-        <ProfileEditor initialDraft={draftFromProfile(state.record.profile)} />
+        <ProfileEditor
+          initialDraft={draftFromProfile(state.record.profile)}
+          onSaved={(record) => {
+            // New roles or places point to other companies: offer the search right away.
+            const before = state.record.profile.preferences;
+            const after = record.profile.preferences;
+            if (
+              after.roles.length > 0 &&
+              (JSON.stringify(before.roles) !== JSON.stringify(after.roles) ||
+                JSON.stringify(before.locations) !== JSON.stringify(after.locations))
+            ) {
+              setSearchChanged(true);
+            }
+            setState({ status: "ready", record });
+          }}
+        />
       ) : null}
     </main>
   );

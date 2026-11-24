@@ -35,6 +35,7 @@ import type { IngestRepository } from "../ingest/repository";
 import type { IngestionService } from "../ingest/service";
 import type { CvImportService } from "../profile/cv-import";
 import type { DiscoveryService } from "../discovery/service";
+import type { ProfileDiscovery } from "../discovery/from-profile";
 import type { ScoringService } from "../scoring/service";
 import type { SavedSearchRepository } from "../saved-searches/repository";
 import type { ApplicationRepository } from "../applications/repository";
@@ -66,6 +67,7 @@ export interface IpcServices {
   repository: IngestRepository;
   ingestion: IngestionService;
   discovery: DiscoveryService;
+  profileDiscovery: ProfileDiscovery;
   scoring: ScoringService;
   savedSearches: SavedSearchRepository;
   applications: ApplicationRepository;
@@ -184,6 +186,8 @@ export async function handleInvoke(
       return services.ingestion.start((payload as IngestStartRequest | undefined)?.companyId);
     case "discovery:search":
       return services.discovery.search(payload as DiscoverySearchRequest);
+    case "discovery:from-profile":
+      return services.profileDiscovery.run();
     case "ingest:cancel":
       services.ingestion.cancel((payload as { runId: string }).runId);
       return undefined;

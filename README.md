@@ -29,15 +29,19 @@ pnpm desktop:dist   # package an installer for this system (apps/desktop/dist)
 
 ## First launch
 
-1. The app opens onboarding. Enter your profile (contact details, experience, education,
-   skills and languages), or import a CV: the text is read on your machine and one AI call
-   extracts a draft. Nothing is saved until you press save.
-2. Open Settings and choose an AI provider (see below). Test the connection there.
-3. On the Companies screen, search for job boards, or add a company by its careers URL.
-   The app scans each company's board and keeps its postings.
-4. On the Jobs screen, open a posting. Bookmark it or prepare it: the app creates an
+1. The app opens profile setup. Choose an AI provider (see below) and test it, then import a
+   CV (the text is read on your machine and one AI call extracts a draft) or enter the profile
+   by hand. Check the draft and say **what you are looking for**: roles, places, work mode,
+   contract and level. Nothing is saved until you press save.
+2. The app reads job openings from companies' own job boards, never from LinkedIn or Indeed.
+   After setup it searches the web for the boards of companies hiring for your roles in your
+   places, adds them and scans them; it repeats the search with every scheduled scan. The
+   **Sources** page (linked from Jobs) lists those companies: add a specific one by its careers
+   URL, or remove one you don't want.
+3. The Jobs screen opens filtered by your work mode, contract and level, ranked by how well
+   each posting fits your profile. Open a posting. Bookmark it or prepare it: the app creates an
    application and you can generate a tailored CV and cover letter.
-5. Open the form from the application. The app fills what your profile covers in a separate
+4. Open the form from the application. The app fills what your profile covers in a separate
    window and highlights the rest. You review it and press submit yourself. The app never
    presses submit. Then mark the application as applied.
 

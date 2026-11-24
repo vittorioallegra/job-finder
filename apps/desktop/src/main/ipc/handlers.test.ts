@@ -147,6 +147,12 @@ function spyServices() {
     repository,
     ingestion,
     discovery,
+    profileDiscovery: {
+      run: async () => {
+        calls.push("profileDiscovery.run");
+        return { ok: false as const, code: "no-roles" as const };
+      },
+    },
     scoring: { start: async () => ({ ok: false as const, code: "no-profile" as const }) },
     savedSearches: {
       list: async () => {
@@ -357,6 +363,7 @@ describe("IPC sender and payload guard", () => {
         "autofill:start",
         "companies:add",
         "companies:list",
+        "discovery:from-profile",
         "discovery:search",
         "documents:export",
         "documents:generate",

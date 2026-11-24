@@ -1,4 +1,4 @@
-// protects=scheduled runs start only with saved searches and once the interval has passed since the last finished run, a run never starts over an active one, and a run the scheduler started notifies once when it has new matches, with the click target of the matching search;
+// protects=scheduled runs start only with saved searches or profile preferences (finding new companies first) and once the interval has passed since the last finished run, a run never starts over an active one, and a run the scheduler started notifies once when it has new matches, with the click target of the matching search;
 // fails_when=a run starts with no saved searches or before the interval, a second run starts over an active one, a run without new matches notifies, a run finished twice notifies twice, a run the scheduler did not start notifies, or a failing store throws out of a check;
 // no_claim=the real clock, the powerMonitor wake events, the timer that calls check, and the ingestion run itself are not exercised here; the ingestion service and engine tests cover the run.
 import { describe, expect, it } from "vitest";
@@ -23,6 +23,9 @@ interface Fixture {
   matches: NewJobMatches;
   notified: Array<{ matches: NewJobMatches; open: OpenNewJobsRequest }>;
   logs: string[];
+  preferences: boolean;
+  /** What happened, in order: "discover" and "start". */
+  order: string[];
 }
 
 function fixture(
@@ -39,6 +42,8 @@ function fixture(
     matches: { count: 2, topScore: 88, searchNames: ["Backend Milan"], savedSearchId: "s1" },
     notified: [],
     logs: [],
+    preferences: false,
+    order: [],
   };
   fx.deps = {
     now: () => clock.now,
@@ -47,9 +52,14 @@ function fixture(
       notificationsEnabled: overrides.notifications ?? true,
     }),
     savedSearches: async () => fx.searches,
+    hasPreferences: async () => fx.preferences,
+    discover: async () => {
+      fx.order.push("discover");
+    },
     lastRunFinishedAt: async () => fx.lastFinished.at,
     startRun: async () => {
       fx.starts += 1;
+      fx.order.push("start");
       return fx.startAnswer;
     },
     newMatches: async () => fx.matches,
@@ -64,6 +74,18 @@ function fixture(
 }
 
 describe("scheduler", () => {
+  it("runs on profile preferences alone, finding new companies before the scan", async () => {
+    const fx = fixture();
+    fx.searches = [];
+    const scheduler = createScheduler(fx.deps);
+    await scheduler.check();
+    expect(fx.starts).toBe(0);
+
+    fx.preferences = true;
+    await scheduler.check();
+    expect(fx.order).toEqual(["discover", "start"]);
+  });
+
   it("runs a due saved search on the first check, and waits for the interval after a finished run", async () => {
     const fx = fixture({ intervalHours: 24 });
     const scheduler = createScheduler(fx.deps);

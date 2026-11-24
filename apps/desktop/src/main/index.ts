@@ -25,6 +25,7 @@ import { createCvImportService } from "./profile/cv-import";
 import { createIngestRepository } from "./ingest/repository";
 import { createIngestionService } from "./ingest/service";
 import { createDiscoveryService } from "./discovery/service";
+import { createProfileDiscovery } from "./discovery/from-profile";
 import { createProfileRepository } from "./profile/repository";
 import { createScoringService } from "./scoring/service";
 import { createSavedSearchRepository } from "./saved-searches/repository";
@@ -361,6 +362,12 @@ if (gotSingleInstanceLock) {
       settings: settingsRepository,
       secrets: secretStore,
     });
+    const profileDiscovery = createProfileDiscovery({
+      preferences: async () => (await profileRepository.get())?.profile.preferences ?? null,
+      search: (request) => discovery.search(request),
+      addCompany: (input) => ingestRepository.addCompany(input),
+      startRun: () => ingestion.start(),
+    });
     /** Creates the main window, or shows the existing one (also from the tray and a notification). */
     function showMainWindow(): void {
       if (!mainWindow || mainWindow.isDestroyed()) {
@@ -456,6 +463,14 @@ if (gotSingleInstanceLock) {
             };
           },
           savedSearches: () => savedSearchRepository.list(),
+          hasPreferences: async () =>
+            ((await profileRepository.get())?.profile.preferences.roles.length ?? 0) > 0,
+          discover: async () => {
+            const result = await profileDiscovery.run({ scan: false });
+            if (!result.ok && result.code !== "no-roles") {
+              logger.log("warn", `scheduled company search failed: ${result.code}`);
+            }
+          },
           lastRunFinishedAt: () => lastFinishedIngestRunAt(database.db),
           startRun: () => ingestion.start(),
           newMatches: (searches, since) =>
@@ -504,6 +519,7 @@ if (gotSingleInstanceLock) {
         repository: ingestRepository,
         ingestion,
         discovery,
+        profileDiscovery,
         scoring,
         savedSearches: savedSearchRepository,
         applications: applicationRepository,

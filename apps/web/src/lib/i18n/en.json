@@ -13,7 +13,6 @@
       "label": "Main",
       "home": "Job Finder home",
       "jobs": "Jobs",
-      "companies": "Companies",
       "applications": "Applications",
       "profile": "Profile",
       "settings": "Settings",
@@ -225,6 +224,7 @@
     "entry": "Entry {{number}}",
     "remove": "Remove entry {{number}}",
     "sections": {
+      "preferences": "What you are looking for",
       "contact": "Contact",
       "summary": "Summary",
       "experience": "Experience",
@@ -317,7 +317,23 @@
       "C2": "C2 · Proficient",
       "native": "Native speaker",
       "fromCv": "{{value}} (from the CV)"
-    }
+    },
+    "preferences": {
+      "intro": "The app looks for companies hiring for these roles in these places, then ranks their jobs against your profile. Leave a part empty to accept anything.",
+      "roles": "Roles",
+      "addRole": "Add a role",
+      "rolesHint": "For example: Backend Engineer, Tech Lead. Press Enter or a comma to add.",
+      "anyRole": "No role yet: add at least one, so the app knows which companies to look for.",
+      "locations": "Places",
+      "addLocation": "Add a place",
+      "locationsHint": "Cities, regions or countries, or Remote. Press Enter or a comma to add.",
+      "anyLocation": "Any place.",
+      "workModes": "Work mode",
+      "employmentTypes": "Contract",
+      "seniorities": "Level"
+    },
+    "searchChanged": "You changed the roles or places you are looking for.",
+    "searchChangedAction": "Find companies for them"
   },
   "onboarding": {
     "title": "Set up your profile",
@@ -376,7 +392,6 @@
     "loading": "Loading jobs…",
     "loadFailed": "Companies and jobs could not be loaded.",
     "retry": "Try again",
-    "openCompanies": "Manage companies",
     "scan": {
       "heading": "Scan",
       "start": "Scan companies",
@@ -384,7 +399,6 @@
       "cancel": "Cancel scan",
       "running": "Scanning…",
       "idle": "No scan is running.",
-      "needCompanies": "Add a company on the Companies screen first.",
       "alreadyRunning": "A scan is already running.",
       "engineUnavailable": "The background engine is not available. Try again in a moment."
     },
@@ -603,10 +617,34 @@
     "openApplications": "Open applications",
     "subtitle_one": "{{count}} open job · {{fresh}} new",
     "subtitle_other": "{{count}} open jobs · {{fresh}} new",
-    "filtersToggle": "Filters and saved searches"
+    "filtersToggle": "Filters and saved searches",
+    "discover": {
+      "companies_one": "Jobs come from {{count}} company.",
+      "companies_other": "Jobs come from {{count}} companies.",
+      "start": "Find new companies",
+      "searching": "Searching…",
+      "searchingLong": "Looking on the web for companies hiring for your roles. This can take a minute.",
+      "needRoles": "Say which roles you are looking for in your profile, and the app finds the companies hiring for them.",
+      "openProfile": "Open the profile",
+      "manage": "Manage sources",
+      "added_one": "Added {{count}} new company out of {{found}} found.",
+      "added_other": "Added {{count}} new companies out of {{found}} found.",
+      "nothingNew_one": "Found {{count}} company, already in your list.",
+      "nothingNew_other": "Found {{count}} companies, all already in your list.",
+      "none": "No company found for your roles and places. Try broader roles, or add a search key in Settings.",
+      "scanning": "Their jobs are being read now.",
+      "blocked": "The keyless search was blocked; a free search key in Settings gives more results.",
+      "failure": {
+        "no-roles": "Add at least one role in your profile first.",
+        "search-blocked": "The search service blocked the request. Add a free search key in Settings and try again.",
+        "search-failed": "The search failed. Try again later.",
+        "engine-unavailable": "The background engine is not running. Try again shortly."
+      }
+    }
   },
   "companies": {
-    "title": "Companies",
+    "title": "Sources",
+    "intro": "The companies whose job boards the app reads. It adds them by itself from what you are looking for; here you can add a specific company, or remove one you don't want.",
     "backJobs": "Back to jobs",
     "loading": "Loading companies…",
     "loadFailed": "Companies could not be loaded.",

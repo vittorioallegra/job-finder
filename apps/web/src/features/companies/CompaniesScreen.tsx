@@ -239,6 +239,7 @@ export function CompaniesScreen() {
     <main className="flex flex-col gap-8">
       <PageHeader
         title={t("companies.title")}
+        description={t("companies.intro")}
         actions={
           <Link to="/jobs" className={buttonClass("secondary", "sm")}>
             {t("companies.backJobs")}

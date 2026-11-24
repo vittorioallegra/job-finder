@@ -68,6 +68,11 @@ export {
   SALARY_PERIODS,
   LANGUAGE_LEVELS,
   PRESENT,
+  PREFERENCE_LIMITS,
+  PREFERRED_EMPLOYMENT_TYPES,
+  PREFERRED_SENIORITIES,
+  PREFERRED_WORK_MODES,
+  emptyPreferences,
   formatProfileDate,
   parseLanguageLevel,
   parseProfileDate,
@@ -81,4 +86,5 @@ export type {
   SalaryPeriod,
   LanguageLevel,
   ProfileDate,
+  JobPreferences,
 } from "@job-finder/core/profile";

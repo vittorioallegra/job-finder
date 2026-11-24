@@ -27,7 +27,11 @@ import type { AppStatus, OpenNewJobsRequest } from "./app";
 import type { AppSettings, AppSettingsPatch } from "./settings";
 import type { SecretName, SecretsStatus } from "./secrets";
 import type { CvImportRequest, CvImportResult, Profile, ProfileRecord } from "./profile";
-import type { DiscoverySearchRequest, DiscoverySearchResult } from "./discovery";
+import type {
+  DiscoverySearchRequest,
+  DiscoverySearchResult,
+  ProfileDiscoveryResult,
+} from "./discovery";
 import type { ScoreStartRequest, ScoreStartResult } from "./scoring";
 import type {
   JobDetail,
@@ -157,6 +161,8 @@ export interface JobFinderBridge {
   readonly discovery: {
     /** Searches the web for ATS boards matching the criteria. Found boards are not added until the user adds them. */
     search(input: DiscoverySearchRequest): Promise<DiscoverySearchResult>;
+    /** Finds and adds the companies the profile's roles and places point to, then scans them. */
+    fromProfile(): Promise<ProfileDiscoveryResult>;
   };
   readonly app: {
     /** The engine state and the newer release, if the update check found one. */

@@ -4,6 +4,7 @@ import {
   parseLanguageLevel,
   parseProfileDate,
   type CvExtraction,
+  type JobPreferences,
   type Profile,
   type ProfileContact,
   type SalaryPeriod,
@@ -22,6 +23,7 @@ export interface ProfileDraft {
   links: LinkDraft[];
   applicationDefaults: DefaultsDraft;
   standardAnswers: AnswerDraft[];
+  preferences: JobPreferences;
 }
 
 export interface ExperienceDraft {
@@ -130,12 +132,29 @@ export function draftFromProfile(profile: Profile): ProfileDraft {
       pronouns: defaults.pronouns,
     },
     standardAnswers: profile.standardAnswers.map((item) => ({ ...item })),
+    preferences: structuredClone(profile.preferences),
   };
 }
 
-/** A draft seeded from a CV extraction: CV sections come from the extraction, the rest stays empty. */
+/**
+ * A draft seeded from a CV extraction: CV sections come from the extraction, the rest stays empty.
+ * "What you are looking for" starts from the CV too: the headline and the latest role as roles,
+ * the person's city as the place. The person corrects them in the review.
+ */
 export function draftFromExtraction(extraction: CvExtraction, empty: Profile): ProfileDraft {
-  return draftFromProfile({ ...empty, ...extraction });
+  const roles: string[] = [];
+  for (const role of [extraction.headline, extraction.experience[0]?.title ?? ""]) {
+    const value = role.trim();
+    if (value !== "" && !roles.some((known) => known.toLowerCase() === value.toLowerCase())) {
+      roles.push(value);
+    }
+  }
+  const city = extraction.contact.location.split(",")[0]?.trim() ?? "";
+  return draftFromProfile({
+    ...empty,
+    ...extraction,
+    preferences: { ...empty.preferences, roles, locations: city === "" ? [] : [city] },
+  });
 }
 
 function isBlank(values: readonly string[]): boolean {
@@ -191,6 +210,7 @@ export function profileFromDraft(draft: ProfileDraft): Profile | null {
       pronouns: draft.applicationDefaults.pronouns,
     },
     standardAnswers: draft.standardAnswers.filter((item) => !isBlank(Object.values(item))),
+    preferences: draft.preferences,
   };
   const parsed = ProfileSchema.safeParse(candidate);
   return parsed.success ? parsed.data : null;

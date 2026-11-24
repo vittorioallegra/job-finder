@@ -146,7 +146,9 @@ describe("profile editor", () => {
     const year = selects.find((select) => select.value === "2021");
     expect(month).toBeDefined();
     expect(year).toBeDefined();
-    const ongoing = container.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    const ongoing = [...container.querySelectorAll("label")]
+      .find((label) => label.textContent?.trim() === "Still going on")
+      ?.querySelector<HTMLInputElement>("input");
     expect(ongoing?.checked).toBe(true);
 
     await act(async () => choose(year!, "2020"));
@@ -201,6 +203,30 @@ describe("profile editor", () => {
         ],
         languages: [{ name: "English", level: "native" }],
         education: [expect.objectContaining({ grade: "110/110" })],
+      }),
+    );
+  });
+
+  it("edits what you are looking for: roles as chips and work modes as choices", async () => {
+    const bridge = createMemoryBridge({ profile: sample() });
+    const save = vi.spyOn(bridge.profile, "save");
+    await render(bridge, sample());
+    const role = container.querySelector<HTMLInputElement>('input[placeholder="Add a role"]')!;
+    await act(async () => setValue(role, "Backend Engineer, Tech Lead"));
+    await act(async () => {
+      role.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    const remote = [...container.querySelectorAll("label")]
+      .find((label) => label.textContent?.trim() === "Remote")
+      ?.querySelector<HTMLInputElement>("input");
+    await act(async () => remote!.click());
+    await act(async () => button(container, "Save profile").click());
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        preferences: expect.objectContaining({
+          roles: ["Backend Engineer", "Tech Lead"],
+          workModes: ["remote"],
+        }),
       }),
     );
   });

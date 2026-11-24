@@ -317,5 +317,12 @@ function demoProfile(): Profile {
       { name: "Italian", level: "native" },
       { name: "English", level: "C1" },
     ],
+    preferences: {
+      roles: ["Senior Frontend Engineer", "Frontend Tech Lead"],
+      locations: ["Milan", "Remote"],
+      workModes: ["remote", "hybrid"],
+      employmentTypes: ["full_time"],
+      seniorities: ["senior", "lead"],
+    },
   };
 }

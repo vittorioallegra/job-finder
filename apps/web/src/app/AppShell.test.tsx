@@ -53,5 +53,7 @@ describe("app frame", () => {
     await act(async () => exit!.click());
     expect(router.state.location.pathname).toBe("/");
     expect(container.querySelector("nav")?.textContent).toContain("Jobs");
+    // Companies are sources now, reached from the jobs list, not from the menu.
+    expect(container.querySelector("nav")?.textContent).not.toContain("Companies");
   });
 });

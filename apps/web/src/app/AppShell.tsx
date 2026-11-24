@@ -1,11 +1,10 @@
-import { Briefcase, Building2, KanbanSquare, Settings, UserRound, X } from "lucide-react";
+import { Briefcase, KanbanSquare, Settings, UserRound, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
 import { buttonClass } from "../components/ui/Button";
 
 const NAV_ITEMS = [
   { to: "/jobs", key: "app.nav.jobs", icon: Briefcase },
-  { to: "/companies", key: "app.nav.companies", icon: Building2 },
   { to: "/applications", key: "app.nav.applications", icon: KanbanSquare },
   { to: "/profile", key: "app.nav.profile", icon: UserRound },
 ] as const;
