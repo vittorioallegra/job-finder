@@ -17,6 +17,7 @@ describe("CV contract agreement with core", () => {
       ...AI_ERROR_CODES,
       "consent-required",
       "engine-unavailable",
+      "cancelled",
     ]);
     for (const code of producible) {
       expect(CV_IMPORT_FAILURE_CODES).toContain(code);

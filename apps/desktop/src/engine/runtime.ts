@@ -49,7 +49,8 @@ export interface IngestApi {
 /** Work the engine does for main that needs the network or the AI layer. */
 export interface EngineServices {
   testAiConnection(config: AiProviderConfig): Promise<AiConnectionResult>;
-  importCv(request: CvImportRequest): Promise<CvImportOutcome>;
+  /** `signal` aborts when main cancels the import. */
+  importCv(request: CvImportRequest, signal: AbortSignal): Promise<CvImportOutcome>;
   /** Searches for ATS boards through the engine's HTTP path. */
   discoverCompanies(
     criteria: DiscoveryCriteria,
@@ -103,6 +104,8 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
     renderPage: renderGuarded,
   });
   const scoring = services.createScoring(db);
+  /** Running CV imports by request id, so a cancel can stop them. */
+  const cvImports = new Map<number, AbortController>();
 
   port.on("message", (data) => {
     const message = data as MainToEngineMessage;
@@ -120,10 +123,23 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
     }
     if (message.type === "cv-import") {
       const { id, request } = message;
+      const controller = new AbortController();
+      cvImports.set(id, controller);
       void services
-        .importCv(request)
+        .importCv(request, controller.signal)
         .catch((): CvImportOutcome => ({ ok: false, code: "unknown" }))
-        .then((outcome) => post(port, { type: "cv-import-result", id, outcome }));
+        .then((outcome) => {
+          cvImports.delete(id);
+          // A cancelled import fails however its request ended; the user asked for it to stop.
+          const result: CvImportOutcome = controller.signal.aborted
+            ? { ok: false, code: "cancelled" }
+            : outcome;
+          post(port, { type: "cv-import-result", id, outcome: result });
+        });
+      return;
+    }
+    if (message.type === "cv-import-cancel") {
+      for (const controller of cvImports.values()) controller.abort();
       return;
     }
     if (message.type === "ingest-start") {

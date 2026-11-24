@@ -126,6 +126,7 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
       },
       importCv: async () =>
         structuredClone(options.cvImport ?? { ok: false, code: "engine-unavailable" }),
+      cancelImport: async () => undefined,
     },
     companies: {
       list: async () => structuredClone(companies),

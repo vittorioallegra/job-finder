@@ -110,11 +110,14 @@ if (parentPort) {
         },
         listModels: (request) =>
           listAiModels(request, { signal: AbortSignal.timeout(MODEL_LIST_TIMEOUT_MS) }),
-        importCv: async (request) => {
+        importCv: async (request, signal) => {
           // Loaded on first use: the CV readers pull in PDF and DOCX parsers the app does not need until a CV is imported.
           const { importCv } = await import("@job-finder/core/cv");
           return importCv(request, {
-            abortSignal: aiDeadline(request.config, CV_IMPORT_TIMEOUT_MS),
+            abortSignal: AbortSignal.any([
+              aiDeadline(request.config, CV_IMPORT_TIMEOUT_MS),
+              signal,
+            ]),
           });
         },
       });

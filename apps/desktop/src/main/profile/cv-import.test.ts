@@ -9,13 +9,20 @@ import type { SecretStore } from "../secrets/store";
 import type { SettingsRepository } from "../settings/repository";
 import { createCvImportService, type CvEngine } from "./cv-import";
 
-function services(ai: Partial<AppSettings["ai"]>, engine: CvEngine) {
+function services(
+  ai: Partial<AppSettings["ai"]>,
+  engine: Omit<CvEngine, "cancelCvImports"> & Partial<Pick<CvEngine, "cancelCvImports">>,
+) {
   const settings: SettingsRepository = {
     get: async () => ({ ...DEFAULT_APP_SETTINGS, ai: { ...DEFAULT_APP_SETTINGS.ai, ...ai } }),
     update: async () => DEFAULT_APP_SETTINGS,
   };
   const secrets = { read: async () => "sk-cv-test" } as unknown as SecretStore;
-  return createCvImportService({ settings, secrets, engine });
+  return createCvImportService({
+    settings,
+    secrets,
+    engine: { cancelCvImports: () => undefined, ...engine },
+  });
 }
 
 const upload = (consent: boolean, consentTarget = "openai") => ({
@@ -28,7 +35,7 @@ const upload = (consent: boolean, consentTarget = "openai") => ({
 describe("CV import service", () => {
   it("refuses a cloud provider without consent and never reaches the engine", async () => {
     const calls: EngineCvImportRequest[] = [];
-    const engine: CvEngine = {
+    const engine: Omit<CvEngine, "cancelCvImports"> = {
       importCv: async (request) => {
         calls.push(request);
         return { ok: false, code: "unknown" };
@@ -42,7 +49,7 @@ describe("CV import service", () => {
 
   it("sends a consented cloud import to the engine with the key and the settings", async () => {
     const calls: EngineCvImportRequest[] = [];
-    const engine: CvEngine = {
+    const engine: Omit<CvEngine, "cancelCvImports"> = {
       importCv: async (request) => {
         calls.push(request);
         return { ok: false, code: "invalid-output" };
@@ -61,7 +68,7 @@ describe("CV import service", () => {
   });
 
   it("does not require consent for a loopback OpenAI-compatible endpoint", async () => {
-    const engine: CvEngine = {
+    const engine: Omit<CvEngine, "cancelCvImports"> = {
       importCv: async () => ({ ok: false, code: "model-not-found" }),
     };
     const service = services(

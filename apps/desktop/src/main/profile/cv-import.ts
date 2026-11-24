@@ -11,11 +11,15 @@ import { readAiKey } from "../ai/keys";
 /** The engine side of a CV import, as seen from main. */
 export interface CvEngine {
   importCv(request: EngineCvImportRequest): Promise<CvImportOutcome>;
+  /** Stops the running imports; each then answers `cancelled`. */
+  cancelCvImports(): void;
 }
 
 export interface CvImportService {
   /** Extracts a profile draft. Nothing is saved here; the renderer shows the draft for review. */
   importCv(request: CvImportRequest): Promise<CvImportResult>;
+  /** Stops a running import, so a model on this computer does not keep working for nothing. */
+  cancelImport(): void;
 }
 
 export interface CvImportServiceOptions {
@@ -55,6 +59,9 @@ export function createCvImportService(options: CvImportServiceOptions): CvImport
         }
         return { ok: false, code: "unknown" };
       }
+    },
+    cancelImport() {
+      options.engine.cancelCvImports();
     },
   };
 }

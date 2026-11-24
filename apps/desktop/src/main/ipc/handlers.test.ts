@@ -81,6 +81,9 @@ function spyServices() {
     },
   };
   const cvImport = {
+    cancelImport: () => {
+      calls.push("cvImport.cancelImport");
+    },
     importCv: async () => {
       calls.push("cvImport.importCv");
       return { ok: false as const, code: "consent-required" as const };
@@ -366,6 +369,7 @@ describe("IPC sender and payload guard", () => {
         "jobs:detail",
         "jobs:flag",
         "jobs:list",
+        "profile:cancel-import",
         "profile:get",
         "profile:import-cv",
         "profile:save",

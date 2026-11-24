@@ -283,6 +283,44 @@ describe("engine runtime", () => {
     ]);
   });
 
+  it("stops a running CV import when main cancels it, and answers cancelled", async () => {
+    const port = fakePort();
+    const signals: AbortSignal[] = [];
+    const services: EngineServices = {
+      createIngest: noIngest,
+      checkForUpdate: async () => ({ ok: false as const, code: "unavailable" as const }),
+      listModels: async () => ({ ok: false as const, code: "unreachable" as const }),
+      createScoring: noScoring,
+      mapFormFields: noMapping,
+      generateDocument: noDocuments,
+      net: fakeNet(),
+      testAiConnection: async () => ({ ok: false, code: "unknown" }),
+      // Like a model call: it ends only when its signal aborts, then fails as a timeout would.
+      importCv: (_request, signal) =>
+        new Promise((resolve) => {
+          signals.push(signal);
+          signal.addEventListener("abort", () => resolve({ ok: false, code: "timeout" }));
+        }),
+      discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
+    };
+    createEngineRuntime(port, services);
+
+    port.deliver({
+      type: "cv-import",
+      id: 11,
+      request: { config, contextSize: 8192, fileName: "cv.txt", bytes: new Uint8Array([32]) },
+    });
+    await settle();
+    expect(port.sent).toEqual([]);
+    port.deliver({ type: "cv-import-cancel" });
+    await settle();
+
+    expect(signals[0]?.aborted).toBe(true);
+    expect(port.sent).toEqual([
+      { type: "cv-import-result", id: 11, outcome: { ok: false, code: "cancelled" } },
+    ]);
+  });
+
   it("still answers pings", () => {
     const port = fakePort();
     createEngineRuntime(port, {

@@ -83,6 +83,7 @@ export const IPC_REQUEST_SCHEMAS = {
   "profile:get": z.undefined(),
   "profile:save": ProfileSchema,
   "profile:import-cv": CvImportRequestSchema,
+  "profile:cancel-import": z.undefined(),
   "companies:list": z.undefined(),
   "companies:add": CompanyAddRequestSchema,
   "jobs:list": JobsListRequestSchema,
@@ -129,6 +130,7 @@ export interface IpcResponses {
   "profile:get": ProfileRecord | null;
   "profile:save": ProfileRecord;
   "profile:import-cv": CvImportResult;
+  "profile:cancel-import": void;
   "companies:list": CompanyRecord[];
   "companies:add": CompanyAddResult;
   "jobs:list": JobListItem[];

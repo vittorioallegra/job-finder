@@ -329,6 +329,7 @@
     "loading": "Loading…",
     "loadFailed": "Settings could not be loaded.",
     "retry": "Try again",
+    "back": "Back",
     "ai": {
       "title": "AI provider",
       "intro": "An AI model reads your CV and fills in the profile. Choose the provider and check the connection.",
@@ -359,7 +360,8 @@
         "unreadable": "the file could not be read",
         "empty-document": "the file contains no text",
         "consent-required": "you did not agree to send the CV to the provider"
-      }
+      },
+      "stop": "Stop"
     },
     "review": {
       "title": "Check your profile",

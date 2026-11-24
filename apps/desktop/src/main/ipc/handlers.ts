@@ -146,6 +146,9 @@ export async function handleInvoke(
       return services.profile.save(payload as Profile);
     case "profile:import-cv":
       return services.cvImport.importCv(payload as CvImportRequest);
+    case "profile:cancel-import":
+      services.cvImport.cancelImport();
+      return undefined;
     case "companies:list":
       return services.repository.listCompanies();
     case "companies:add":

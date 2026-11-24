@@ -16,6 +16,7 @@ export const CV_IMPORT_FAILURE_CODES = [
   "empty-document",
   "consent-required",
   "engine-unavailable",
+  "cancelled",
   "not-configured",
   "invalid-key",
   "model-not-found",

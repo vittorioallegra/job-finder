@@ -104,6 +104,8 @@ export interface EngineSupervisor {
   testAiConnection(config: AiProviderConfig): Promise<AiConnectionResult>;
   /** Runs a CV import in the engine. The request carries the key and the CV bytes; neither is logged. */
   importCv(request: CvImportRequest): Promise<CvImportOutcome>;
+  /** Stops the running CV imports; nothing happens when the engine is not running. */
+  cancelCvImports(): void;
   /**
    * Asks the engine to start an ingestion run. Resolves with its answer (`already-running` when
    * another run is active) and rejects with EngineUnavailableError when the engine is gone. `ai`
@@ -551,6 +553,11 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
         ready.pendingFormMaps.set(id, { resolve, reject });
         ready.handle.port.postMessage({ type: "map-form-fields", id, request });
       });
+    },
+    cancelCvImports() {
+      if (current?.ready) {
+        current.handle.port.postMessage({ type: "cv-import-cancel" });
+      }
     },
     cancelIngestion(runId) {
       if (current?.ready) {

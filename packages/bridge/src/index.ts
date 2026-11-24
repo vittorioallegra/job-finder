@@ -89,6 +89,8 @@ export interface JobFinderBridge {
     save(profile: Profile): Promise<ProfileRecord>;
     /** Extracts a profile draft from a CV in the engine. Nothing is saved until `save`. */
     importCv(request: CvImportRequest): Promise<CvImportResult>;
+    /** Stops a running import; the import then answers `cancelled`. Nothing happens when none runs. */
+    cancelImport(): Promise<void>;
   };
   readonly companies: {
     /** Companies the engine scans, in the order they were added. */

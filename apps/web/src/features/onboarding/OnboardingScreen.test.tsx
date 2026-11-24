@@ -1,4 +1,4 @@
-// protects=onboarding saves the AI provider before Continue unlocks, with the same context controls as Settings, asks for consent before a CV goes to a cloud provider but not to a local endpoint, shows AI unavailable when the engine fails, shows one progress message with a spinner while the CV is read, and opens the review with the extracted draft;
+// protects=onboarding saves the AI provider before Continue unlocks, with the same context controls as Settings, asks for consent before a CV goes to a cloud provider but not to a local endpoint, shows AI unavailable when the engine fails, shows one progress message with a spinner while the CV is read, locks manual setup during the import and stops it on demand or when the user goes back, lets each step go back, and opens the review with the extracted draft;
 // fails_when=Continue unlocks with unsaved AI edits, a cloud import is enabled without consent, a local endpoint asks for consent, an engine failure shows no reason, or the extracted draft is not shown for review;
 // no_claim=the real file dialog, the engine's extraction quality and the OS keychain are not exercised; the bridge is an in-memory double.
 import { act } from "react";
@@ -207,6 +207,48 @@ describe("onboarding", () => {
     expect(status?.textContent).toContain("Reading your CV…");
     expect(status?.textContent).toContain("0 seconds so far");
     expect(container.textContent?.split("Reading your CV…").length).toBe(2);
+  });
+
+  it("locks manual setup while the CV is read, stops the import on demand or on leaving, and goes back", async () => {
+    let cancels = 0;
+    await render(
+      { settings: withAi({ model: "test-model", provider: "anthropic" }) },
+      (bridge) => ({
+        ...bridge,
+        profile: {
+          ...bridge.profile,
+          importCv: () => new Promise<CvImportResult>(() => {}),
+          cancelImport: async () => {
+            cancels += 1;
+          },
+        },
+      }),
+    );
+    await act(async () => button(container, "Save provider").click());
+    await act(async () => button(container, "Continue to the CV").click());
+    await act(async () => chooseFile(container));
+    await act(async () => tickConsent(container));
+    await act(async () => button(container, "Import CV").click());
+    expect(button(container, "Enter the profile by hand").disabled).toBe(true);
+
+    await act(async () => button(container, "Stop").click());
+    expect(cancels).toBe(1);
+    expect(container.textContent).not.toContain("Reading your CV…");
+    expect(button(container, "Enter the profile by hand").disabled).toBe(false);
+
+    await act(async () => button(container, "Import CV").click());
+    await act(async () => button(container, "Back").click());
+    expect(cancels).toBe(2);
+    expect(container.textContent).toContain("Continue to the CV");
+  });
+
+  it("goes back from the review to the CV step", async () => {
+    await goToCv();
+    await act(async () => button(container, "Enter the profile by hand").click());
+    expect(container.querySelector("#onboarding-review")).not.toBeNull();
+    await act(async () => button(container, "Back").click());
+    expect(container.querySelector("#onboarding-review")).toBeNull();
+    expect(container.textContent).toContain("Import CV");
   });
 
   it("opens the review with the extracted headline", async () => {

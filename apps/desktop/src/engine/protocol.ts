@@ -116,6 +116,8 @@ export type MainToEngineMessage =
   | { type: "ai-test"; id: number; config: AiProviderConfig }
   /** The CV bytes and the API key travel to the engine only; the outcome carries no CV text. */
   | { type: "cv-import"; id: number; request: CvImportRequest }
+  /** Stops every running CV import; each answers `cancelled`. */
+  | { type: "cv-import-cancel" }
   /** The answer to a `page-render` request: the page HTML, or a code. */
   | { type: "page-render-result"; id: number; result: PageRenderResult }
   /** `companyId` limits the run to one company (a retry); omitted: every company. */

@@ -8,7 +8,8 @@ import {
 } from "../profile/schema";
 import { extractCvText, CvDocumentError, type CvDocumentErrorCode } from "./extract-text";
 
-export type CvImportFailureCode = CvDocumentErrorCode | AiErrorCode;
+/** `cancelled`: the user stopped the import (or left the screen) before it finished. */
+export type CvImportFailureCode = CvDocumentErrorCode | AiErrorCode | "cancelled";
 
 export type CvImportOutcome =
   | { ok: true; extraction: CvExtraction; warnings: AiWarning[] }

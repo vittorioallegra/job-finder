@@ -1,7 +1,7 @@
 import { useAiConsent } from "../../lib/useAiConsent";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { FileUp, Loader2 } from "lucide-react";
+import { ArrowLeft, FileUp, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router";
 import {
   CV_UPLOAD_MAX_BYTES,
@@ -158,6 +158,7 @@ export function OnboardingScreen() {
             setWarnings([]);
             setStep("review");
           }}
+          onBack={() => setStep("ai")}
         />
       ) : null}
 
@@ -173,6 +174,12 @@ export function OnboardingScreen() {
             </p>
           ) : null}
           <ProfileEditor initialDraft={draft} onSaved={() => navigate("/")} />
+          <div>
+            <Button variant="ghost" onClick={() => setStep("cv")}>
+              <ArrowLeft aria-hidden className="size-4" />
+              {t("onboarding.back")}
+            </Button>
+          </div>
         </section>
       ) : null}
     </main>
@@ -322,13 +329,14 @@ interface CvStepProps {
   settings: AppSettings;
   onImported: (draft: ProfileDraft, warnings: CvImportWarning[]) => void;
   onManual: () => void;
+  onBack: () => void;
 }
 
 type CvState =
   { status: "idle" } | { status: "importing" } | { status: "failed"; code: CvImportFailureCode };
 
 /** Picks a CV, asks for consent when the provider is a cloud service, and imports it into a draft. */
-function CvStep({ bridge, settings, onImported, onManual }: CvStepProps) {
+function CvStep({ bridge, settings, onImported, onManual, onBack }: CvStepProps) {
   const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const { consent, consentTarget, setConsent } = useAiConsent(aiConsentTarget(settings.ai));
@@ -337,7 +345,32 @@ function CvStep({ bridge, settings, onImported, onManual }: CvStepProps) {
   const providerKey =
     settings.ai.provider === "openai-compatible" ? "openaiCompatible" : settings.ai.provider;
   const providerName = t(`settings.ai.providers.${providerKey}`);
-  const canImport = file !== null && (!cloud || consent) && state.status !== "importing";
+  const importing = state.status === "importing";
+  const canImport = file !== null && (!cloud || consent) && !importing;
+
+  // Leaving this step while the CV is read stops the import, so the model does not keep working.
+  const importingRef = useRef(false);
+  useEffect(() => {
+    importingRef.current = importing;
+  }, [importing]);
+  useEffect(
+    () => () => {
+      if (importingRef.current) void bridge.profile.cancelImport().catch(() => undefined);
+    },
+    [bridge],
+  );
+
+  function stopImport() {
+    // Cancelled here already: leaving the step right after must not cancel a second time.
+    importingRef.current = false;
+    void bridge.profile.cancelImport().catch(() => undefined);
+    setState({ status: "idle" });
+  }
+
+  function back() {
+    if (importing) stopImport();
+    onBack();
+  }
 
   async function runImport() {
     if (file === null) {
@@ -358,6 +391,9 @@ function CvStep({ bridge, settings, onImported, onManual }: CvStepProps) {
       });
       if (result.ok) {
         onImported(draftFromExtraction(result.extraction, emptyProfile()), result.warnings);
+      } else if (result.code === "cancelled") {
+        // Stopped by the user, who already sees the step as it was before the import.
+        setState({ status: "idle" });
       } else {
         setState({ status: "failed", code: result.code });
       }
@@ -411,7 +447,11 @@ function CvStep({ bridge, settings, onImported, onManual }: CvStepProps) {
       ) : null}
 
       <div className="flex flex-wrap items-center justify-end gap-3">
-        <Button variant="ghost" onClick={onManual}>
+        <Button variant="ghost" onClick={back} className="mr-auto">
+          <ArrowLeft aria-hidden className="size-4" />
+          {t("onboarding.back")}
+        </Button>
+        <Button variant="ghost" onClick={onManual} disabled={importing}>
           {t("onboarding.cv.manual")}
         </Button>
         <Button onClick={() => void runImport()} disabled={!canImport}>
@@ -422,7 +462,7 @@ function CvStep({ bridge, settings, onImported, onManual }: CvStepProps) {
         </Button>
       </div>
 
-      {state.status === "importing" ? <ImportProgress local={!cloud} /> : null}
+      {importing ? <ImportProgress local={!cloud} onStop={stopImport} /> : null}
 
       {state.status === "failed" ? (
         <p role="alert" className="text-sm text-app-danger">
@@ -438,7 +478,7 @@ function CvStep({ bridge, settings, onImported, onManual }: CvStepProps) {
 }
 
 /** How long the import has run, so a slow local model still shows that work goes on. */
-function ImportProgress({ local }: { local: boolean }) {
+function ImportProgress({ local, onStop }: { local: boolean; onStop: () => void }) {
   const { t } = useTranslation();
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
@@ -461,6 +501,9 @@ function ImportProgress({ local }: { local: boolean }) {
           {t("onboarding.cv.elapsed", { count: seconds })}
         </p>
       </div>
+      <Button variant="secondary" size="sm" onClick={onStop} className="ml-auto shrink-0">
+        {t("onboarding.cv.stop")}
+      </Button>
     </div>
   );
 }
