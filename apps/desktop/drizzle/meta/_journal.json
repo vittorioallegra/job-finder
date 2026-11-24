@@ -106,6 +106,13 @@
       "when": 1795441364525,
       "tag": "0014_application_document_language",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1795528458054,
+      "tag": "0015_company-exclusion",
+      "breakpoints": true
     }
   ]
 }

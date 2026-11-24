@@ -36,6 +36,11 @@ export const companies = sqliteTable("companies", {
   ats: text("ats"),
   slug: text("slug"),
   createdAt: integer("created_at").notNull(),
+  /**
+   * When the user removed the company from the sources. It is no longer scanned, its jobs leave
+   * the lists, and the company search does not add it again; applications keep their jobs.
+   */
+  excludedAt: integer("excluded_at"),
 });
 
 /**

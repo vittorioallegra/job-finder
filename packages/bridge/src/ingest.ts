@@ -25,6 +25,12 @@ export const CompanyAddRequestSchema = z.strictObject({
 
 export type CompanyAddRequest = z.input<typeof CompanyAddRequestSchema>;
 
+export const CompanyRemoveRequestSchema = z.strictObject({
+  companyId: z.string().min(1).max(64),
+});
+
+export type CompanyRemoveRequest = z.input<typeof CompanyRemoveRequestSchema>;
+
 export const IngestCancelRequestSchema = z.strictObject({
   runId: z.string().min(1).max(64),
 });

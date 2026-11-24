@@ -15,6 +15,7 @@ import type {
 } from "./ingest";
 import {
   CompanyAddRequestSchema,
+  CompanyRemoveRequestSchema,
   IngestCancelRequestSchema,
   IngestStartRequestSchema,
 } from "./ingest";
@@ -86,6 +87,7 @@ export const IPC_REQUEST_SCHEMAS = {
   "profile:cancel-import": z.undefined(),
   "companies:list": z.undefined(),
   "companies:add": CompanyAddRequestSchema,
+  "companies:remove": CompanyRemoveRequestSchema,
   "jobs:list": JobsListRequestSchema,
   "jobs:detail": JobDetailRequestSchema,
   "jobs:flag": JobFlagRequestSchema,
@@ -134,6 +136,7 @@ export interface IpcResponses {
   "profile:cancel-import": void;
   "companies:list": CompanyRecord[];
   "companies:add": CompanyAddResult;
+  "companies:remove": boolean;
   "jobs:list": JobListItem[];
   "jobs:detail": JobDetail | null;
   "jobs:flag": boolean;

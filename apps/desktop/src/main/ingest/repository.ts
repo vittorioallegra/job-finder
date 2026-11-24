@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import {
   applications,
   companies,
@@ -31,12 +31,23 @@ import type { AppDb } from "../db/operations";
 export interface AddCompanyInput {
   name: string;
   careersUrl: string;
+  /**
+   * The user added it by hand: a company removed earlier comes back. The company search leaves it
+   * unset, so a removed company is not added again.
+   */
+  restore?: boolean;
 }
 
 export interface IngestRepository {
   listCompanies(): Promise<CompanyRecord[]>;
   /** Detects the ATS board from the careers URL (no network) and stores the company. */
   addCompany(input: AddCompanyInput, now?: number, newId?: () => string): Promise<CompanyAddResult>;
+  /**
+   * Removes a company from the sources: it is no longer scanned and its jobs leave the lists. The
+   * row stays, so applications keep their jobs and the company search does not add it again.
+   * Resolves false when it does not exist.
+   */
+  removeCompany(companyId: string, now?: number): Promise<boolean>;
   /**
    * Open jobs matching the request. By affinity (the default), highest first, with the jobs
    * without a score for the current profile version last; by newest, the latest posting first.
@@ -106,7 +117,11 @@ async function latestScans(db: AppDb): Promise<Map<string, CompanyScan>> {
 export function createIngestRepository(db: AppDb): IngestRepository {
   return {
     async listCompanies() {
-      const rows = await db.select().from(companies).orderBy(asc(companies.createdAt));
+      const rows = await db
+        .select()
+        .from(companies)
+        .where(isNull(companies.excludedAt))
+        .orderBy(asc(companies.createdAt));
       const scans = await latestScans(db);
       return rows.map((row) => ({
         id: row.id,
@@ -124,24 +139,37 @@ export function createIngestRepository(db: AppDb): IngestRepository {
       const detection = detectAts({ url: input.careersUrl });
       let board: { ats: string; slug: string } | undefined;
       if (detection?.slug !== undefined) board = { ats: detection.ats, slug: detection.slug };
-      const sameUrl = await db
-        .select({ id: companies.id })
+      // One board is one company: the same URL, or the same ATS and board token under another URL.
+      const [existing] = await db
+        .select()
         .from(companies)
-        .where(eq(companies.careersUrl, input.careersUrl))
+        .where(
+          board
+            ? or(
+                eq(companies.careersUrl, input.careersUrl),
+                and(eq(companies.ats, board.ats), eq(companies.slug, board.slug)),
+              )
+            : eq(companies.careersUrl, input.careersUrl),
+        )
         .limit(1);
-      if (sameUrl.length > 0) {
-        return { ok: false, code: "duplicate-company" };
-      }
-      // One board is one company: the same ATS and board token under another URL is a duplicate.
-      if (board) {
-        const existing = await db
-          .select({ id: companies.id })
-          .from(companies)
-          .where(and(eq(companies.ats, board.ats), eq(companies.slug, board.slug)))
-          .limit(1);
-        if (existing.length > 0) {
+      if (existing) {
+        if (existing.excludedAt === null || !input.restore) {
           return { ok: false, code: "duplicate-company" };
         }
+        await db.update(companies).set({ excludedAt: null }).where(eq(companies.id, existing.id));
+        const scans = await latestScans(db);
+        return {
+          ok: true,
+          company: {
+            id: existing.id,
+            name: existing.name,
+            careersUrl: existing.careersUrl,
+            ats: existing.ats,
+            slug: existing.slug,
+            createdAt: existing.createdAt,
+            lastScan: scans.get(existing.id) ?? null,
+          },
+        };
       }
       const row = {
         id: newId(),
@@ -153,6 +181,15 @@ export function createIngestRepository(db: AppDb): IngestRepository {
       };
       await db.insert(companies).values(row);
       return { ok: true, company: { ...row, lastScan: null } };
+    },
+
+    async removeCompany(companyId, now = Date.now()) {
+      const updated = await db
+        .update(companies)
+        .set({ excludedAt: now })
+        .where(eq(companies.id, companyId))
+        .returning({ id: companies.id });
+      return updated.length > 0;
     },
 
     async listJobs(request = { filter: {}, sort: "affinity" }, now = Date.now(), limit = 200) {

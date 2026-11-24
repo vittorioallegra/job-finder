@@ -1,4 +1,4 @@
-// protects=the companies screen finds boards through the bridge and adds only the ones the user picks, adds a company by its link and shows why one is refused, shows each company's last scan, retries a scan for one company, shows an error with a retry when the list cannot be read, and points to Settings for a free-tier search key when no key is saved or keyless search is blocked;
+// protects=a company can be removed from the sources; the companies screen finds boards through the bridge and adds only the ones the user picks, adds a company by its link and shows why one is refused, shows each company's last scan, retries a scan for one company, shows an error with a retry when the list cannot be read, and points to Settings for a free-tier search key when no key is saved or keyless search is blocked;
 // fails_when=a found board is added without a click, a board already in the list is offered again, a refused company is shown as added, a last scan is missing or wrong, a retry scans all companies or starts with no message, or a failed read shows a blank page;
 // no_claim=layout, keyboard focus order and the real search provider are not checked here; the core discovery tests and the engine runtime tests cover the search.
 import { act } from "react";
@@ -121,6 +121,20 @@ describe("companies screen", () => {
     expect(
       [...container.querySelectorAll("button")].filter((node) => node.textContent === "Scan again"),
     ).toHaveLength(4);
+  });
+
+  it("removes a company from the sources and lists the rest", async () => {
+    const memory = createMemoryBridge({ companies: [acme] });
+    const remove = vi.fn(memory.companies.remove);
+    await render({ ...memory, companies: { ...memory.companies, remove } });
+    await act(async () => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Remove Acme from the sources"]')!
+        .click();
+    });
+    await act(async () => {});
+    expect(remove).toHaveBeenCalledWith(acme.id);
+    expect(container.textContent).not.toContain(acme.careersUrl);
   });
 
   it("finds boards for the keywords and adds only the one the user picks", async () => {

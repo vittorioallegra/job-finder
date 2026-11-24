@@ -99,6 +99,11 @@ export interface JobFinderBridge {
   readonly companies: {
     /** Companies the engine scans, in the order they were added. */
     list(): Promise<CompanyRecord[]>;
+    /**
+     * Removes a company from the sources: no more scans, its jobs leave the lists, and the company
+     * search does not add it again. Adding it by hand brings it back. Resolves false when unknown.
+     */
+    remove(companyId: string): Promise<boolean>;
     /** Adds a company from its careers URL. The ATS and its board are detected from the URL. */
     add(input: CompanyAddRequest): Promise<CompanyAddResult>;
   };

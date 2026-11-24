@@ -1,5 +1,13 @@
 import { and, eq, inArray, notInArray, sql, type SQL } from "drizzle-orm";
-import { applications, jobFlags, jobScores, jobSources, jobs, profile } from "../db/schema";
+import {
+  applications,
+  companies,
+  jobFlags,
+  jobScores,
+  jobSources,
+  jobs,
+  profile,
+} from "../db/schema";
 import { APPLIED_STATUSES } from "../applications/status";
 import { postedSince, type JobFilter } from "./schema";
 
@@ -46,7 +54,10 @@ const comparableTitle = sql`replace(replace(replace(lower(${jobs.title}), '-', '
  * the condition can be added to any query over `jobs`.
  */
 export function jobFilterCondition(filter: JobFilter, now: number): SQL | undefined {
-  const parts: SQL[] = [];
+  // Jobs of a company removed from the sources never show, whatever the filter.
+  const parts: SQL[] = [
+    sql`${jobs.companyId} not in (select ${companies.id} from ${companies} where ${companies.excludedAt} is not null)`,
+  ];
 
   const roles = filter.roles.map(roleTitleTerms).filter((words) => words.length > 0);
   if (roles.length > 0) {

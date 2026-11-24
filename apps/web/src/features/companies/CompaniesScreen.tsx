@@ -77,6 +77,7 @@ export function CompaniesScreen() {
   const [added, setAdded] = useState(false);
   const [addFailure, setAddFailure] = useState<CompanyAddFailureCode | "unknown" | null>(null);
   const [scanNotice, setScanNotice] = useState<ScanNotice | null>(null);
+  const [removeFailed, setRemoveFailed] = useState(false);
   // Null until the key status is read; the hint to Settings is shown only once it says no key is set.
   const [hasSearchKey, setHasSearchKey] = useState<boolean | null>(null);
 
@@ -160,6 +161,18 @@ export function CompaniesScreen() {
       );
     } catch {
       setSearch({ status: "failed", code: "engine-unavailable" });
+    }
+  }
+
+  /** Removes a company from the sources; adding it by hand brings it back. */
+  async function removeCompany(companyId: string) {
+    setRemoveFailed(false);
+    try {
+      await bridge.companies.remove(companyId);
+      const companies = await bridge.companies.list();
+      setLoad((previous) => (previous.status === "ready" ? { ...previous, companies } : previous));
+    } catch {
+      setRemoveFailed(true);
     }
   }
 
@@ -268,6 +281,12 @@ export function CompaniesScreen() {
             <h2 id="companies-list-title" className="sr-only">
               {t("companies.list.heading")}
             </h2>
+            <p className="text-sm text-app-muted">{t("companies.remove.hint")}</p>
+            {removeFailed ? (
+              <p role="alert" className="text-sm text-app-danger">
+                {t("companies.remove.failed")}
+              </p>
+            ) : null}
             {load.companies.length === 0 ? (
               <EmptyState
                 icon={<Building2 className="size-5" strokeWidth={1.8} aria-hidden="true" />}
@@ -300,6 +319,14 @@ export function CompaniesScreen() {
                         onClick={() => void retryScan(company.id)}
                       >
                         {t("companies.scan.retry")}
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        aria-label={t("companies.remove.label", { name: company.name })}
+                        onClick={() => void removeCompany(company.id)}
+                      >
+                        {t("companies.remove.action")}
                       </Button>
                       {scanNotice?.companyId === company.id ? (
                         scanNotice.status === "started" ? (

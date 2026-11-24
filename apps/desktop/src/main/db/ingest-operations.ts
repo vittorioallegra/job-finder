@@ -7,16 +7,20 @@ import type { AppDb } from "./operations";
 
 /** Companies the engine scans, in the order they were added. */
 export async function listCompanyRows(db: AppDb) {
-  return db
-    .select({
-      id: companies.id,
-      name: companies.name,
-      careersUrl: companies.careersUrl,
-      ats: companies.ats,
-      slug: companies.slug,
-    })
-    .from(companies)
-    .orderBy(asc(companies.createdAt));
+  return (
+    db
+      .select({
+        id: companies.id,
+        name: companies.name,
+        careersUrl: companies.careersUrl,
+        ats: companies.ats,
+        slug: companies.slug,
+      })
+      .from(companies)
+      // A company removed from the sources is not scanned.
+      .where(isNull(companies.excludedAt))
+      .orderBy(asc(companies.createdAt))
+  );
 }
 
 /**

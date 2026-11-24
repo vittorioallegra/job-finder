@@ -1,4 +1,4 @@
-// protects=a company is stored with its supported board or as a generic careers page, one board or careers URL is stored once, the job list shows only open jobs ordered by affinity for the current profile version with unscored jobs last, the latest run comes back with its log in order, and each company shows its most recent scan;
+// protects=a company is stored with its supported board or as a generic careers page, one board or careers URL is stored once, the job list shows only open jobs ordered by affinity for the current profile version with unscored jobs last, the latest run comes back with its log in order, each company shows its most recent scan, and a removed company leaves the sources and the lists until it is added by hand;
 // fails_when=a board or careers URL already stored is stored again, a supported careers URL is stored without its board, a closed job is listed, a score of an older profile version orders a job, the run log is returned out of order or without its kinds, or a company shows an older scan than its latest;
 // no_claim=the careers URL is checked by its shape only, without a request, so a board that does not exist is still stored; the database schema is covered by the migration tests.
 import { mkdtempSync } from "node:fs";
@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { companies, jobs, jobScores, profile, runs } from "@job-finder/core";
 import type { IngestEvent } from "@job-finder/core/ingest/events";
 import { openAppDatabase, type AppDatabase } from "../db/database";
-import { appendRunEvent } from "../db/ingest-operations";
+import { appendRunEvent, listCompanyRows } from "../db/ingest-operations";
 import { createIngestRepository } from "./repository";
 
 const repoMigrations = resolve(__dirname, "../../../drizzle");
@@ -58,6 +58,58 @@ describe("ingest repository", () => {
       }),
     ).toEqual({ ok: false, code: "duplicate-company" });
     expect(await repository.listCompanies()).toHaveLength(2);
+    database.close();
+  });
+
+  it("removes a company from the sources: no scan, no jobs, not added again unless by hand", async () => {
+    const database = await openDatabase();
+    const repository = createIngestRepository(database.db);
+    await repository.addCompany(
+      { name: "Acme", careersUrl: "https://boards.greenhouse.io/acme" },
+      1,
+      () => "co-1",
+    );
+    await database.db.insert(jobs).values({
+      id: "job-1",
+      companyId: "co-1",
+      fingerprint: "fp-1",
+      title: "Frontend Engineer",
+      description: "",
+      url: "https://boards.greenhouse.io/acme/jobs/1",
+      applyUrl: "https://boards.greenhouse.io/acme/jobs/1",
+      locations: "[]",
+      workMode: "remote",
+      employmentType: "full_time",
+      seniority: "mid",
+      visaSponsorship: "unknown",
+      firstSeenAt: 1,
+      lastSeenAt: 1,
+    });
+    expect(await repository.listJobs()).toHaveLength(1);
+
+    expect(await repository.removeCompany("co-1", 5)).toBe(true);
+    expect(await repository.removeCompany("missing")).toBe(false);
+    expect(await repository.listCompanies()).toEqual([]);
+    expect(await repository.listJobs()).toEqual([]);
+    expect(await listCompanyRows(database.db)).toEqual([]);
+    // The company search does not bring it back.
+    expect(
+      await repository.addCompany({
+        name: "acme",
+        careersUrl: "https://boards.greenhouse.io/acme",
+      }),
+    ).toEqual({ ok: false, code: "duplicate-company" });
+
+    // Added by hand, it comes back with its jobs.
+    expect(
+      await repository.addCompany({
+        name: "Acme",
+        careersUrl: "https://boards.greenhouse.io/acme",
+        restore: true,
+      }),
+    ).toMatchObject({ ok: true, company: { id: "co-1" } });
+    expect(await repository.listCompanies()).toHaveLength(1);
+    expect(await repository.listJobs()).toHaveLength(1);
     database.close();
   });
 

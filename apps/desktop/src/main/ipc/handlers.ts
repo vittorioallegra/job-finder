@@ -154,7 +154,10 @@ export async function handleInvoke(
     case "companies:list":
       return services.repository.listCompanies();
     case "companies:add":
-      return services.repository.addCompany(payload as CompanyAddRequest);
+      // Added by hand: a company removed earlier comes back.
+      return services.repository.addCompany({ ...(payload as CompanyAddRequest), restore: true });
+    case "companies:remove":
+      return services.repository.removeCompany((payload as { companyId: string }).companyId);
     case "jobs:list":
       return services.repository.listJobs(payload as JobsListRequest);
     case "jobs:detail":

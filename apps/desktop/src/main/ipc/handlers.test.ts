@@ -90,6 +90,10 @@ function spyServices() {
     },
   };
   const repository = {
+    removeCompany: async () => {
+      calls.push("repository.removeCompany");
+      return true;
+    },
     listCompanies: async () => {
       calls.push("repository.listCompanies");
       return [];
@@ -363,6 +367,7 @@ describe("IPC sender and payload guard", () => {
         "autofill:start",
         "companies:add",
         "companies:list",
+        "companies:remove",
         "discovery:from-profile",
         "discovery:search",
         "documents:export",

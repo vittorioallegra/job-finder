@@ -146,6 +146,12 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
         companies.push(company);
         return { ok: true, company: structuredClone(company) };
       },
+      remove: async (companyId) => {
+        const index = companies.findIndex((company) => company.id === companyId);
+        if (index < 0) return false;
+        companies.splice(index, 1);
+        return true;
+      },
     },
     // No filtering here: the list returns the jobs it was given, in their given order.
     jobs: {
