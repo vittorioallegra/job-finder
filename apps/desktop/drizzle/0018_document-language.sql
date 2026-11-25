@@ -1,0 +1,1 @@
+ALTER TABLE `applications` ADD `document_language` text;

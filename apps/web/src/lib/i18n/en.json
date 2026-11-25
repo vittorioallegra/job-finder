@@ -763,7 +763,8 @@
         },
         "hint": {
           "posting": "Default: {{language}}, the language of the posting.",
-          "ui": "Default: {{language}}, the app language. The posting's language is unknown or not supported."
+          "ui": "Default: {{language}}, the app language. The posting's language is unknown or not supported.",
+          "chosen": "Your choice for this application."
         }
       },
       "writtenIn": "Written in {{language}}."

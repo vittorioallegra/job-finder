@@ -20,6 +20,7 @@ import type {
   DocumentExportRequest,
   DocumentExportResult,
   DocumentGenerateRequest,
+  DocumentSetLanguageRequest,
   DocumentGenerateResult,
   DocumentGetRequest,
   DocumentSaveRequest,
@@ -139,6 +140,8 @@ export interface JobFinderBridge {
     get(request: DocumentGetRequest): Promise<ApplicationDocuments>;
     /** Generates a CV or a cover letter with the AI in the engine. Replaces the stored draft of that kind. */
     generate(request: DocumentGenerateRequest): Promise<DocumentGenerateResult>;
+    /** Saves the language the user chose for this application's documents. Resolves false when the application does not exist. */
+    setLanguage(request: DocumentSetLanguageRequest): Promise<boolean>;
     /** Saves the user's edits to a stored document, after the profile checks. */
     save(request: DocumentSaveRequest): Promise<DocumentSaveResult>;
     /** Renders the stored document to a PDF in the application's folder. */

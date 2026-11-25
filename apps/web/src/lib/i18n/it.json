@@ -763,7 +763,8 @@
         },
         "hint": {
           "posting": "Predefinita: {{language}}, la lingua dell'annuncio.",
-          "ui": "Predefinita: {{language}}, la lingua dell'app. La lingua dell'annuncio non è nota o non è supportata."
+          "ui": "Predefinita: {{language}}, la lingua dell'app. La lingua dell'annuncio non è nota o non è supportata.",
+          "chosen": "La tua scelta per questa candidatura."
         }
       },
       "writtenIn": "Scritto in {{language}}."

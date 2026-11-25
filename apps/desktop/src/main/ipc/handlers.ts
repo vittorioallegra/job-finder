@@ -4,6 +4,7 @@ import {
   type OpenNewJobsRequest,
   type DocumentExportRequest,
   type DocumentGenerateRequest,
+  type DocumentSetLanguageRequest,
   type DocumentGetRequest,
   type DocumentSaveRequest,
   type ApplicationBookmarkRequest,
@@ -193,6 +194,8 @@ export async function handleInvoke(
       return services.documents.get((payload as DocumentGetRequest).applicationId);
     case "documents:generate":
       return services.documents.generate(payload as DocumentGenerateRequest);
+    case "documents:set-language":
+      return services.documents.setLanguage(payload as DocumentSetLanguageRequest);
     case "documents:save":
       return services.documents.save(payload as DocumentSaveRequest);
     case "documents:export":

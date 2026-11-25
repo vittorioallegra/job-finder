@@ -1,5 +1,5 @@
-// protects=the documents panel shows loading, error and AI-unavailable states, generates both documents with one button without any consent step, keeps writing after the panel closes and shows the run and its result on reopening, shows the language of the stored documents, shows generated text as editable, reports a save that breaks the profile, exports a PDF, and names every AI failure;
-// fails_when=a generate call needs a consent, a run stops when the panel closes, a reopened panel shows the default language instead of the stored one, an AI failure lacks the settings link, a refused save is reported as saved, or an export without a file is reported as exported;
+// protects=the documents panel shows loading, error and AI-unavailable states, generates both documents with one button without any consent step, keeps writing after the panel closes and shows the run and its result on reopening, saves the language the user picks at once and shows it when reopened, shows the language of the stored documents, shows generated text as editable, reports a save that breaks the profile, exports a PDF, and names every AI failure;
+// fails_when=a generate call needs a consent, a run stops when the panel closes, a picked language is not saved, a reopened panel shows the default language instead of the stored one, an AI failure lacks the settings link, a refused save is reported as saved, or an export without a file is reported as exported;
 // no_claim=the layout, the real bridge and the PDF itself are not checked here; the desktop service and PDF tests cover the rules and the file;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -123,6 +123,7 @@ function bridgeWith(
     documents: {
       get: vi.fn(async () => documentsOf()),
       generate: vi.fn(async () => ({ ok: false as const, code: "unknown" as const })),
+      setLanguage: vi.fn(async () => true),
       save: vi.fn(async () => ({ ok: false as const, code: "not-found" as const })),
       exportPdf: vi.fn(async () => ({ ok: false as const, code: "export-failed" as const })),
       reveal: vi.fn(async () => true),
@@ -210,6 +211,28 @@ describe("application documents panel", () => {
 
     expect(kinds).toEqual(["cv", "cover-letter"]);
     expect(generate).toHaveBeenCalledWith({ applicationId: "a1", kind: "cv", language: "en" });
+  });
+
+  it("saves the language the user picks at once, and shows a saved choice when reopened", async () => {
+    const setLanguage = vi.fn(async () => true);
+    await render(bridgeWith({ setLanguage }));
+    await act(async () => {
+      const select = languageSelect(container);
+      select.value = "it";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(setLanguage).toHaveBeenCalledWith({ applicationId: "a1", language: "it" });
+
+    await act(async () => root.render(<div />));
+    await render(
+      bridgeWith({
+        get: vi.fn(async () =>
+          documentsOf({ defaultLanguage: { language: "it", source: "chosen" } }),
+        ),
+      }),
+    );
+    expect(languageSelect(container).value).toBe("it");
+    expect(container.textContent).toContain("Your choice for this application.");
   });
 
   it("shows the language a stored document was written in, not the default, when the panel is reopened", async () => {

@@ -8,11 +8,14 @@ export type DocumentLanguage = (typeof DOCUMENT_LANGUAGES)[number];
 
 export interface DocumentLanguageChoice {
   language: DocumentLanguage;
-  /** "posting": the normalized language of the job. "ui": the UI language (no or unsupported posting language). */
-  source: "posting" | "ui";
+  /**
+   * "chosen": the user picked it for this application. "posting": the normalized language of the
+   * job. "ui": the UI language (no or unsupported posting language).
+   */
+  source: "chosen" | "posting" | "ui";
 }
 
-/** The language a document uses when the user has not chosen one: the posting's, else the UI's. */
+/** The language a document uses when the user has not chosen one: the posting's, else the UI's. A language the user chose for the application wins (the callers apply it). */
 export function documentLanguageFor(
   postingLanguage: string | null | undefined,
   uiLanguage: DocumentLanguage,

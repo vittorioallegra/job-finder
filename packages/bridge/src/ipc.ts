@@ -32,6 +32,7 @@ import {
   DocumentGenerateRequestSchema,
   DocumentGetRequestSchema,
   DocumentSaveRequestSchema,
+  DocumentSetLanguageRequestSchema,
 } from "./documents";
 import type { AppStatus, OpenNewJobsRequest } from "./app";
 import type { AutofillStartResult } from "./autofill";
@@ -103,6 +104,7 @@ export const IPC_REQUEST_SCHEMAS = {
   "scores:start": ScoreStartRequestSchema,
   "documents:get": DocumentGetRequestSchema,
   "documents:generate": DocumentGenerateRequestSchema,
+  "documents:set-language": DocumentSetLanguageRequestSchema,
   "documents:save": DocumentSaveRequestSchema,
   "documents:export": DocumentExportRequestSchema,
   "documents:reveal": DocumentExportRequestSchema,
@@ -150,6 +152,7 @@ export interface IpcResponses {
   "scores:start": ScoreStartResult;
   "documents:get": ApplicationDocuments;
   "documents:generate": DocumentGenerateResult;
+  "documents:set-language": boolean;
   "documents:save": DocumentSaveResult;
   "documents:export": DocumentExportResult;
   "documents:reveal": boolean;

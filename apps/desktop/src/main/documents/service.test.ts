@@ -296,6 +296,17 @@ describe("document service", () => {
     expect((await build().get("a1")).cv?.language).toBe("en");
   });
 
+  it("saves the language the user chose, uses it for the next document, and refuses an unknown application", async () => {
+    // protects=a language chosen for an application is stored, reported as chosen, and used by a later generate without a language in the request, over the posting's; fails_when=the choice is lost, ignored by generate, or accepted for an application that does not exist; no_claim=the screen that picks it;
+    await database.db.update(jobs).set({ language: "it" }).where(eq(jobs.id, "j1"));
+    expect(await build().setLanguage({ applicationId: "a1", language: "en" })).toBe(true);
+    expect((await build().get("a1")).defaultLanguage).toEqual({ language: "en", source: "chosen" });
+
+    await build().generate({ applicationId: "a1", kind: "cv" });
+    expect(requests[0]).toMatchObject({ language: "en" });
+    expect(await build().setLanguage({ applicationId: "missing", language: "it" })).toBe(false);
+  });
+
   it("keeps the document's language on a saved edit, and renders the PDF in that language", async () => {
     await database.db.update(jobs).set({ language: "it" }).where(eq(jobs.id, "j1"));
     await build({ settings: settingsFor(false, "en") }).generate({

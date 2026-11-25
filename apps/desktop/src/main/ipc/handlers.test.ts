@@ -191,6 +191,7 @@ function spyServices() {
         calls.push(`documents.generate:${request.kind}`);
         return { ok: false as const, code: "unknown" as const };
       },
+      setLanguage: async () => true,
       save: async () => ({ ok: false as const, code: "not-found" as const }),
       exportPdf: async (request: { kind: string }) => {
         calls.push(`documents.export:${request.kind}`);
@@ -354,6 +355,7 @@ describe("IPC sender and payload guard", () => {
         "documents:get",
         "documents:reveal",
         "documents:save",
+        "documents:set-language",
         "ingest:cancel",
         "ingest:latest",
         "ingest:start",

@@ -72,6 +72,7 @@ const api: JobFinderBridge = {
   documents: {
     get: (request) => invoke("documents:get", request),
     generate: (request) => invoke("documents:generate", request),
+    setLanguage: (request) => invoke("documents:set-language", request),
     save: (request) => invoke("documents:save", request),
     exportPdf: (request) => invoke("documents:export", request),
     reveal: (request) => invoke("documents:reveal", request),

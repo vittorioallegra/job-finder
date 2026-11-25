@@ -2,11 +2,13 @@ import {
   documentLanguageFor,
   type ApplicationDocuments,
   type DocumentLanguage,
+  type DocumentLanguageChoice,
   type DocumentExportRequest,
   type DocumentExportResult,
   type DocumentGenerateRequest,
   type DocumentGenerateResult,
   type DocumentSaveRequest,
+  type DocumentSetLanguageRequest,
   type DocumentSaveResult,
 } from "@job-finder/bridge";
 import { renderDocumentHtml, type DocumentLabels } from "@job-finder/core/documents/render";
@@ -33,6 +35,8 @@ export interface DocumentService {
   get(applicationId: string): Promise<ApplicationDocuments>;
   /** Generates a document with the AI and stores it, replacing the draft of that kind. */
   generate(request: DocumentGenerateRequest): Promise<DocumentGenerateResult>;
+  /** Saves the language the user chose for the application's documents. False when it does not exist. */
+  setLanguage(request: DocumentSetLanguageRequest): Promise<boolean>;
   /** Stores the user's edits after the profile checks. */
   save(request: DocumentSaveRequest): Promise<DocumentSaveResult>;
   /** Renders the stored document to a PDF in the application's folder. */
@@ -93,13 +97,27 @@ export function createDocumentService(options: DocumentServiceOptions): Document
     return explanationLanguage(ui.language, options.systemLocale());
   }
 
+  /** The user's choice for the application, else the posting's language, else the UI's. */
+  async function languageFor(
+    applicationId: string,
+    postingLanguage: string | null | undefined,
+  ): Promise<DocumentLanguageChoice> {
+    const chosen = await repository.chosenLanguage(applicationId);
+    if (chosen !== null) return { language: chosen, source: "chosen" };
+    return documentLanguageFor(postingLanguage, await uiLanguage());
+  }
+
   return {
+    async setLanguage(request) {
+      return repository.setChosenLanguage(request.applicationId, request.language);
+    },
+
     async get(applicationId) {
       const stored = await repository.forApplication(applicationId);
       const posting = await repository.jobOf(applicationId);
       return {
         ...stored,
-        defaultLanguage: documentLanguageFor(posting?.language, await uiLanguage()),
+        defaultLanguage: await languageFor(applicationId, posting?.language),
       };
     },
 
@@ -111,7 +129,7 @@ export function createDocumentService(options: DocumentServiceOptions): Document
       if (saved === null) return { ok: false, code: "no-profile" };
       const { ai } = await options.settings.get();
       const language: DocumentLanguage =
-        request.language ?? documentLanguageFor(postingLanguage, await uiLanguage()).language;
+        request.language ?? (await languageFor(request.applicationId, postingLanguage)).language;
       const apiKey = await readAiKey(options.secrets, ai);
       let outcome: GenerateDocumentOutcome;
       try {

@@ -39,6 +39,14 @@ export type DocumentGetRequest = z.input<typeof DocumentGetRequestSchema>;
  * Generates a document with the AI. `language` overrides the language the posting and the UI would
  * give; omitted, the default applies.
  */
+/** Saves the language the user chose for the documents of an application. */
+export const DocumentSetLanguageRequestSchema = z.strictObject({
+  applicationId: identifier,
+  language: z.enum(DOCUMENT_LANGUAGES),
+});
+
+export type DocumentSetLanguageRequest = z.input<typeof DocumentSetLanguageRequestSchema>;
+
 export const DocumentGenerateRequestSchema = z.strictObject({
   applicationId: identifier,
   kind: z.enum(DOCUMENT_KINDS),

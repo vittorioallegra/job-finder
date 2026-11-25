@@ -131,8 +131,12 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
             aiSettings.model.trim() !== "" &&
             (aiSettings.provider !== "openai-compatible" || aiSettings.baseUrl.trim() !== ""),
         });
-        // The language the documents were written in wins over the default, so the choice is kept.
-        const stored = documents.cv?.language ?? documents.coverLetter?.language ?? null;
+        // The user's saved choice is the default here. Without one, the language the documents were
+        // written in wins over the posting's and the UI's.
+        const stored =
+          documents.defaultLanguage.source === "chosen"
+            ? null
+            : (documents.cv?.language ?? documents.coverLetter?.language ?? null);
         setLanguage(stored ?? documents.defaultLanguage.language);
         setDrafts(
           Object.fromEntries(
@@ -354,7 +358,12 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
             `applications.documents.language.options.${documents.defaultLanguage.language}`,
           ),
         })}
-        onChange={(event) => setLanguage(event.target.value as DocumentLanguage)}
+        onChange={(event) => {
+          const picked = event.target.value as DocumentLanguage;
+          setLanguage(picked);
+          // Saved at once, so it is still there when the user comes back. A failure only loses that.
+          void bridge.documents.setLanguage({ applicationId, language: picked }).catch(() => {});
+        }}
       />
 
       {records.cv === null && records["cover-letter"] === null ? (

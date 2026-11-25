@@ -252,6 +252,7 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
         defaultLanguage: { language: "en" as const, source: "ui" as const },
       }),
       generate: async () => ({ ok: false as const, code: "engine-unavailable" as const }),
+      setLanguage: async () => true,
       save: async () => ({ ok: false as const, code: "not-found" as const }),
       exportPdf: async () => ({ ok: false as const, code: "export-failed" as const }),
       reveal: async () => false,

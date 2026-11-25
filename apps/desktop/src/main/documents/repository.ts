@@ -12,6 +12,10 @@ export type StoredDocuments = Omit<ApplicationDocuments, "defaultLanguage">;
 export interface DocumentRepository {
   /** The stored documents of an application (each null until generated). */
   forApplication(applicationId: string): Promise<StoredDocuments>;
+  /** The language the user chose for the application's documents, or null. */
+  chosenLanguage(applicationId: string): Promise<DocumentLanguage | null>;
+  /** Saves the user's language choice. Resolves false when the application does not exist. */
+  setChosenLanguage(applicationId: string, language: DocumentLanguage): Promise<boolean>;
   /** One stored document, or null when none was generated for the application yet. */
   find(applicationId: string, kind: DocumentKind): Promise<DocumentRecord | null>;
   /**
@@ -67,6 +71,29 @@ export function createDocumentRepository(db: AppDb): DocumentRepository {
 
   return {
     find,
+
+    async chosenLanguage(applicationId) {
+      const [row] = await db
+        .select({ language: applications.documentLanguage })
+        .from(applications)
+        .where(eq(applications.id, applicationId))
+        .limit(1);
+      return (row?.language as DocumentLanguage | null | undefined) ?? null;
+    },
+
+    async setChosenLanguage(applicationId, language) {
+      const [row] = await db
+        .select({ id: applications.id })
+        .from(applications)
+        .where(eq(applications.id, applicationId))
+        .limit(1);
+      if (!row) return false;
+      await db
+        .update(applications)
+        .set({ documentLanguage: language })
+        .where(eq(applications.id, applicationId));
+      return true;
+    },
 
     async forApplication(applicationId) {
       const rows = await db

@@ -200,6 +200,8 @@ export const applications = sqliteTable(
     status: text("status", { enum: APPLICATION_STATUSES }).notNull(),
     createdAt: integer("created_at").notNull(),
     statusChangedAt: integer("status_changed_at").notNull(),
+    /** The language the user chose for this application's documents; null until they choose. */
+    documentLanguage: text("document_language"),
   },
   (table) => [index("applications_job_idx").on(table.jobId)],
 );
