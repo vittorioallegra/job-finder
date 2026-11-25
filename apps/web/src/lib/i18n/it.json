@@ -704,6 +704,7 @@
         "cv": "CV su misura",
         "cover-letter": "Lettera di presentazione"
       },
+      "generateBoth": "Genera CV e lettera di presentazione",
       "notGenerated": "Non ancora generato.",
       "generate": "Genera",
       "generateAgain": "Genera di nuovo",

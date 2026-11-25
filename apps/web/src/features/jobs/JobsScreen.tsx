@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import {
   DEFAULT_JOB_FILTER,
   filterFromPreferences,
@@ -162,6 +162,7 @@ export function JobsScreen() {
   // set once per click. The apply step reads the current state through a ref, so the effect runs only
   // when the link or the load state changes.
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const wantsNew = params.get("new") === "1";
   const applyLink = useRef<() => void>(() => {});
   useEffect(() => {
@@ -530,6 +531,7 @@ export function JobsScreen() {
                 jobId={selectedJobId}
                 onChanged={jobsChanged}
                 onClose={() => setSelectedJobId(null)}
+                onApplicationStarted={(id) => navigate(`/applications?open=${id}&generate=1`)}
               />
             </Drawer>
           ) : null}

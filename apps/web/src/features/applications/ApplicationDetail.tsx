@@ -17,13 +17,20 @@ type DetailState =
 
 interface ApplicationDetailProps {
   applicationId: string;
+  /** Generate the documents on opening, when the AI allows it without a consent step. */
+  autoGenerate?: boolean;
   /** Called after a note is added, so the list shows the application as it is now. */
   onChanged: (application: ApplicationDetailRecord) => void;
   onClose: () => void;
 }
 
 /** The timeline of one application (its status changes and notes), with a form to add a note. */
-export function ApplicationDetail({ applicationId, onChanged, onClose }: ApplicationDetailProps) {
+export function ApplicationDetail({
+  applicationId,
+  autoGenerate = false,
+  onChanged,
+  onClose,
+}: ApplicationDetailProps) {
   const { t, i18n } = useTranslation();
   const bridge = useBridge();
   const [state, setState] = useState<DetailState>({ status: "loading" });
@@ -144,7 +151,7 @@ export function ApplicationDetail({ applicationId, onChanged, onClose }: Applica
               </ol>
             )}
           </Card>
-          <ApplicationDocuments applicationId={state.application.id} />
+          <ApplicationDocuments applicationId={state.application.id} autoGenerate={autoGenerate} />
           <ApplicationForm
             application={state.application}
             onChanged={(application) => {

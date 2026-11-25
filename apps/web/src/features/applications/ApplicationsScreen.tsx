@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Briefcase, Download } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import {
   APPLICATION_STATUSES,
   canTransition,
@@ -41,7 +41,14 @@ export function ApplicationsScreen() {
   const [view, setView] = useState<View>("list");
   const [statusFilter, setStatusFilter] = useState<"" | ApplicationStatus>("");
   const [companyFilter, setCompanyFilter] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Preparing an application from a job opens it here (`?open=<id>&generate=1`): its documents are
+  // generated at once when the AI can be used without a consent step. The link is read once.
+  const [params, setParams] = useSearchParams();
+  const [selectedId, setSelectedId] = useState<string | null>(() => params.get("open"));
+  const [autoGenerate] = useState(() => params.get("generate") === "1");
+  useEffect(() => {
+    if (params.has("open") || params.has("generate")) setParams({}, { replace: true });
+  }, [params, setParams]);
   const [notice, setNotice] = useState<Notice | null>(null);
 
   // A retry bumps `attempt`, which reads the list again.
@@ -278,6 +285,7 @@ export function ApplicationsScreen() {
               <ApplicationDetail
                 key={selectedId}
                 applicationId={selectedId}
+                autoGenerate={autoGenerate}
                 onChanged={(application) =>
                   replace({
                     id: application.id,

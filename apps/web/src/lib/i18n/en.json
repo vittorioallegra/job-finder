@@ -704,6 +704,7 @@
         "cv": "Tailored CV",
         "cover-letter": "Cover letter"
       },
+      "generateBoth": "Generate CV and cover letter",
       "notGenerated": "Not generated yet.",
       "generate": "Generate",
       "generateAgain": "Generate again",

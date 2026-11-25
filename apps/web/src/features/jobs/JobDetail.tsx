@@ -32,13 +32,15 @@ interface JobDetailProps {
   /** Called after a flag changes, so the results show the new state. */
   onChanged: () => void;
   onClose: () => void;
+  /** Called with the new application's id once preparing has started, to continue there. */
+  onApplicationStarted?: (applicationId: string) => void;
 }
 
 /**
  * One job with its description and every source that lists it. Opening it marks the job viewed;
  * dismissing hides it from the results until the filter shows dismissed jobs.
  */
-export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
+export function JobDetail({ jobId, onChanged, onClose, onApplicationStarted }: JobDetailProps) {
   const { t, i18n } = useTranslation();
   const bridge = useBridge();
   const [state, setState] = useState<DetailState>({ status: "loading" });
@@ -90,6 +92,7 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
       setState({ status: "ready", job: { ...state.job, applicationStatus } });
       setPrepare({ status: "done", applicationStatus });
       onChanged();
+      onApplicationStarted?.(result.application.id);
     } else if (result.code === "duplicate-confirmation-required") {
       setPrepare({ status: "warning", duplicates: result.duplicates, confirmed: confirmations });
     } else {
