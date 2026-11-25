@@ -770,7 +770,17 @@
       "writing": {
         "cv": "Writing your CV… this can take a minute. You can leave this page: it keeps going.",
         "cover-letter": "Writing your cover letter… this can take a minute. You can leave this page: it keeps going."
-      }
+      },
+      "preview": "Preview",
+      "edit": "Edit",
+      "close": "Close",
+      "cancel": "Cancel",
+      "previewTitle": "{{kind}}: preview",
+      "editTitle": "{{kind}}: edit",
+      "previewLoading": "Preparing the preview…",
+      "previewFailed": "The preview could not be prepared. Save your profile and try again.",
+      "previewFrame": "Preview of the document as it will look in the PDF",
+      "editIntro": "Change the wording below. Employers, titles, dates, degrees and skills come from your profile, so they are not editable here: edit them in your profile. Saved text must stay true to your profile."
     },
     "form": {
       "heading": "Application form",

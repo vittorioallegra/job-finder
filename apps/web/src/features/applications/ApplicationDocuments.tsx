@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2 } from "lucide-react";
+import { Eye, Loader2, Pencil } from "lucide-react";
 import { Link } from "react-router";
 import {
   DOCUMENT_AI_UNAVAILABLE_CODES,
@@ -22,6 +22,7 @@ import {
 import { Badge } from "../../components/ui/Badge";
 import { Button, buttonClass } from "../../components/ui/Button";
 import { Card, CardTitle } from "../../components/ui/Card";
+import { Modal } from "../../components/ui/Modal";
 import { SelectInput } from "../../components/ui/SelectInput";
 import { TextArea } from "../../components/ui/TextArea";
 
@@ -116,6 +117,8 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
   // Results up to this version are already in the page (or were stored before it opened).
   const seenVersion = useRef(generation.version);
   const scrollTarget = useRef<DocumentKind | null>(null);
+  const [previewing, setPreviewing] = useState<DocumentKind | null>(null);
+  const [editing, setEditing] = useState<DocumentKind | null>(null);
   const busy =
     generation.running !== null
       ? { kind: generation.running, action: "generate" as Action }
@@ -263,6 +266,14 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
     );
   }
 
+  /** Leaving the editor without saving drops the changes: the text goes back to what is stored. */
+  function stopEditing(kind: DocumentKind) {
+    const record = records[kind];
+    if (record) setDrafts((current) => ({ ...current, [kind]: draftOf(record) }));
+    setNotice(kind, null);
+    setEditing(null);
+  }
+
   function noticeView(notice: Notice) {
     return (
       <div
@@ -281,9 +292,10 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
     );
   }
 
-  async function save(kind: DocumentKind, record: DocumentRecord) {
+  /** Resolves true when the edits were stored. */
+  async function save(kind: DocumentKind, record: DocumentRecord): Promise<boolean> {
     const draft = drafts[kind];
-    if (!draft) return;
+    if (!draft) return false;
     setBusy({ kind, action: "save" });
     setNotice(kind, null);
     try {
@@ -294,6 +306,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
       if (result.ok) {
         applyRecord(result.document);
         setNotice(kind, { tone: "ok", text: t("applications.documents.saved") });
+        return true;
       } else if (result.code === "validation-failed") {
         setNotice(kind, {
           tone: "error",
@@ -309,6 +322,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
     } finally {
       setBusy(null);
     }
+    return false;
   }
 
   async function exportPdf(kind: DocumentKind) {
@@ -453,23 +467,22 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
                     ) : null}
                     {stale ? <Badge tone="fair">{t("applications.documents.stale")}</Badge> : null}
                   </div>
-                  {draft ? (
-                    <DocumentEditor
-                      draft={draft}
-                      content={record.content}
-                      onDraft={(next) => setDrafts((current) => ({ ...current, [kind]: next }))}
-                    />
-                  ) : null}
                   <div className="flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => setPreviewing(kind)}>
+                      <Eye className="size-4" strokeWidth={1.8} aria-hidden="true" />
+                      {t("applications.documents.preview")}
+                    </Button>
                     <Button
                       variant="secondary"
                       size="sm"
                       disabled={busy !== null || !draft}
-                      onClick={() => void save(kind, record)}
+                      onClick={() => {
+                        setNotice(kind, null);
+                        setEditing(kind);
+                      }}
                     >
-                      {working && busy?.action === "save"
-                        ? t("applications.documents.saving")
-                        : t("applications.documents.save")}
+                      <Pencil className="size-4" strokeWidth={1.8} aria-hidden="true" />
+                      {t("applications.documents.edit")}
                     </Button>
                     <Button
                       variant="secondary"
@@ -500,12 +513,133 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
                   </Button>
                 )}
               </div>
-              {notice ? noticeView(notice) : null}
+              {notice && editing !== kind ? noticeView(notice) : null}
             </Card>
           </div>
         );
       })}
+
+      {previewing !== null && records[previewing] !== null ? (
+        <Modal
+          title={t("applications.documents.previewTitle", {
+            kind: t(`applications.documents.kinds.${previewing}`),
+          })}
+          closeLabel={t("applications.documents.close")}
+          onClose={() => setPreviewing(null)}
+          footer={
+            <Button variant="secondary" onClick={() => setPreviewing(null)}>
+              {t("applications.documents.close")}
+            </Button>
+          }
+        >
+          <DocumentPreview
+            applicationId={applicationId}
+            kind={previewing}
+            version={records[previewing]?.updatedAt ?? 0}
+          />
+        </Modal>
+      ) : null}
+
+      {editing !== null && records[editing] !== null && drafts[editing] ? (
+        <Modal
+          title={t("applications.documents.editTitle", {
+            kind: t(`applications.documents.kinds.${editing}`),
+          })}
+          closeLabel={t("applications.documents.cancel")}
+          onClose={() => stopEditing(editing)}
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                disabled={busy !== null}
+                onClick={() => stopEditing(editing)}
+              >
+                {t("applications.documents.cancel")}
+              </Button>
+              <Button
+                disabled={busy !== null}
+                onClick={() => {
+                  const record = records[editing];
+                  if (record) void save(editing, record).then((saved) => saved && setEditing(null));
+                }}
+              >
+                {busy?.kind === editing && busy.action === "save"
+                  ? t("applications.documents.saving")
+                  : t("applications.documents.save")}
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-app-muted">{t("applications.documents.editIntro")}</p>
+            <DocumentEditor
+              draft={drafts[editing] as Draft}
+              content={(records[editing] as DocumentRecord).content}
+              onDraft={(next) => setDrafts((current) => ({ ...current, [editing]: next }))}
+            />
+            {notices[editing] ? noticeView(notices[editing] as Notice) : null}
+          </div>
+        </Modal>
+      ) : null}
     </section>
+  );
+}
+
+/** The document as it will look in the PDF: the HTML it is printed from, shown on a white page. */
+function DocumentPreview({
+  applicationId,
+  kind,
+  version,
+}: {
+  applicationId: string;
+  kind: DocumentKind;
+  /** Changes when the document is edited, so the preview is read again. */
+  version: number;
+}) {
+  const { t } = useTranslation();
+  const bridge = useBridge();
+  const [state, setState] = useState<
+    { status: "loading" } | { status: "failed" } | { status: "ready"; html: string }
+  >({ status: "loading" });
+
+  useEffect(() => {
+    let active = true;
+    bridge.documents
+      .preview({ applicationId, kind })
+      .then((result) => {
+        if (active)
+          setState(result.ok ? { status: "ready", html: result.html } : { status: "failed" });
+      })
+      .catch(() => {
+        if (active) setState({ status: "failed" });
+      });
+    return () => {
+      active = false;
+    };
+  }, [bridge, applicationId, kind, version]);
+
+  if (state.status === "loading") {
+    return (
+      <p role="status" className="text-sm text-app-muted">
+        {t("applications.documents.previewLoading")}
+      </p>
+    );
+  }
+  if (state.status === "failed") {
+    return (
+      <p role="alert" className="text-sm text-app-danger">
+        {t("applications.documents.previewFailed")}
+      </p>
+    );
+  }
+  return (
+    <iframe
+      title={t("applications.documents.previewFrame")}
+      // Nothing in the document runs: no scripts, no forms, no links followed.
+      sandbox=""
+      srcDoc={state.html}
+      className="h-[65vh] w-full rounded-lg border border-app-border bg-white"
+    />
   );
 }
 

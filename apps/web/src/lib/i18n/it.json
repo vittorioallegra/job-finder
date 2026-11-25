@@ -770,7 +770,17 @@
       "writing": {
         "cv": "Sto scrivendo il CV… può volerci un minuto. Puoi uscire da questa pagina: continua da solo.",
         "cover-letter": "Sto scrivendo la lettera di presentazione… può volerci un minuto. Puoi uscire da questa pagina: continua da solo."
-      }
+      },
+      "preview": "Anteprima",
+      "edit": "Modifica",
+      "close": "Chiudi",
+      "cancel": "Annulla",
+      "previewTitle": "{{kind}}: anteprima",
+      "editTitle": "{{kind}}: modifica",
+      "previewLoading": "Preparo l'anteprima…",
+      "previewFailed": "Non è stato possibile preparare l'anteprima. Salva il profilo e riprova.",
+      "previewFrame": "Anteprima del documento come apparirà nel PDF",
+      "editIntro": "Modifica qui sotto la formulazione. Aziende, ruoli, date, titoli di studio e competenze vengono dal profilo, quindi non si modificano qui: cambiali nel profilo. Il testo salvato deve restare fedele al profilo."
     },
     "form": {
       "heading": "Modulo di candidatura",

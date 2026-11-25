@@ -25,6 +25,7 @@ import type {
   ApplicationDocuments,
   DocumentExportResult,
   DocumentGenerateResult,
+  DocumentPreviewResult,
   DocumentSaveResult,
 } from "./documents";
 import {
@@ -108,6 +109,7 @@ export const IPC_REQUEST_SCHEMAS = {
   "documents:save": DocumentSaveRequestSchema,
   "documents:export": DocumentExportRequestSchema,
   "documents:reveal": DocumentExportRequestSchema,
+  "documents:preview": DocumentExportRequestSchema,
   "autofill:start": AutofillStartRequestSchema,
   "app:status": z.undefined(),
   "app:open-update": z.undefined(),
@@ -156,6 +158,7 @@ export interface IpcResponses {
   "documents:save": DocumentSaveResult;
   "documents:export": DocumentExportResult;
   "documents:reveal": boolean;
+  "documents:preview": DocumentPreviewResult;
   "autofill:start": AutofillStartResult;
   "app:status": AppStatus;
   "app:open-update": boolean;

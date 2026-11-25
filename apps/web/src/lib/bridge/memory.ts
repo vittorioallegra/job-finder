@@ -256,6 +256,7 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
       save: async () => ({ ok: false as const, code: "not-found" as const }),
       exportPdf: async () => ({ ok: false as const, code: "export-failed" as const }),
       reveal: async () => false,
+      preview: async () => ({ ok: false as const, code: "not-found" as const }),
     },
     scores: {
       start: async () =>

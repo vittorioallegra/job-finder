@@ -196,6 +196,8 @@ export async function handleInvoke(
       return services.documents.generate(payload as DocumentGenerateRequest);
     case "documents:set-language":
       return services.documents.setLanguage(payload as DocumentSetLanguageRequest);
+    case "documents:preview":
+      return services.documents.preview(payload as DocumentExportRequest);
     case "documents:save":
       return services.documents.save(payload as DocumentSaveRequest);
     case "documents:export":

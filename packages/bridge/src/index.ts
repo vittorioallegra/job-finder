@@ -20,6 +20,7 @@ import type {
   DocumentExportRequest,
   DocumentExportResult,
   DocumentGenerateRequest,
+  DocumentPreviewResult,
   DocumentSetLanguageRequest,
   DocumentGenerateResult,
   DocumentGetRequest,
@@ -146,6 +147,8 @@ export interface JobFinderBridge {
     save(request: DocumentSaveRequest): Promise<DocumentSaveResult>;
     /** Renders the stored document to a PDF in the application's folder. */
     exportPdf(request: DocumentExportRequest): Promise<DocumentExportResult>;
+    /** The HTML the stored document is printed from, to preview it as it will look in the PDF. */
+    preview(request: DocumentExportRequest): Promise<DocumentPreviewResult>;
     /** Shows an exported PDF in the file manager. Resolves false when there is none yet. */
     reveal(request: DocumentExportRequest): Promise<boolean>;
   };

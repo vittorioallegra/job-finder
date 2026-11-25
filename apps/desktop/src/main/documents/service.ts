@@ -7,6 +7,7 @@ import {
   type DocumentExportResult,
   type DocumentGenerateRequest,
   type DocumentGenerateResult,
+  type DocumentPreviewResult,
   type DocumentSaveRequest,
   type DocumentSetLanguageRequest,
   type DocumentSaveResult,
@@ -39,6 +40,8 @@ export interface DocumentService {
   setLanguage(request: DocumentSetLanguageRequest): Promise<boolean>;
   /** Stores the user's edits after the profile checks. */
   save(request: DocumentSaveRequest): Promise<DocumentSaveResult>;
+  /** The HTML the stored document is printed from, for the preview. */
+  preview(request: DocumentExportRequest): Promise<DocumentPreviewResult>;
   /** Renders the stored document to a PDF in the application's folder. */
   exportPdf(request: DocumentExportRequest): Promise<DocumentExportResult>;
   /** Shows the exported PDF in the file manager. False when there is none. */
@@ -95,6 +98,27 @@ export function createDocumentService(options: DocumentServiceOptions): Document
   async function uiLanguage(): Promise<ExplanationLanguage> {
     const { ui } = await options.settings.get();
     return explanationLanguage(ui.language, options.systemLocale());
+  }
+
+  /**
+   * The stored document as the HTML it is printed from. It follows the document's own language; a
+   * document stored before languages were kept uses the UI language it was generated in.
+   */
+  async function renderStored(
+    request: DocumentExportRequest,
+  ): Promise<{ ok: true; html: string } | { ok: false; code: "not-found" | "no-profile" }> {
+    const stored = await repository.find(request.applicationId, request.kind);
+    if (stored === null) return { ok: false, code: "not-found" };
+    const saved = await options.profile.get();
+    if (saved === null) return { ok: false, code: "no-profile" };
+    const language = stored.language ?? (await uiLanguage());
+    const html = renderDocumentHtml(
+      stored.content,
+      saved.profile.contact,
+      documentLabels(language),
+      language,
+    );
+    return { ok: true, html };
   }
 
   /** The user's choice for the application, else the posting's language, else the UI's. */
@@ -188,20 +212,15 @@ export function createDocumentService(options: DocumentServiceOptions): Document
       return { ok: true, document };
     },
 
+    async preview(request) {
+      const rendered = await renderStored(request);
+      return rendered.ok ? { ok: true, html: rendered.html } : rendered;
+    },
+
     async exportPdf(request) {
-      const stored = await repository.find(request.applicationId, request.kind);
-      if (stored === null) return { ok: false, code: "not-found" };
-      const saved = await options.profile.get();
-      if (saved === null) return { ok: false, code: "no-profile" };
-      // The PDF follows the document's own language; a document stored before languages were kept
-      // uses the UI language it was generated in.
-      const language = stored.language ?? (await uiLanguage());
-      const html = renderDocumentHtml(
-        stored.content,
-        saved.profile.contact,
-        documentLabels(language),
-        language,
-      );
+      const rendered = await renderStored(request);
+      if (!rendered.ok) return rendered;
+      const { html } = rendered;
       try {
         const bytes = await options.renderPdf(html);
         await options.writePdf(request.applicationId, request.kind, bytes);

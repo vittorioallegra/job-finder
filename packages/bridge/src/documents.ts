@@ -130,6 +130,10 @@ export type DocumentSaveResult =
   | { ok: false; code: "not-found" | "no-profile" }
   | { ok: false; code: "validation-failed"; issues: DocumentIssue[] };
 
+/** The HTML a document is printed from, for the preview. */
+export type DocumentPreviewResult =
+  { ok: true; html: string } | { ok: false; code: "not-found" | "no-profile" };
+
 export type DocumentExportResult =
   | { ok: true; document: DocumentRecord }
   | { ok: false; code: "not-found" | "no-profile" | "export-failed" };

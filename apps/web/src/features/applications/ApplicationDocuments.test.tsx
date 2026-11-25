@@ -1,5 +1,5 @@
-// protects=the documents panel shows loading, error and AI-unavailable states, generates both documents with one button without any consent step, keeps writing after the panel closes and shows the run and its result on reopening, saves the language the user picks at once and shows it when reopened, shows the language of the stored documents, shows generated text as editable, reports a save that breaks the profile, exports a PDF, and names every AI failure;
-// fails_when=a generate call needs a consent, a run stops when the panel closes, a picked language is not saved, a reopened panel shows the default language instead of the stored one, an AI failure lacks the settings link, a refused save is reported as saved, or an export without a file is reported as exported;
+// protects=the documents panel shows loading, error and AI-unavailable states, generates both documents with one button without consent, keeps writing after the panel closes, shows the language, shows a generated document as a card with Preview, Edit and Export buttons instead of fields, edits in a dialog that saves or drops its changes, previews the printed document in a sandboxed frame, reports a save that breaks the profile, exports a PDF and names every AI failure;
+// fails_when=a generate call needs a consent, a run stops when the panel closes, the card shows loose fields, cancelling the editor keeps the changes, the preview can run scripts, a refused save is reported as saved or hidden, an export without a file is reported as exported, or an AI failure lacks the settings link;
 // no_claim=the layout, the real bridge and the PDF itself are not checked here; the desktop service and PDF tests cover the rules and the file;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -100,8 +100,20 @@ function languageSelect(container: HTMLElement): HTMLSelectElement {
   return control;
 }
 
+/** A button of the open dialog, which is rendered outside the panel's container. */
+function dialogButton(text: string): HTMLButtonElement {
+  const dialog = document.querySelector("[role=dialog]");
+  const found = [...(dialog?.querySelectorAll("button") ?? [])].find(
+    (node) => node.textContent?.trim() === text,
+  );
+  if (!found) throw new Error(`no dialog button ${text}`);
+  return found;
+}
+
 function textareaLabelled(container: HTMLElement, text: string): HTMLTextAreaElement {
-  const label = [...container.querySelectorAll("label")].find((node) => node.textContent === text);
+  const label = [
+    ...(document.querySelector("[role=dialog]") ?? container).querySelectorAll("label"),
+  ].find((node) => node.textContent === text);
   const control = label?.htmlFor ? document.getElementById(label.htmlFor) : null;
   if (!(control instanceof HTMLTextAreaElement)) throw new Error(`no textarea ${text}`);
   return control;
@@ -127,6 +139,7 @@ function bridgeWith(
       save: vi.fn(async () => ({ ok: false as const, code: "not-found" as const })),
       exportPdf: vi.fn(async () => ({ ok: false as const, code: "export-failed" as const })),
       reveal: vi.fn(async () => true),
+      preview: vi.fn(async () => ({ ok: true as const, html: "<html><body>CV</body></html>" })),
       ...documents,
     },
   };
@@ -286,7 +299,8 @@ describe("application documents panel", () => {
 
     await act(async () => pending.shift()?.());
     await act(async () => {});
-    expect(container.textContent).toContain("Dear team, hello there.");
+    expect(container.textContent).toContain("Generated.");
+    expect(button(container, "Preview")).toBeTruthy();
   });
 
   it("shows the posting's language as the default, and sends the language the user picks", async () => {
@@ -337,16 +351,63 @@ describe("application documents panel", () => {
       }),
     );
 
+    // The card shows buttons, not a pile of fields.
+    expect(container.querySelectorAll("textarea")).toHaveLength(0);
+    await act(async () => button(container, "Edit").click());
+
     const paragraph = textareaLabelled(container, "Paragraph 1");
     expect(paragraph.value).toBe("Hi there.");
     await act(async () => type(paragraph, "Edited."));
-    await act(async () => button(container, "Save changes").click());
+    await act(async () => dialogButton("Save changes").click());
 
     expect(save).toHaveBeenCalledWith({
       applicationId: "a1",
       content: { kind: "cover-letter", letter: { paragraphs: ["Edited."] } },
     });
+    expect(document.querySelector("[role=dialog]")).toBeNull();
     expect(container.textContent).toContain("Changes saved.");
+  });
+
+  it("drops the edits when the editor is cancelled", async () => {
+    const save = vi.fn();
+    await render(
+      bridgeWith({
+        get: vi.fn(async () => documentsOf({ coverLetter: coverLetter("Hi there.") })),
+        save,
+      }),
+    );
+    await act(async () => button(container, "Edit").click());
+    await act(async () => type(textareaLabelled(container, "Paragraph 1"), "Typed, then dropped."));
+    await act(async () => dialogButton("Cancel").click());
+    expect(document.querySelector("[role=dialog]")).toBeNull();
+    expect(save).not.toHaveBeenCalled();
+
+    await act(async () => button(container, "Edit").click());
+    expect(textareaLabelled(container, "Paragraph 1").value).toBe("Hi there.");
+  });
+
+  it("opens a preview of the document as it will print, in a sandboxed frame", async () => {
+    const preview = vi.fn(async () => ({
+      ok: true as const,
+      html: "<html><body>Maria Rossi</body></html>",
+    }));
+    await render(
+      bridgeWith({
+        get: vi.fn(async () => documentsOf({ coverLetter: coverLetter("Hi there.") })),
+        preview,
+      }),
+    );
+    await act(async () => button(container, "Preview").click());
+    await act(async () => {});
+
+    expect(preview).toHaveBeenCalledWith({ applicationId: "a1", kind: "cover-letter" });
+    const frame = document.querySelector("[role=dialog] iframe") as HTMLIFrameElement;
+    expect(frame.getAttribute("srcdoc")).toContain("Maria Rossi");
+    // Sandboxed with no permissions: nothing in the document runs.
+    expect(frame.getAttribute("sandbox")).toBe("");
+
+    await act(async () => dialogButton("Close").click());
+    expect(document.querySelector("[role=dialog]")).toBeNull();
   });
 
   it("names the facts a refused save breaks, and does not report it as saved", async () => {
@@ -361,11 +422,14 @@ describe("application documents panel", () => {
       }),
     );
 
-    await act(async () => button(container, "Save changes").click());
+    await act(async () => button(container, "Edit").click());
+    await act(async () => dialogButton("Save changes").click());
 
-    expect(container.textContent).toContain("Some text does not match your profile");
-    expect(container.textContent).toContain("a skill is not in your profile");
-    expect(container.textContent).not.toContain("Changes saved.");
+    // The refusal is told inside the editor, which stays open.
+    const dialogText = document.querySelector("[role=dialog]")?.textContent ?? "";
+    expect(dialogText).toContain("Some text does not match your profile");
+    expect(dialogText).toContain("a skill is not in your profile");
+    expect(dialogText).not.toContain("Changes saved.");
   });
 
   it("links an AI failure to the settings, and shows a retryable failure without the link", async () => {

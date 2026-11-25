@@ -253,6 +253,23 @@ describe("document service", () => {
     expect(pdfWrites).toHaveLength(0);
   });
 
+  it("previews the HTML the PDF is printed from, without writing a file or marking an export", async () => {
+    // protects=the preview returns the same HTML the export prints for a stored document, writes no PDF and leaves the export time alone, and refuses a missing document; fails_when=the preview writes a file, marks the document as exported, or answers for a document that does not exist; no_claim=how the HTML looks in a browser;
+    expect(await build().preview({ applicationId: "a1", kind: "cv" })).toEqual({
+      ok: false,
+      code: "not-found",
+    });
+
+    await build().generate({ applicationId: "a1", kind: "cover-letter" });
+    const preview = await build().preview({ applicationId: "a1", kind: "cover-letter" });
+
+    expect(preview).toMatchObject({ ok: true });
+    if (!preview.ok) return;
+    expect(preview.html).toContain("<html");
+    expect(pdfWrites).toEqual([]);
+    expect((await build().get("a1")).coverLetter?.exportedAt).toBeNull();
+  });
+
   it("reveals only an exported PDF", async () => {
     await build().generate({ applicationId: "a1", kind: "cover-letter" });
     expect(await build().reveal({ applicationId: "a1", kind: "cover-letter" })).toBe(false);

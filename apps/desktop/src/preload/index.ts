@@ -76,6 +76,7 @@ const api: JobFinderBridge = {
     save: (request) => invoke("documents:save", request),
     exportPdf: (request) => invoke("documents:export", request),
     reveal: (request) => invoke("documents:reveal", request),
+    preview: (request) => invoke("documents:preview", request),
   },
   scores: {
     start: (input) => invoke("scores:start", input),
