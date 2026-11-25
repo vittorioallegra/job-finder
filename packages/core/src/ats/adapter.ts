@@ -21,7 +21,15 @@ export interface AdapterSpec {
   endpoint(slug: string, offset?: number): string;
   /** Returns undefined when the body does not have the expected shape. */
   parse(body: string, board: BoardRef): ParsedPage | undefined;
+  /**
+   * Reads the description from the posting page, for a provider whose listing leaves some of them
+   * empty. Returns undefined when the page has none.
+   */
+  describe?(pageBody: string): string | undefined;
 }
+
+/** Postings per board whose page is read for a missing description; the rest stay without one. */
+export const MAX_DESCRIPTION_PAGES = 150;
 
 /**
  * A board API answers with every opening in one document: a large company's Greenhouse board with
@@ -56,6 +64,19 @@ export function createAdapter(spec: AdapterSpec): AtsAdapter {
         if (!parsed) return { ok: false, code: "invalid-response", url };
         jobs.push(...parsed.jobs);
         url = parsed.next;
+      }
+
+      if (spec.describe) {
+        let reads = 0;
+        for (const [index, job] of jobs.entries()) {
+          if (job.description !== "" || reads === MAX_DESCRIPTION_PAGES) continue;
+          if (options?.signal?.aborted) break;
+          reads += 1;
+          // A page that cannot be read leaves the posting without a description; it never fails the scan.
+          const page = await client.get(job.url, { signal: options?.signal });
+          const description = page.ok ? spec.describe(page.body) : undefined;
+          if (description) jobs[index] = { ...job, description };
+        }
       }
       return { ok: true, jobs };
     },

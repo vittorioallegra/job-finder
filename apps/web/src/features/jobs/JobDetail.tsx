@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { ExternalLink, X } from "lucide-react";
 import type {
   ApplicationStartResult,
   ApplicationStatus,
@@ -9,7 +10,7 @@ import type {
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Badge } from "../../components/ui/Badge";
-import { Button } from "../../components/ui/Button";
+import { Button, buttonClass } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 
 type DetailState =
@@ -146,6 +147,7 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
     }
   }
 
+  const postingUrl = state.status === "ready" ? (state.job.sources[0]?.url ?? null) : null;
   const formatDate = (epochMs: number) => new Date(epochMs).toLocaleDateString(i18n.language);
   const notStated = t("jobs.detail.notStated");
   const salary = state.status === "ready" ? state.job.salary : null;
@@ -160,6 +162,12 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
 
   return (
     <section aria-labelledby="jobs-detail-title" className="flex flex-col gap-5">
+      <div>
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          <X aria-hidden="true" className="size-4" />
+          {t("jobs.detail.close")}
+        </Button>
+      </div>
       <div className="flex items-start justify-between gap-3">
         <h3
           id="jobs-detail-title"
@@ -167,9 +175,17 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
         >
           {state.status === "ready" ? state.job.title : t("jobs.detail.heading")}
         </h3>
-        <Button variant="secondary" size="sm" onClick={onClose}>
-          {t("jobs.detail.close")}
-        </Button>
+        {postingUrl !== null ? (
+          <a
+            href={postingUrl}
+            target="_blank"
+            rel="noreferrer"
+            className={`${buttonClass("secondary", "sm")} shrink-0`}
+          >
+            {t("jobs.detail.openPosting")}
+            <ExternalLink aria-hidden="true" className="size-4" />
+          </a>
+        ) : null}
       </div>
 
       {state.status === "loading" ? (

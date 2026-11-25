@@ -1,4 +1,4 @@
-// protects=a Teamtailor or Personio feed that changed format fails the scan, while a valid feed with no postings stays a complete empty scan;
+// protects=a Teamtailor or Personio feed that changed format fails the scan, while a valid feed with no postings stays a complete empty scan, and a Personio posting whose feed entry has no description gets it from its page without failing the scan when that page cannot be read;
 // fails_when=a feed whose items cannot be read returns ok with fewer or no jobs, which would close the company's postings, or a valid empty feed is reported as a failure;
 // no_claim=the live feeds: the bodies are small hand-written documents.
 import { describe, expect, it } from "vitest";
@@ -43,5 +43,39 @@ describe("XML feed adapters", () => {
 
     expect(await scan("personio", drifted)).toMatchObject({ ok: false, code: "invalid-response" });
     expect(await scan("personio", empty)).toEqual({ ok: true, jobs: [] });
+  });
+
+  it("reads a Personio description from the posting page when the feed leaves it empty", async () => {
+    const feed = `<workzag-jobs>
+      <position><id>1</id><office>Berlin</office><name>Backend</name><jobDescriptions></jobDescriptions></position>
+      <position><id>2</id><office>Berlin</office><name>Frontend</name><jobDescriptions></jobDescriptions></position>
+    </workzag-jobs>`;
+    const page = `<html><script type="application/ld+json">${JSON.stringify({
+      description: "<h1>Your mission</h1><p>Build services.</p>",
+    })}</script></html>`;
+    const client = createHttpClient({
+      fetch: (async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith("/robots.txt")) return new Response("", { status: 404 });
+        if (url.endsWith("/xml")) return new Response(feed, { status: 200 });
+        return url.endsWith("/job/1")
+          ? new Response(page, { status: 200 })
+          : new Response("gone", { status: 500 });
+      }) as typeof fetch,
+      intervalMs: 0,
+      sleep: async () => {},
+      maxAttempts: 1,
+    });
+
+    const result = await ATS_ADAPTERS.personio.fetchJobs(
+      { ats: "personio", slug: "acme", companyName: "Acme" },
+      client,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.jobs.map((job) => job.description)).toEqual([
+      "Your mission\nBuild services.",
+      "",
+    ]);
   });
 });

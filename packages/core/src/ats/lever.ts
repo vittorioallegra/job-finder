@@ -54,7 +54,7 @@ export const lever = createAdapter({
           applyUrl: posting.applyUrl ?? undefined,
           companyName: companyOf(board),
           title: posting.text,
-          description: posting.descriptionPlain ?? htmlToText(posting.description ?? ""),
+          description: posting.descriptionPlain || htmlToText(posting.description ?? ""),
           locations: withCountry(locations, posting.country),
           workModeHints: [posting.workplaceType ?? undefined],
           employmentLabel: categories?.commitment ?? undefined,

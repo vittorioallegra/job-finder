@@ -56,8 +56,27 @@ function parse(body: string, board: BoardRef): ParsedPage | undefined {
   return { jobs };
 }
 
+/** The posting page carries the description as JSON-LD, also when the feed leaves it empty. */
+function describe(pageBody: string): string | undefined {
+  const $ = load(pageBody);
+  for (const element of $('script[type="application/ld+json"]').toArray()) {
+    try {
+      const data: unknown = JSON.parse($(element).text());
+      const description = (data as { description?: unknown }).description;
+      if (typeof description === "string") {
+        const text = htmlToText(description);
+        if (text !== "") return text;
+      }
+    } catch {
+      // Not the posting's data; try the next block.
+    }
+  }
+  return undefined;
+}
+
 export const personio = createAdapter({
   id: "personio",
   endpoint: (slug) => `https://${slug}.jobs.personio.de/xml`,
   parse,
+  describe,
 });

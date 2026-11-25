@@ -489,6 +489,7 @@
       "retry": "Try again",
       "missing": "This job no longer exists.",
       "close": "Close",
+      "openPosting": "Open posting",
       "dismiss": "Dismiss",
       "restore": "Restore",
       "closed": "Closed: no source lists it any more",
