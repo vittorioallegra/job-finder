@@ -262,10 +262,8 @@ describe("validation across languages", () => {
 
     expect(validateDocument(repaired, profile())).toEqual([]);
     if (repaired.kind !== "cv") return;
-    // Every job of the profile is there, once, in the profile's order.
-    expect(repaired.cv.experience.map((entry) => entry.source)).toEqual(
-      profile().experience.map((_, index) => index),
-    );
+    // Only the entry the model chose is there, once.
+    expect(repaired.cv.experience).toHaveLength(1);
     expect(repaired.cv.experience[0]?.company).toBe(profile().experience[0]?.company);
     expect(repaired.cv.summary).toBe("Ten years of APIs.");
     expect(repaired.cv.skills[0]?.name).toBe(profile().skills[0]?.name);
@@ -282,22 +280,29 @@ describe("validation across languages", () => {
     });
   });
 
-  it("puts back the latest job and the degree when the model leaves them out, with the profile's own wording", () => {
+  it("keeps the experiences and degrees the model chose as the most relevant, in the profile's order, and adds nothing back", () => {
     const p = profile();
-    const answer = cv({ experience: [], education: [], skills: [] });
+    const chosen = cv({
+      experience: [
+        { ...cv().experience[0]!, source: 1 },
+        { ...cv().experience[0]!, source: 0 },
+      ],
+      education: [],
+      skills: [],
+    });
 
-    const repaired = repairDocument({ kind: "cv", cv: answer }, p);
+    const repaired = repairDocument({ kind: "cv", cv: chosen }, p);
 
     expect(validateDocument(repaired, p)).toEqual([]);
     if (repaired.kind !== "cv") return;
-    expect(repaired.cv.experience.map((entry) => entry.company)).toEqual(
-      p.experience.map((item) => item.company),
+    expect(repaired.cv.experience.map((entry) => entry.source)).toEqual([0, 1]);
+    expect(repaired.cv.education).toEqual([]);
+
+    const onlyOlder = repairDocument(
+      { kind: "cv", cv: cv({ experience: [{ ...cv().experience[0]!, source: 1 }] }) },
+      p,
     );
-    expect(repaired.cv.education.map((entry) => entry.degree)).toEqual(
-      p.education.map((item) => item.degree),
-    );
-    expect(repaired.cv.experience[0]?.bullets.map((bullet) => bullet.text)).toEqual(
-      p.experience[0]?.bullets.map((text) => text.trim()),
-    );
+    if (onlyOlder.kind !== "cv") return;
+    expect(onlyOlder.cv.experience.map((entry) => entry.source)).toEqual([1]);
   });
 });

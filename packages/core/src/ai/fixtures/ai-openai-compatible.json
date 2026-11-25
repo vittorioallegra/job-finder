@@ -11,7 +11,7 @@
       "body": "{\"id\":\"chatcmpl-hand-made\",\"object\":\"chat.completion\",\"created\":1767225600,\"model\":\"fixture-replay-model\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"ok\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":100,\"completion_tokens\":50,\"total_tokens\":150}}"
     },
     {
-      "key": "78ef3f6de090a3425bfe977a852e5c0a1fb409b29027bfdb6e6ce2e48eeab324",
+      "key": "65f13d3773f8bba746012275c5c392c48695495484dd5fdbc0dbcd198578f24b",
       "method": "POST",
       "path": "/v1/chat/completions",
       "status": 200,

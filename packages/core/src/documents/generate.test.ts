@@ -1,5 +1,5 @@
-// protects=generateDocument returns a document only after it passes the profile checks, adds back a job or a degree the model left out, sets small drifts right from the profile instead of rejecting the answer, retries once with the rules broken when nothing usable is left, reports an answer still unusable as invalid-output, maps provider failures to their codes, and asks for the text in the language it is given;
-// fails_when=a CV without the latest job or the degree, an invented employer, date, skill or number reaches the result, a drifted answer is rejected instead of corrected, the retry omits the broken rules, a second unusable answer is accepted, a provider rejection is reported as invalid-output, more than two answers are requested, or the prompt names another language than the one given;
+// protects=generateDocument returns a document only after it passes the profile checks, keeps the experiences and degrees the model chose as relevant without adding the others back, sets small drifts right from the profile instead of rejecting the answer, retries once with the rules broken when nothing usable is left, reports an answer still unusable as invalid-output, maps provider failures to their codes, and asks for the text in the language it is given;
+// fails_when=the entries the model left out are forced back in, an invented employer, date, skill or number reaches the result, a drifted answer is rejected instead of corrected, the retry omits the broken rules, a second unusable answer is accepted, a provider rejection is reported as invalid-output, more than two answers are requested, or the prompt names another language than the one given;
 // no_claim=every provider answer is a scripted double, not a live model; the quality of real output is not shown;
 import { describe, expect, it } from "vitest";
 import type { AiProviderConfig } from "../ai/provider";
@@ -132,7 +132,7 @@ describe("generateDocument", () => {
     expect(bodies).toHaveLength(1);
   });
 
-  it("adds back a job and a degree the model left out, even when its answer is otherwise valid", async () => {
+  it("keeps the experiences the model chose as most relevant, and does not add the others back", async () => {
     const twoJobs: Profile = {
       ...profile(),
       experience: [
@@ -146,17 +146,8 @@ describe("generateDocument", () => {
         },
         ...profile().experience,
       ],
-      education: [
-        {
-          institution: "Politecnico",
-          degree: "MSc Computer Science",
-          grade: "",
-          startDate: "2014",
-          endDate: "2019",
-        },
-      ],
     };
-    // The model keeps only the older job (source 1) and no degree.
+    // The model judges only the older job (source 1) relevant and leaves out the degree.
     const answer = {
       ...VALID_CV,
       experience: [{ ...VALID_CV.experience[0]!, source: 1 }],
@@ -167,12 +158,11 @@ describe("generateDocument", () => {
 
     expect(outcome.ok).toBe(true);
     if (!outcome.ok || outcome.content.kind !== "cv") return;
-    expect(outcome.content.cv.experience.map((entry) => entry.company)).toEqual(["Globex", "Acme"]);
-    expect(outcome.content.cv.experience[0]?.endDate).toBe("present");
-    expect(outcome.content.cv.education.map((entry) => entry.degree)).toEqual([
-      "MSc Computer Science",
-    ]);
+    expect(outcome.content.cv.experience.map((entry) => entry.company)).toEqual(["Acme"]);
+    expect(outcome.content.cv.education).toEqual([]);
     expect(bodies).toHaveLength(1);
+    // The model is told to select, and to keep the most recent role unless it is unrelated.
+    expect(bodies[0]).toContain("matter most for this posting");
   });
 
   it("sends the rules back once when a letter has nothing left after the repair, and accepts a corrected answer", async () => {

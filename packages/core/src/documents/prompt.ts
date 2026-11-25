@@ -31,7 +31,7 @@ export function documentSystemPrompt(kind: DocumentKind, language: ExplanationLa
       "You tailor a CV to one job posting, selecting and rewording the profile's own items.",
       ...common,
       "Refer to each profile item by its index in the profile list (source). Copy the company, title, location, dates, institution, degree and grade exactly as the profile states them.",
-      "Include every experience entry and every education entry of the profile, in the profile's order: a CV must not leave out the latest job or the degree. Only the bullets and the skills are selected.",
+      "Choose the experience entries, education entries, bullets and skills that matter most for this posting; leave out what is not relevant, so the CV is short and focused. Unless it is clearly unrelated, keep the most recent role so the timeline has no unexplained gap, and keep the degree that best fits the role.",
       "Emphasize the bullets that match the posting. Each rewritten bullet names the index of the source bullet it rewrites; a number in it must also appear in that source bullet.",
       "Skill names must be the profile's own skill name or one of its aliases.",
       `Reply with only one JSON object of this shape: ${CV_SHAPE}`,
