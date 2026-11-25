@@ -649,11 +649,6 @@
   "applications": {
     "title": "Applications",
     "backToJobs": "Back to jobs",
-    "view": {
-      "label": "View",
-      "list": "List",
-      "board": "Board"
-    },
     "filters": {
       "status": "Status",
       "allStatuses": "All statuses",
@@ -665,10 +660,8 @@
       "preparing": "Preparing",
       "ready": "Ready",
       "applied": "Applied",
-      "interviewing": "Interviewing",
-      "offer": "Offer",
       "rejected": "Rejected",
-      "withdrawn": "Withdrawn"
+      "accepted": "Accepted"
     },
     "loading": "Loading applications…",
     "loadFailed": "Applications could not be read.",
@@ -697,10 +690,8 @@
       "moveHeading": "What happened next?",
       "moveFailed": "The status could not be changed.",
       "move": {
-        "interviewing": "I have an interview",
-        "offer": "I got an offer",
         "rejected": "It was rejected",
-        "withdrawn": "I withdrew"
+        "accepted": "I was accepted"
       },
       "jobDescription": "Job description",
       "guide": {
@@ -849,10 +840,8 @@
     "group": {
       "to-send": "To send",
       "applied": "Applied",
-      "interviewing": "Interviewing",
-      "offer": "Offer",
       "rejected": "Rejected",
-      "withdrawn": "Withdrawn"
+      "accepted": "Accepted"
     },
     "delete": {
       "button": "Delete {{title}}",

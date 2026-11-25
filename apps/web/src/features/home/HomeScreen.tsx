@@ -18,7 +18,7 @@ interface Overview {
 
 type State = { kind: "loading" } | { kind: "error" } | { kind: "ready"; overview: Overview };
 
-const CLOSED_STATUSES = new Set(["rejected", "withdrawn"]);
+const CLOSED_STATUSES = new Set(["rejected", "accepted"]);
 
 export function HomeScreen() {
   const { t } = useTranslation();

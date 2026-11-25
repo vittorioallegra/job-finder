@@ -120,6 +120,13 @@
       "when": 1795546184526,
       "tag": "0016_drop-saved-searches",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1795596583229,
+      "tag": "0017_simplify-application-statuses",
+      "breakpoints": true
     }
   ]
 }

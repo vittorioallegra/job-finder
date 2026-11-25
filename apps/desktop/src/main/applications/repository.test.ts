@@ -171,7 +171,7 @@ describe("application repository", () => {
     });
 
     await repository.update(
-      { applicationId: applied.application.id, status: "interviewing" },
+      { applicationId: applied.application.id, status: "accepted" },
       NOW - 10 * DAY,
       newId,
     );
@@ -203,7 +203,7 @@ describe("application repository", () => {
     if (!bookmark.ok) throw new Error("expected a start");
     const id = bookmark.application.id;
 
-    expect(await repository.update({ applicationId: id, status: "offer" }, NOW, newId)).toEqual({
+    expect(await repository.update({ applicationId: id, status: "accepted" }, NOW, newId)).toEqual({
       ok: false,
       code: "invalid-transition",
     });

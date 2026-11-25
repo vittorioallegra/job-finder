@@ -7,23 +7,19 @@ export const APPLICATION_STATUSES = [
   "preparing",
   "ready",
   "applied",
-  "interviewing",
-  "offer",
+  "accepted",
   "rejected",
-  "withdrawn",
 ] as const;
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 
 /** The status changes the user may make. A bookmark is removed, not transitioned. */
 const TRANSITIONS: Record<ApplicationStatus, readonly ApplicationStatus[]> = {
   bookmarked: ["preparing"],
-  preparing: ["ready", "applied", "withdrawn"],
-  ready: ["preparing", "applied", "withdrawn"],
-  applied: ["interviewing", "rejected", "withdrawn"],
-  interviewing: ["offer", "rejected", "withdrawn"],
-  offer: [],
+  preparing: ["ready", "applied"],
+  ready: ["preparing", "applied"],
+  applied: ["accepted", "rejected"],
+  accepted: [],
   rejected: [],
-  withdrawn: [],
 };
 
 export function canTransition(from: ApplicationStatus, to: ApplicationStatus): boolean {
@@ -41,14 +37,7 @@ export function isUnsent(status: ApplicationStatus): boolean {
  * What the user sees: the three statuses before submitting are one group, "to send". The other
  * statuses stand for themselves.
  */
-export const APPLICATION_GROUPS = [
-  "to-send",
-  "applied",
-  "interviewing",
-  "offer",
-  "rejected",
-  "withdrawn",
-] as const;
+export const APPLICATION_GROUPS = ["to-send", "applied", "accepted", "rejected"] as const;
 export type ApplicationGroup = (typeof APPLICATION_GROUPS)[number];
 
 export function groupOf(status: ApplicationStatus): ApplicationGroup {
@@ -59,17 +48,9 @@ export function groupOf(status: ApplicationStatus): ApplicationGroup {
 export const GUARD_STATUSES: readonly ApplicationStatus[] = [
   "ready",
   "applied",
-  "interviewing",
-  "offer",
+  "accepted",
   "rejected",
-  "withdrawn",
 ];
 
 /** Statuses the "hide applied" filter hides: the application was submitted, or it ended. */
-export const APPLIED_STATUSES: readonly ApplicationStatus[] = [
-  "applied",
-  "interviewing",
-  "offer",
-  "rejected",
-  "withdrawn",
-];
+export const APPLIED_STATUSES: readonly ApplicationStatus[] = ["applied", "accepted", "rejected"];

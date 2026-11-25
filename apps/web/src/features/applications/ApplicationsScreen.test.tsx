@@ -1,5 +1,5 @@
-// protects=the applications screen shows the loading, empty and error states with a retry, lists applications with no status selector and the statuses before submitting as one "To send" group, deletes only an unsent application after one confirmation and reports a failure, offers the moves after sending in the detail only, keeps the close button first and the timeline last, filters the list and the board by group and company, shows the job's description in a closed accordion at the top of the detail, with the delete button in the top row, adds notes to the timeline, and reports the CSV export's count or its failure;
-// fails_when=a card offers a status selector, a sent application can be deleted, a delete needs no confirmation or leaves the card after a failure, a move the machine forbids is offered, the board counts or filters are wrong, a note is not shown, an error shows a blank page, or the export result is not reported;
+// protects=the applications screen shows the loading, empty and error states with a retry, lists applications with no status selector and the statuses before submitting as one "To send" group, deletes only an unsent application after one confirmation and reports a failure, offers the moves after sending in the detail only, keeps the close button first and the timeline last, filters the one list (no board) by group and company, shows the job's description in a closed accordion at the top of the detail, with the delete button in the top row, adds notes to the timeline, and reports the CSV export's count or its failure;
+// fails_when=a card offers a status selector, a sent application can be deleted, a delete needs no confirmation or leaves the card after a failure, a move the machine forbids is offered, the filters are wrong or a board view returns, a note is not shown, an error shows a blank page, or the export result is not reported;
 // no_claim=layout, keyboard focus order and the real bridge's storage are not checked here; the desktop repository and export tests cover the rules and the file;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -156,12 +156,9 @@ describe("applications screen", () => {
     expect(container.textContent?.match(/To send/g)).toHaveLength(2 + 1); // two badges and the filter option
     expect(container.querySelectorAll("select").length).toBe(2); // only the two filters
 
-    await act(async () => {
-      button(container, "Board").click();
-    });
-    expect(container.querySelector("#board-to-send")?.textContent).toBe("To send (2)");
-    expect(container.querySelector("#board-applied")?.textContent).toBe("Applied (1)");
-    expect(container.querySelector("#board-ready")).toBeNull();
+    // One list, no board: there is no view switch.
+    expect(() => button(container, "Board")).toThrow();
+    expect(() => button(container, "List")).toThrow();
   });
 
   it("deletes an application that was not sent after one confirmation, and offers no delete for a sent one", async () => {
@@ -230,15 +227,15 @@ describe("applications screen", () => {
     await act(async () => {
       button(container, "Details").click();
     });
-    const offered = ["I have an interview", "It was rejected", "I withdrew"];
+    const offered = ["I was accepted", "It was rejected"];
     for (const label of offered) expect(button(container, label)).toBeTruthy();
 
     await act(async () => {
-      button(container, "I have an interview").click();
+      button(container, "I was accepted").click();
     });
     await act(async () => {});
-    expect(update).toHaveBeenCalledWith({ applicationId: "a1", status: "interviewing" });
-    expect(container.textContent).toContain("Interviewing");
+    expect(update).toHaveBeenCalledWith({ applicationId: "a1", status: "accepted" });
+    expect(container.textContent).toContain("Accepted");
   });
 
   it("shows the job's description in the detail, for a reminder", async () => {
@@ -307,13 +304,13 @@ describe("applications screen", () => {
         jobTitle: "Data Engineer",
         companyId: "c2",
         companyName: "Beta",
-        status: "offer",
+        status: "accepted",
       }),
     ];
     await render(bridgeWith({ list: async () => applications }));
 
     await act(async () => {
-      type(select(container, "Status"), "offer");
+      type(select(container, "Status"), "accepted");
     });
     expect(container.textContent).toContain("Data Engineer");
     expect(container.textContent).not.toContain("Backend Engineer");
@@ -322,24 +319,6 @@ describe("applications screen", () => {
       type(select(container, "Company"), "c1");
     });
     expect(container.textContent).toContain("No application matches these filters.");
-  });
-
-  it("switches to the board, with one column per status and its count", async () => {
-    await render(
-      bridgeWith({
-        list: async () => [
-          summary({ id: "a1", status: "applied" }),
-          summary({ id: "a2", jobId: "j2", jobTitle: "Frontend", status: "applied" }),
-        ],
-      }),
-    );
-
-    await act(async () => {
-      button(container, "Board").click();
-    });
-    const heading = container.querySelector("#board-applied");
-    expect(heading?.textContent).toBe("Applied (2)");
-    expect(container.querySelector("#board-offer")?.textContent).toBe("Offer (0)");
   });
 
   it("opens the timeline, adds a note, and shows it with the events", async () => {

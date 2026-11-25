@@ -20,12 +20,12 @@ describe("application status machine", () => {
     expect(canTransition("bookmarked", "preparing")).toBe(true);
     expect(canTransition("preparing", "ready")).toBe(true);
     expect(canTransition("ready", "applied")).toBe(true);
-    expect(canTransition("applied", "interviewing")).toBe(true);
-    expect(canTransition("interviewing", "offer")).toBe(true);
+    expect(canTransition("applied", "accepted")).toBe(true);
     expect(canTransition("applied", "rejected")).toBe(true);
     expect(canTransition("bookmarked", "applied")).toBe(false);
     expect(canTransition("preparing", "applied")).toBe(true);
-    expect(canTransition("offer", "withdrawn")).toBe(false);
+    expect(canTransition("accepted", "rejected")).toBe(false);
+    expect(canTransition("preparing", "rejected")).toBe(false);
     expect(canTransition("rejected", "applied")).toBe(false);
   });
 
@@ -35,20 +35,16 @@ describe("application status machine", () => {
       "preparing",
       "ready",
       "applied",
-      "interviewing",
-      "offer",
+      "accepted",
       "rejected",
-      "withdrawn",
     ];
     expect(all.filter((status) => GUARD_STATUSES.includes(status))).toEqual([
       "ready",
       "applied",
-      "interviewing",
-      "offer",
+      "accepted",
       "rejected",
-      "withdrawn",
     ]);
-    expect(APPLIED_STATUSES).toEqual(["applied", "interviewing", "offer", "rejected", "withdrawn"]);
+    expect(APPLIED_STATUSES).toEqual(["applied", "accepted", "rejected"]);
   });
 });
 
@@ -71,15 +67,8 @@ describe("duplicate confirmations", () => {
     expect(groupOf("bookmarked")).toBe("to-send");
     expect(groupOf("preparing")).toBe("to-send");
     expect(groupOf("ready")).toBe("to-send");
-    expect(groupOf("interviewing")).toBe("interviewing");
-    expect(APPLICATION_GROUPS).toEqual([
-      "to-send",
-      "applied",
-      "interviewing",
-      "offer",
-      "rejected",
-      "withdrawn",
-    ]);
+    expect(groupOf("accepted")).toBe("accepted");
+    expect(APPLICATION_GROUPS).toEqual(["to-send", "applied", "accepted", "rejected"]);
     expect(isUnsent("ready")).toBe(true);
     expect(isUnsent("applied")).toBe(false);
   });

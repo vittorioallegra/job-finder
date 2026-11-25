@@ -126,7 +126,7 @@ application (tailored CV, cover letter, auto-filled form) for the user to review
     CRUD, run progress and run log.
 15. **Application tracker.** Tables `applications`, `application_events`; bookmark is an
     application with status `bookmarked` (single source of truth). Status machine
-    (`bookmarked → preparing → ready → applied → interviewing → offer | rejected | withdrawn`),
+    (`bookmarked → preparing → ready → applied → accepted | rejected`; first built with more end statuses, simplified later, see Decisions),
     events with timestamps and notes, duplicate guard (see Decisions), list + board views,
     CSV export without secrets and with formula-injection escaping. Prepare-application
     flow: duplicate warning → documents → open apply window.
@@ -320,6 +320,7 @@ Approved: yes (2026-11-23)
   - Cloud consent was a bare boolean, so it carried over after the provider or base URL changed — `fix: tie cloud AI consent to the provider and host it was given for`
 
 ### Decisions
+- Statuses simplified: only to send (bookmarked, preparing, ready), applied, accepted and rejected remain; the board view is removed and the tracker is one list. Migration `0017` folds interviewing into applied, offer into accepted and withdrawn into rejected, on applications and events. An unsent application is deleted instead of withdrawn.
 - Applications UI round 2: deleting opens a confirmation dialog from a red button (in the list card, and in the detail top row); the card shows the group chip under the title and the Details button on the right; the detail opens with a short guide, the job description in a closed accordion, then documents, form, moves, notes and history. A job already saved or prepared offers no Prepare or Dismiss. Prepare does not redirect: it starts the application and writes the documents in the background, with a link to open it.
 - Applications screen: the board and filter use groups, the three statuses before submitting forming "to send"; no per-card status selector; an unsent application can be deleted with its notes, documents and PDF folder (one in-place confirmation); `preparing` may go straight to `applied`; the detail opens with Close, shows one button to generate both documents when none exists, and keeps the timeline last. The application status badge on jobs is accent coloured in the list and the detail, and shows the group name.
 - The jobs list has no filter form and there are no saved searches: the list follows the profile's preferences (`filterFromPreferences`), and the scheduler and the new-job notification read the same preferences. Migration `0016_drop-saved-searches` drops the table; the filter keeps only roles, places, work modes, contracts, dismissed, applied and new-only.

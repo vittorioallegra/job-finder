@@ -155,9 +155,9 @@ export function demoDataset(now: number = Date.now()): DemoDataset {
     application("a3", "j5", "Frontend Lead", "c5", "Kairos", "bookmarked", now, [
       ["bookmarked", null, now - 3 * day],
     ]),
-    application("a4", "j10", "UI Engineer", "c2", "Orbita Labs", "interviewing", now, [
+    application("a4", "j10", "UI Engineer", "c2", "Orbita Labs", "accepted", now, [
       ["applied", null, now - 20 * day],
-      ["interviewing", "First call went well; tech interview on Thursday.", now - 6 * day],
+      ["accepted", "Offer accepted after the technical interview.", now - 6 * day],
     ]),
     application("a5", "j11", "Frontend Developer", "c6", "Nordlicht", "rejected", now, [
       ["applied", null, now - 30 * day],

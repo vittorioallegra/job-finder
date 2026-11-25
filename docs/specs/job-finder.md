@@ -174,13 +174,13 @@ future results), or **bookmarked**.
 ### #5 Application tracker
 
 - An application record links a job to a status:
-  `bookmarked → preparing → ready → applied → interviewing → offer | rejected | withdrawn`,
+  `bookmarked → preparing → ready → applied → accepted | rejected`,
   with timestamps, notes, and the exact CV and cover letter files used.
 - **Duplicate guard:** before preparing an application, the app warns when
   (a) the same job (same id or same fingerprint) already has an application past
   `preparing`, or (b) the same company has an application in the last 90 days, showing
   the earlier one. The user can override (b) but not (a) without confirming twice.
-- The tracker is a list/board view filterable by status and company.
+- The tracker is one list filterable by status and company; the statuses before submitting show as one "to send" group.
 - Export of applications to CSV.
 
 ### #6 Application prep & autofill

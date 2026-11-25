@@ -25,17 +25,14 @@ type LoadState =
   | { status: "error" }
   | { status: "ready"; applications: ApplicationSummary[] };
 
-type View = "list" | "board";
-const VIEWS: readonly View[] = ["list", "board"];
-
 interface Notice {
   tone: "ok" | "error";
   text: string;
 }
 
 /**
- * The tracker: every application as a list or as a board (one column per group, the three statuses
- * before submitting being one "to send" group), filtered by group and company. Statuses are not
+ * The tracker: every application in one list, filtered by group (the three statuses before
+ * submitting being one "to send" group) and company. Statuses are not
  * changed here: they follow what the user does in the detail. An application not sent yet can be
  * deleted. The detail opens beside the list.
  */
@@ -43,7 +40,6 @@ export function ApplicationsScreen() {
   const { t, i18n } = useTranslation();
   const bridge = useBridge();
   const [load, setLoad] = useState<LoadState>({ status: "loading" });
-  const [view, setView] = useState<View>("list");
   const [statusFilter, setStatusFilter] = useState<"" | ApplicationGroup>("");
   const [companyFilter, setCompanyFilter] = useState("");
   // A link such as `?open=<id>` (from the jobs screen) opens that application. It is read once.
@@ -142,13 +138,12 @@ export function ApplicationsScreen() {
     }
   }
 
-  function renderCard(application: ApplicationSummary, layout: "row" | "card") {
-    const wrapper =
-      layout === "row"
-        ? "flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-5 py-4"
-        : "flex flex-col gap-3 rounded-xl border border-app-border bg-app-surface p-3.5 shadow-card";
+  function renderCard(application: ApplicationSummary) {
     return (
-      <li key={application.id} className={wrapper}>
+      <li
+        key={application.id}
+        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-5 py-4"
+      >
         <div className="flex min-w-0 flex-col gap-1.5">
           <p className="font-display text-base font-semibold text-app-fg">{application.jobTitle}</p>
           <p className="text-sm text-app-muted">
@@ -157,11 +152,9 @@ export function ApplicationsScreen() {
               date: new Date(application.statusChangedAt).toLocaleDateString(i18n.language),
             })}
           </p>
-          {layout === "row" ? (
-            <div>
-              <Badge tone="accent">{t(`applications.group.${groupOf(application.status)}`)}</Badge>
-            </div>
-          ) : null}
+          <div>
+            <Badge tone="accent">{t(`applications.group.${groupOf(application.status)}`)}</Badge>
+          </div>
         </div>
         <div className="flex items-center justify-end gap-2">
           {isUnsent(application.status) ? (
@@ -227,23 +220,6 @@ export function ApplicationsScreen() {
       {load.status === "ready" ? (
         <>
           <div className="flex flex-wrap items-end gap-4">
-            <div role="group" aria-label={t("applications.view.label")} className="flex gap-2">
-              {VIEWS.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  aria-pressed={view === option}
-                  onClick={() => setView(option)}
-                  className={`rounded-full px-3.5 py-1.5 text-[13px] transition-colors ${
-                    view === option
-                      ? "bg-app-accent text-app-accent-fg"
-                      : "bg-app-sunken text-app-muted hover:text-app-fg"
-                  }`}
-                >
-                  {t(`applications.view.${option}`)}
-                </button>
-              ))}
-            </div>
             <span className="flex-1" />
             <SelectInput
               label={t("applications.filters.status")}
@@ -315,45 +291,14 @@ export function ApplicationsScreen() {
             <EmptyState title={t("applications.noMatch")} />
           ) : null}
 
-          {view === "list" ? (
-            visible.length > 0 ? (
-              <Card padded={false} className="overflow-hidden">
-                <ul className="divide-y divide-app-border" aria-label={t("applications.title")}>
-                  {visible.map((application) => renderCard(application, "row"))}
-                </ul>
-              </Card>
-            ) : (
-              <ul aria-label={t("applications.title")} />
-            )
+          {visible.length > 0 ? (
+            <Card padded={false} className="overflow-hidden">
+              <ul className="divide-y divide-app-border" aria-label={t("applications.title")}>
+                {visible.map((application) => renderCard(application))}
+              </ul>
+            </Card>
           ) : (
-            <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2">
-              {APPLICATION_GROUPS.filter(
-                (group) => statusFilter === "" || group === statusFilter,
-              ).map((group) => {
-                const cards = visible.filter(
-                  (application) => groupOf(application.status) === group,
-                );
-                return (
-                  <section
-                    key={group}
-                    aria-labelledby={`board-${group}`}
-                    className="flex w-72 shrink-0 flex-col gap-3 rounded-2xl bg-app-sunken p-3"
-                  >
-                    <h2
-                      id={`board-${group}`}
-                      className="flex items-center justify-between px-1 font-sans text-sm font-semibold text-app-fg"
-                    >
-                      <span>
-                        {t(`applications.group.${group}`)} ({cards.length})
-                      </span>
-                    </h2>
-                    <ul className="flex flex-col gap-2">
-                      {cards.map((card) => renderCard(card, "card"))}
-                    </ul>
-                  </section>
-                );
-              })}
-            </div>
+            <ul aria-label={t("applications.title")} />
           )}
         </>
       ) : null}

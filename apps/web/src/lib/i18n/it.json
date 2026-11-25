@@ -649,11 +649,6 @@
   "applications": {
     "title": "Candidature",
     "backToJobs": "Torna agli annunci",
-    "view": {
-      "label": "Vista",
-      "list": "Elenco",
-      "board": "Bacheca"
-    },
     "filters": {
       "status": "Stato",
       "allStatuses": "Tutti gli stati",
@@ -665,10 +660,8 @@
       "preparing": "In preparazione",
       "ready": "Pronta",
       "applied": "Inviata",
-      "interviewing": "Colloquio",
-      "offer": "Offerta",
       "rejected": "Rifiutata",
-      "withdrawn": "Ritirata"
+      "accepted": "Accettata"
     },
     "loading": "Caricamento candidature…",
     "loadFailed": "Non è stato possibile leggere le candidature.",
@@ -697,10 +690,8 @@
       "moveHeading": "Com'è andata?",
       "moveFailed": "Non è stato possibile cambiare lo stato.",
       "move": {
-        "interviewing": "Ho un colloquio",
-        "offer": "Ho ricevuto un'offerta",
         "rejected": "È stata rifiutata",
-        "withdrawn": "Mi sono ritirato"
+        "accepted": "Sono stato accettato"
       },
       "jobDescription": "Descrizione dell'offerta",
       "guide": {
@@ -849,10 +840,8 @@
     "group": {
       "to-send": "Da inviare",
       "applied": "Inviata",
-      "interviewing": "Colloquio",
-      "offer": "Offerta",
       "rejected": "Rifiutata",
-      "withdrawn": "Ritirata"
+      "accepted": "Accettata"
     },
     "delete": {
       "button": "Elimina {{title}}",
