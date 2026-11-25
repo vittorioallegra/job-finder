@@ -24,7 +24,7 @@ export function useApplicationGroup(
   const { t } = useTranslation();
   const generation = useGeneration(applicationId ?? "");
   const stored = groupOf(status);
-  const running = stored === "to-send" ? generation.running : null;
+  const running = stored === "to-send" ? (generation.running[0] ?? null) : null;
   const group = running !== null ? "preparing" : stored;
   return { group, label: t(`applications.group.${group}`), running };
 }

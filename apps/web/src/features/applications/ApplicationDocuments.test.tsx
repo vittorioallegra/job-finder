@@ -1,5 +1,5 @@
-// protects=the documents panel shows loading, error and AI-unavailable states, generates both documents with one button, keeps writing after the panel closes, writes the history (in preparation, then ready), empties the documents when the language changes, shows cards with Preview, Edit and Save PDF (a brief "PDF saved"), edits in a dialog, previews in a sandboxed frame, keeps Preview, Edit and Save PDF off while writing, says "Generated" briefly next to the button, and names every AI failure;
-// fails_when=a run stops when the panel closes, the history misses a step, a language change keeps old documents, "PDF saved" stays for ever, the card shows loose fields or a tag, cancelling the editor keeps changes, the preview can run scripts, a refused save is hidden, Preview stays active while writing, "Generated" stays for ever or sits under the button, or an AI failure lacks the settings link;
+// protects=the documents panel shows loading, error and AI-unavailable states, generates both documents with one button, keeps writing after the panel closes, writes the history (in preparation, then ready), empties the documents when the language changes, shows cards with Preview, Edit and Save PDF (a brief "PDF saved"), edits in a dialog, previews in a sandboxed frame, keeps Preview, Edit and Save PDF off while writing, says "Generated" briefly next to the button, lets the CV and the letter be written at the same time without touching each other's buttons, and names every AI failure;
+// fails_when=a run stops when the panel closes, the history misses a step, a language change keeps old documents, "PDF saved" stays for ever, the card shows loose fields or a tag, cancelling the editor keeps changes, the preview can run scripts, a refused save is hidden, Preview stays active while writing, "Generated" stays for ever or sits under the button, writing one document disables the other's buttons, or an AI failure lacks the settings link;
 // no_claim=the layout, the real bridge and the PDF itself are not checked here; the desktop service and PDF tests cover the rules and the file;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -559,6 +559,68 @@ describe("application documents panel", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("leaves the other document alone while one is being written, and lets both be written at once", async () => {
+    const finishers: Record<string, () => void> = {};
+    const generate = vi.fn(
+      ({ kind }: { kind: string }) =>
+        new Promise((resolve) => {
+          finishers[kind] = () =>
+            resolve({
+              ok: true as const,
+              document: kind === "cv" ? cvRecord() : coverLetter("New letter."),
+            });
+        }),
+    );
+    const update = vi.fn(async (_request: { applicationId: string; status: string }) => ({
+      ok: true as const,
+    }));
+    const base = bridgeWith({
+      get: vi.fn(async () => documentsOf({ cv: cvRecord(), coverLetter: coverLetter("Old.") })),
+      generate: generate as never,
+    });
+    const bridge = {
+      ...base,
+      applications: { ...base.applications, update },
+    } as unknown as JobFinderBridge;
+    await render(bridge);
+
+    const cards = () =>
+      [...container.querySelectorAll("section")].filter((node) =>
+        node.getAttribute("aria-labelledby")?.startsWith("application-documents-"),
+      );
+    const inCard = (kind: string, name: string) => {
+      const card = cards().find(
+        (node) => node.getAttribute("aria-labelledby") === `application-documents-${kind}`,
+      );
+      const found = [...(card?.querySelectorAll("button") ?? [])].find(
+        (node) => node.textContent?.trim() === name,
+      );
+      if (!found) throw new Error(`no ${name} in ${kind}`);
+      return found;
+    };
+
+    // Rewrite the CV: only the CV's own buttons are off.
+    await act(async () => inCard("cv", "Generate again").click());
+    expect(inCard("cv", "Preview").disabled).toBe(true);
+    expect(inCard("cover-letter", "Preview").disabled).toBe(false);
+    expect(inCard("cover-letter", "Edit").disabled).toBe(false);
+    expect(inCard("cover-letter", "Save PDF…").disabled).toBe(false);
+    expect(inCard("cover-letter", "Generate again").disabled).toBe(false);
+
+    // The letter can be rewritten at the same time, by its own run.
+    await act(async () => inCard("cover-letter", "Generate again").click());
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(inCard("cover-letter", "Edit").disabled).toBe(true);
+
+    // "Ready" goes into the history once, when the last run is over.
+    await act(async () => finishers["cv"]?.());
+    await act(async () => {});
+    expect(update.mock.calls.map(([request]) => request.status)).toEqual(["preparing"]);
+    await act(async () => finishers["cover-letter"]?.());
+    await act(async () => {});
+    expect(update.mock.calls.map(([request]) => request.status)).toEqual(["preparing", "ready"]);
   });
 
   it("records the work in the history: in preparation when writing starts, ready when it is done", async () => {

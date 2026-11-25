@@ -132,10 +132,10 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
     [],
   );
   const [editing, setEditing] = useState<DocumentKind | null>(null);
-  const busy =
-    generation.running !== null
-      ? { kind: generation.running, action: "generate" as Action }
-      : localBusy;
+  // A document is busy while it is being written, saved or exported; another one is not affected.
+  const running = generation.running;
+  const kindBusy = (kind: DocumentKind) => running.includes(kind) || localBusy?.kind === kind;
+  const anyBusy = running.length > 0 || localBusy !== null;
   const [notices, setNotices] = useState<Partial<Record<DocumentKind, Notice>>>({});
 
   useEffect(() => {
@@ -394,7 +394,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
         label={t("applications.documents.language.label")}
         options={languageOptions}
         value={language}
-        disabled={busy !== null}
+        disabled={anyBusy}
         hint={t(`applications.documents.language.hint.${documents.defaultLanguage.source}`, {
           language: t(
             `applications.documents.language.options.${documents.defaultLanguage.language}`,
@@ -434,12 +434,12 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
       />
 
       {records.cv === null && records["cover-letter"] === null ? (
-        generation.running !== null ? (
-          writingView(generation.running)
+        running.length > 0 ? (
+          writingView(running[0] as DocumentKind)
         ) : (
           <div>
             <Button
-              disabled={busy !== null || !ai?.configured}
+              disabled={anyBusy || !ai?.configured}
               onClick={() => generate(["cv", "cover-letter"])}
             >
               {t("applications.documents.generateBoth")}
@@ -459,9 +459,9 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
       ).map((kind) => {
         const record = records[kind];
         const draft = drafts[kind];
-        const working = busy?.kind === kind;
+        const working = localBusy?.kind === kind;
         const notice = notices[kind];
-        const generateDisabled = busy !== null || !ai?.configured;
+        const generateDisabled = kindBusy(kind) || !ai?.configured;
         return (
           <div
             key={kind}
@@ -488,7 +488,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
                   <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
-                      disabled={generation.running === kind}
+                      disabled={running.includes(kind)}
                       onClick={() => setPreviewing(kind)}
                     >
                       <Eye className="size-4" strokeWidth={1.8} aria-hidden="true" />
@@ -497,7 +497,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
                     <Button
                       variant="secondary"
                       size="sm"
-                      disabled={busy !== null || !draft || generation.running === kind}
+                      disabled={kindBusy(kind) || !draft}
                       onClick={() => {
                         setNotice(kind, null);
                         setEditing(kind);
@@ -509,10 +509,10 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
                     <Button
                       variant="secondary"
                       size="sm"
-                      disabled={busy !== null || generation.running === kind}
+                      disabled={kindBusy(kind)}
                       onClick={() => void exportPdf(kind)}
                     >
-                      {working && busy?.action === "export"
+                      {working && localBusy?.action === "export"
                         ? t("applications.documents.exporting")
                         : t("applications.documents.export")}
                     </Button>
@@ -525,7 +525,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
                 </>
               )}
               <div className="flex items-center justify-end gap-3 border-t border-app-border pt-3">
-                {generation.running === kind ? (
+                {running.includes(kind) ? (
                   writingView(kind)
                 ) : (
                   <>
@@ -581,19 +581,19 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
             <>
               <Button
                 variant="secondary"
-                disabled={busy !== null}
+                disabled={localBusy !== null}
                 onClick={() => stopEditing(editing)}
               >
                 {t("applications.documents.cancel")}
               </Button>
               <Button
-                disabled={busy !== null}
+                disabled={localBusy !== null}
                 onClick={() => {
                   const record = records[editing];
                   if (record) void save(editing, record).then((saved) => saved && setEditing(null));
                 }}
               >
-                {busy?.kind === editing && busy.action === "save"
+                {localBusy?.kind === editing && localBusy.action === "save"
                   ? t("applications.documents.saving")
                   : t("applications.documents.save")}
               </Button>
