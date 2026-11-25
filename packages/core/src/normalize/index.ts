@@ -9,4 +9,5 @@ export * from "./salary";
 export * from "./seniority";
 export * from "./text";
 export * from "./visa";
+export * from "./work-authorization";
 export * from "./work-mode";

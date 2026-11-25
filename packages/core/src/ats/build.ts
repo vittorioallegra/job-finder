@@ -5,6 +5,7 @@ import {
   normalizeLocation,
   parseSalaryText,
   remoteScopeFrom,
+  remoteScopeFromDescription,
   resolveWorkMode,
   seniorityFrom,
   visaSponsorshipFrom,
@@ -59,7 +60,13 @@ export function buildJob(input: JobInput): NormalizedJob {
   const remoteScope = input.locations
     .map((location) => remoteScopeFrom(location.raw))
     .find((scope) => scope !== undefined);
-  if (remoteScope !== undefined) job.remoteScope = remoteScope;
+  if (remoteScope !== undefined) {
+    job.remoteScope = remoteScope;
+  } else if (job.workMode === "remote") {
+    // "Remote" with no stated scope: the description may tie the job to a country.
+    const described = remoteScopeFromDescription(input.description);
+    if (described !== undefined) job.remoteScope = described;
+  }
   const salary = parseSalaryText(input.description);
   if (salary !== undefined) job.salary = salary;
   const language = detectLanguage(input.description);
