@@ -9,6 +9,7 @@ import {
   type JobDetail as JobDetailRecord,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
+import { startGeneration } from "../../lib/document-generation";
 import { Badge } from "../../components/ui/Badge";
 import { Button, buttonClass } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -83,17 +84,12 @@ export function JobDetail({ jobId, onChanged, onClose, onOpenApplication }: JobD
    */
   async function generateDocuments(applicationId: string) {
     setPrepare({ status: "generating", applicationId });
-    let documents: "ready" | "failed" = "ready";
-    for (const kind of ["cv", "cover-letter"] as const) {
-      try {
-        const result = await bridge.documents.generate({ applicationId, kind });
-        if (!result.ok) documents = "failed";
-      } catch {
-        documents = "failed";
-      }
-      if (documents === "failed") break;
-    }
-    setPrepare({ status: "done", applicationId, documents });
+    const result = await startGeneration(bridge, applicationId, ["cv", "cover-letter"]);
+    setPrepare({
+      status: "done",
+      applicationId,
+      documents: result !== null && result.failure !== null ? "failed" : "ready",
+    });
   }
 
   /** Starts the application with the confirmations given, then reflects its status. */

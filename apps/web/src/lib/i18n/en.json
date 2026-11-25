@@ -697,10 +697,11 @@
       "guide": {
         "unsent": "This application is not sent yet. To finish it:\n1. Write your CV and cover letter for this job.\n2. Open the company's form: the app fills in what it can, and you check it and send it yourself.\n3. Press “I submitted it” so the application moves to Applied.",
         "sent": "You sent this application. Below you can record what happened next, add notes, and read the history."
-      }
+      },
+      "noteHint": "Private notes, kept only in this app and in the CSV export. Nothing is sent to the employer."
     },
     "documents": {
-      "heading": "Documents",
+      "heading": "Application",
       "intro": "A CV and a cover letter written for this job from your profile. Check the text, edit it if needed, and export a PDF.",
       "loading": "Loading documents…",
       "loadFailed": "The documents could not be read.",

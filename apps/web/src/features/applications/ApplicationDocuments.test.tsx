@@ -1,5 +1,5 @@
-// protects=the documents panel shows loading, error and AI-unavailable states, sends a generate call without any consent step also for a cloud provider, shows a generated document as editable text, reports a save that breaks the profile by its issues, exports a PDF and offers to reveal it, names every AI failure under its own message, starts from the posting's language with the user's pick sent to generation, and generates both documents with one button;
-// fails_when=a generate call needs a consent the user cannot give here, an AI failure is shown without the settings link, a refused save is reported as saved, an export without a file is reported as exported, the panel shows a blank page on a failed read, or the posting's language is ignored or the user's choice is not sent;
+// protects=the documents panel shows loading, error and AI-unavailable states, sends a generate call without any consent step also for a cloud provider, shows a generated document as editable text, reports a save that breaks the profile by its issues, exports a PDF and offers to reveal it, names every AI failure under its own message, starts from the posting's language with the user's pick sent to generation, generates both documents with one button, keeps writing after the panel is closed and shows the run and its result when it is reopened, and shows the language the stored documents were written in;
+// fails_when=a generate call needs a consent the user cannot give here, an AI failure is shown without the settings link, a refused save is reported as saved, an export without a file is reported as exported, the panel shows a blank page on a failed read, a run stops when the panel closes, a reopened panel shows the default instead of the language of the stored documents, or the posting's language is ignored or the user's choice is not sent;
 // no_claim=the layout, the real bridge and the PDF itself are not checked here; the desktop service and PDF tests cover the rules and the file;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -210,6 +210,54 @@ describe("application documents panel", () => {
 
     expect(kinds).toEqual(["cv", "cover-letter"]);
     expect(generate).toHaveBeenCalledWith({ applicationId: "a1", kind: "cv", language: "en" });
+  });
+
+  it("shows the language a stored document was written in, not the default, when the panel is reopened", async () => {
+    await render(
+      bridgeWith({
+        get: vi.fn(async () =>
+          documentsOf({
+            coverLetter: coverLetter("Ciao.", { language: "it" }),
+            defaultLanguage: { language: "en", source: "ui" },
+          }),
+        ),
+      }),
+    );
+    expect(languageSelect(container).value).toBe("it");
+  });
+
+  it("keeps writing after the panel is closed, shows the run when it is reopened, and then its result", async () => {
+    const pending: Array<() => void> = [];
+    const generate = vi.fn(
+      ({ kind }: { kind: string }) =>
+        new Promise((resolve) => {
+          pending.push(() =>
+            resolve({
+              ok: true as const,
+              document: kind === "cv" ? { ...cvRecord() } : coverLetter("Dear team, hello there."),
+            }),
+          );
+        }),
+    );
+    const bridge = bridgeWith({ generate: generate as never });
+
+    await render(bridge);
+    await act(async () => button(container, "Generate CV and cover letter").click());
+    expect(generate).toHaveBeenCalledTimes(1);
+
+    // The user leaves: the panel goes away, but the run is not tied to it.
+    await act(async () => root.render(<div />));
+    await act(async () => pending.shift()?.());
+    await act(async () => {});
+    expect(generate).toHaveBeenCalledTimes(2);
+
+    // Back on the application while the letter is still being written.
+    await render(bridge);
+    expect(button(container, "Generating…").disabled).toBe(true);
+
+    await act(async () => pending.shift()?.());
+    await act(async () => {});
+    expect(container.textContent).toContain("Dear team, hello there.");
   });
 
   it("shows the posting's language as the default, and sends the language the user picks", async () => {

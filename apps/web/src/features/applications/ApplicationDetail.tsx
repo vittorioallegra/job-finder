@@ -260,6 +260,7 @@ export function ApplicationDetail({
             <form onSubmit={(event) => void addNote(event)} className="flex flex-col gap-3">
               <TextArea
                 label={t("applications.detail.noteLabel")}
+                hint={t("applications.detail.noteHint")}
                 value={note}
                 maxLength={2000}
                 onChange={(event) => setNote(event.target.value)}

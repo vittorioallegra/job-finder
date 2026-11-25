@@ -697,10 +697,11 @@
       "guide": {
         "unsent": "Questa candidatura non è ancora inviata. Per completarla:\n1. Scrivi il CV e la lettera di presentazione per questa offerta.\n2. Apri il modulo dell'azienda: l'app compila quello che può, tu controlli e invii di persona.\n3. Premi “Ho inviato la candidatura” così la candidatura passa a Inviata.",
         "sent": "Hai inviato questa candidatura. Qui sotto puoi segnare com'è andata, aggiungere note e leggere la cronologia."
-      }
+      },
+      "noteHint": "Note private, restano solo in questa app e nell'esportazione CSV. Non vengono inviate al datore di lavoro."
     },
     "documents": {
-      "heading": "Documenti",
+      "heading": "Candidatura",
       "intro": "Un CV e una lettera di presentazione scritti per questa offerta a partire dal tuo profilo. Controlla il testo, modificalo se serve ed esporta un PDF.",
       "loading": "Caricamento dei documenti…",
       "loadFailed": "I documenti non si possono leggere.",

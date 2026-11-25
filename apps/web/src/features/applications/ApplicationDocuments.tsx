@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import {
@@ -13,6 +13,11 @@ import {
   type DocumentRecord,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
+import {
+  startGeneration,
+  useGeneration,
+  type GenerationState,
+} from "../../lib/document-generation";
 import { Badge } from "../../components/ui/Badge";
 import { Button, buttonClass } from "../../components/ui/Button";
 import { Card, CardTitle } from "../../components/ui/Card";
@@ -105,7 +110,14 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
   const [ai, setAi] = useState<AiState | null>(null);
   const [language, setLanguage] = useState<DocumentLanguage>("en");
   const [drafts, setDrafts] = useState<Partial<Record<DocumentKind, Draft>>>({});
-  const [busy, setBusy] = useState<{ kind: DocumentKind; action: Action } | null>(null);
+  const [localBusy, setBusy] = useState<{ kind: DocumentKind; action: Action } | null>(null);
+  const generation = useGeneration(applicationId);
+  // Results up to this version are already in the page (or were stored before it opened).
+  const seenVersion = useRef(generation.version);
+  const busy =
+    generation.running !== null
+      ? { kind: generation.running, action: "generate" as Action }
+      : localBusy;
   const [notices, setNotices] = useState<Partial<Record<DocumentKind, Notice>>>({});
 
   useEffect(() => {
@@ -119,7 +131,9 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
             aiSettings.model.trim() !== "" &&
             (aiSettings.provider !== "openai-compatible" || aiSettings.baseUrl.trim() !== ""),
         });
-        setLanguage(documents.defaultLanguage.language);
+        // The language the documents were written in wins over the default, so the choice is kept.
+        const stored = documents.cv?.language ?? documents.coverLetter?.language ?? null;
+        setLanguage(stored ?? documents.defaultLanguage.language);
         setDrafts(
           Object.fromEntries(
             [documents.cv, documents.coverLetter]
@@ -210,34 +224,23 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
     };
   }
 
-  /** Resolves true when the document was generated. */
-  async function generate(kind: DocumentKind): Promise<boolean> {
-    setBusy({ kind, action: "generate" });
-    setNotice(kind, null);
-    try {
-      const result = await bridge.documents.generate({
-        applicationId,
-        kind,
-        language,
-      });
-      if (result.ok) {
-        applyRecord(result.document);
-        setNotice(kind, { tone: "ok", text: t("applications.documents.generated") });
-        return true;
-      }
-      setNotice(kind, failureNotice(result.code));
-      return false;
-    } catch {
-      setNotice(kind, failureNotice("unknown"));
-      return false;
-    } finally {
-      setBusy(null);
-    }
+  /** Starts writing the given documents. The run goes on if the user leaves; see `startGeneration`. */
+  function generate(kinds: DocumentKind[]) {
+    for (const kind of kinds) setNotice(kind, null);
+    void startGeneration(bridge, applicationId, kinds, language);
   }
 
-  /** The CV, then the letter; a failure stops the run, since the next call would fail the same way. */
-  async function generateBoth() {
-    if (await generate("cv")) await generate("cover-letter");
+  /** A run that finished while this panel was open (or after it was reopened) shows its result. */
+  function applyGeneration(state: GenerationState) {
+    if (state.version <= seenVersion.current) return;
+    seenVersion.current = state.version;
+    for (const record of state.last?.records ?? []) {
+      applyRecord(record);
+      setNotice(record.kind, { tone: "ok", text: t("applications.documents.generated") });
+    }
+    if (state.last?.failure) {
+      setNotice(state.last.failure.kind, failureNotice(state.last.failure.code));
+    }
   }
 
   function noticeView(notice: Notice) {
@@ -319,6 +322,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
 
   return (
     <section aria-labelledby="application-documents-title" className="flex flex-col gap-4">
+      <OnChange value={generation} onChange={applyGeneration} />
       <h4
         id="application-documents-title"
         className="font-display text-xl font-semibold text-app-fg"
@@ -355,7 +359,10 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
 
       {records.cv === null && records["cover-letter"] === null ? (
         <div>
-          <Button disabled={busy !== null || !ai?.configured} onClick={() => void generateBoth()}>
+          <Button
+            disabled={busy !== null || !ai?.configured}
+            onClick={() => generate(["cv", "cover-letter"])}
+          >
             {busy !== null
               ? t("applications.documents.generating")
               : t("applications.documents.generateBoth")}
@@ -447,7 +454,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
               </>
             )}
             <div className="flex justify-end border-t border-app-border pt-3">
-              <Button size="sm" disabled={generateDisabled} onClick={() => void generate(kind)}>
+              <Button size="sm" disabled={generateDisabled} onClick={() => generate([kind])}>
                 {working && busy?.action === "generate"
                   ? t("applications.documents.generating")
                   : record === null
@@ -544,5 +551,13 @@ function DocumentEditor({ draft, content, onDraft }: DocumentEditorProps) {
       </div>
     );
   }
+  return null;
+}
+
+/** Calls `onChange` with the value each time it changes (and once at the start). */
+function OnChange<T>({ value, onChange }: { value: T; onChange: (value: T) => void }) {
+  useEffect(() => {
+    onChange(value);
+  }, [value, onChange]);
   return null;
 }
