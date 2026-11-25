@@ -4,7 +4,6 @@ import { ExternalLink, X } from "lucide-react";
 import {
   groupOf,
   type ApplicationStartResult,
-  type ApplicationStatus,
   type DuplicateApplication,
   type DuplicateCheck,
   type JobDetail as JobDetailRecord,
@@ -25,7 +24,8 @@ type PrepareState =
   | { status: "idle" }
   | { status: "busy" }
   | { status: "warning"; duplicates: DuplicateCheck; confirmed: number }
-  | { status: "done"; applicationStatus: ApplicationStatus }
+  | { status: "generating"; applicationId: string }
+  | { status: "done"; applicationId: string; documents: "ready" | "failed" }
   | { status: "failed" };
 
 interface JobDetailProps {
@@ -33,15 +33,15 @@ interface JobDetailProps {
   /** Called after a flag changes, so the results show the new state. */
   onChanged: () => void;
   onClose: () => void;
-  /** Called with the new application's id once preparing has started, to continue there. */
-  onApplicationStarted?: (applicationId: string) => void;
+  /** Opens an application on the applications screen. Without it no link is offered. */
+  onOpenApplication?: (applicationId: string) => void;
 }
 
 /**
  * One job with its description and every source that lists it. Opening it marks the job viewed;
  * dismissing hides it from the results until the filter shows dismissed jobs.
  */
-export function JobDetail({ jobId, onChanged, onClose, onApplicationStarted }: JobDetailProps) {
+export function JobDetail({ jobId, onChanged, onClose, onOpenApplication }: JobDetailProps) {
   const { t, i18n } = useTranslation();
   const bridge = useBridge();
   const [state, setState] = useState<DetailState>({ status: "loading" });
@@ -77,6 +77,25 @@ export function JobDetail({ jobId, onChanged, onClose, onApplicationStarted }: J
 
   const [prepare, setPrepare] = useState<PrepareState>({ status: "idle" });
 
+  /**
+   * Writes the CV and then the cover letter in the background, while the user stays here. A failure
+   * stops the run (the next call would fail the same way) and is shown with the application's link.
+   */
+  async function generateDocuments(applicationId: string) {
+    setPrepare({ status: "generating", applicationId });
+    let documents: "ready" | "failed" = "ready";
+    for (const kind of ["cv", "cover-letter"] as const) {
+      try {
+        const result = await bridge.documents.generate({ applicationId, kind });
+        if (!result.ok) documents = "failed";
+      } catch {
+        documents = "failed";
+      }
+      if (documents === "failed") break;
+    }
+    setPrepare({ status: "done", applicationId, documents });
+  }
+
   /** Starts the application with the confirmations given, then reflects its status. */
   async function start(confirmations: number) {
     if (state.status !== "ready") return;
@@ -91,9 +110,8 @@ export function JobDetail({ jobId, onChanged, onClose, onApplicationStarted }: J
     if (result.ok) {
       const applicationStatus = result.application.status;
       setState({ status: "ready", job: { ...state.job, applicationStatus } });
-      setPrepare({ status: "done", applicationStatus });
       onChanged();
-      onApplicationStarted?.(result.application.id);
+      await generateDocuments(result.application.id);
     } else if (result.code === "duplicate-confirmation-required") {
       setPrepare({ status: "warning", duplicates: result.duplicates, confirmed: confirmations });
     } else {
@@ -264,13 +282,19 @@ export function JobDetail({ jobId, onChanged, onClose, onApplicationStarted }: J
             onConfirm={confirmWarning}
             onCancel={() => setPrepare({ status: "idle" })}
             formatDate={formatDate}
+            onOpenApplication={onOpenApplication}
             actions={
-              <>
-                <Button variant="secondary" onClick={() => void setDismissed(!state.job.dismissed)}>
-                  {state.job.dismissed ? t("jobs.detail.restore") : t("jobs.detail.dismiss")}
-                </Button>
-                {state.job.applicationStatus === null ||
-                state.job.applicationStatus === "bookmarked" ? (
+              state.job.applicationStatus === null ||
+              state.job.applicationStatus === "bookmarked" ? (
+                <>
+                  {state.job.applicationStatus === null ? (
+                    <Button
+                      variant="secondary"
+                      onClick={() => void setDismissed(!state.job.dismissed)}
+                    >
+                      {state.job.dismissed ? t("jobs.detail.restore") : t("jobs.detail.dismiss")}
+                    </Button>
+                  ) : null}
                   <Button
                     variant="secondary"
                     aria-pressed={state.job.applicationStatus === "bookmarked"}
@@ -280,9 +304,10 @@ export function JobDetail({ jobId, onChanged, onClose, onApplicationStarted }: J
                       ? t("jobs.detail.removeBookmark")
                       : t("jobs.detail.bookmark")}
                   </Button>
-                ) : null}
-              </>
+                </>
+              ) : null
             }
+            canPrepare={state.job.applicationStatus === null}
           />
 
           <Card as="div" className="bg-app-sunken/40">
@@ -333,8 +358,11 @@ interface PreparePanelProps {
   onConfirm: () => void;
   onCancel: () => void;
   formatDate: (epochMs: number) => string;
-  /** Secondary actions shown next to the prepare button. */
+  /** Secondary actions shown next to the prepare button; null when the job is already in an application. */
   actions: ReactNode;
+  /** The job has no application yet, so it can be prepared. */
+  canPrepare: boolean;
+  onOpenApplication?: (applicationId: string) => void;
 }
 
 /**
@@ -348,6 +376,8 @@ function PreparePanel({
   onCancel,
   formatDate,
   actions,
+  canPrepare,
+  onOpenApplication,
 }: PreparePanelProps) {
   const { t } = useTranslation();
   if (prepare.status === "warning") {
@@ -394,20 +424,43 @@ function PreparePanel({
   }
   return (
     <div className="flex flex-col gap-2">
-      {prepare.status === "done" ? null : (
+      {actions !== null || canPrepare ? (
         <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={onPrepare} disabled={prepare.status === "busy"}>
-            {t("jobs.detail.prepare")}
-          </Button>
+          {canPrepare ? (
+            <Button onClick={onPrepare} disabled={prepare.status === "busy"}>
+              {t("jobs.detail.prepare")}
+            </Button>
+          ) : null}
           {actions}
         </div>
-      )}
-      {prepare.status === "done" ? (
-        <p role="status" className="text-sm text-app-good">
-          {t("jobs.detail.prepared", {
-            status: t(`applications.status.${prepare.applicationStatus}`),
-          })}
+      ) : null}
+      {prepare.status === "generating" ? (
+        <p role="status" className="text-sm text-app-muted">
+          {t("jobs.detail.generating")}
         </p>
+      ) : null}
+      {prepare.status === "done" ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <p
+            role={prepare.documents === "ready" ? "status" : "alert"}
+            className={`text-sm ${prepare.documents === "ready" ? "text-app-good" : "text-app-danger"}`}
+          >
+            {t(
+              prepare.documents === "ready"
+                ? "jobs.detail.prepared"
+                : "jobs.detail.preparedPartial",
+            )}
+          </p>
+          {onOpenApplication ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onOpenApplication(prepare.applicationId)}
+            >
+              {t("jobs.detail.openApplication")}
+            </Button>
+          ) : null}
+        </div>
       ) : null}
       {prepare.status === "failed" ? (
         <p role="alert" className="text-sm text-app-danger">

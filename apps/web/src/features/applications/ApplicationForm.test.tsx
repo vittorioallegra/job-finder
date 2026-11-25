@@ -1,5 +1,5 @@
 // protects=the form panel opens the form only for an application being prepared, shows what was filled and what the user must still fill, names each failure, asks for consent before a cloud AI fallback runs, shows the AI unavailable state when no provider is set up, marks AI drafts for review, and moves the application to applied only when the user confirms the submission;
-// fails_when=the form opens for an applied or bookmarked application, a refused start is reported as opened, the left-over fields are hidden, a failure shows no message, the AI fallback starts for a cloud provider without consent, no AI-unavailable message appears when the AI cannot answer, a draft is not marked for review, or "I submitted it" changes the status without the user pressing it or before the application is ready;
+// fails_when=the form opens for an applied or bookmarked application, a refused start is reported as opened, the left-over fields are hidden, a failure shows no message, the AI fallback starts for a cloud provider without consent, no AI-unavailable message appears when the AI cannot answer, a draft is not marked for review, or "I submitted it" changes the status without the user pressing it or is blocked while the application is still preparing;
 // no_claim=the form window, the page scripts and the real status machine are not run here; the desktop tests and the Electron end-to-end test cover them;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -211,7 +211,7 @@ describe("application form panel", () => {
     expect([...container.querySelectorAll("button")].map((node) => node.textContent)).toEqual([]);
   });
 
-  it("keeps the confirmation disabled while the application is still preparing", async () => {
+  it("lets the user confirm a submission while the application is still preparing", async () => {
     const bridge = bridgeWith(async () => ({
       ok: true,
       provider: "lever",
@@ -224,10 +224,7 @@ describe("application form panel", () => {
 
     await act(async () => button(container, "Open form and autofill").click());
 
-    expect(button(container, "I submitted it").disabled).toBe(true);
-    expect(container.textContent).toContain(
-      "Mark the application ready before you confirm a submission.",
-    );
+    expect(button(container, "I submitted it").disabled).toBe(false);
   });
 
   it("shows the AI unavailable state with a settings link when no provider is set up", async () => {

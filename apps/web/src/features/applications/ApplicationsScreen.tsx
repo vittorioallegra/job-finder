@@ -46,13 +46,11 @@ export function ApplicationsScreen() {
   const [view, setView] = useState<View>("list");
   const [statusFilter, setStatusFilter] = useState<"" | ApplicationGroup>("");
   const [companyFilter, setCompanyFilter] = useState("");
-  // Preparing an application from a job opens it here (`?open=<id>&generate=1`): its documents are
-  // generated at once when the AI can be used without a consent step. The link is read once.
+  // A link such as `?open=<id>` (from the jobs screen) opens that application. It is read once.
   const [params, setParams] = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(() => params.get("open"));
-  const [autoGenerate] = useState(() => params.get("generate") === "1");
   useEffect(() => {
-    if (params.has("open") || params.has("generate")) setParams({}, { replace: true });
+    if (params.has("open")) setParams({}, { replace: true });
   }, [params, setParams]);
   const [notice, setNotice] = useState<Notice | null>(null);
 
@@ -147,11 +145,11 @@ export function ApplicationsScreen() {
   function renderCard(application: ApplicationSummary, layout: "row" | "card") {
     const wrapper =
       layout === "row"
-        ? "flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4"
-        : "flex flex-col gap-2 rounded-xl border border-app-border bg-app-surface p-3.5 shadow-card";
+        ? "flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-5 py-4"
+        : "flex flex-col gap-3 rounded-xl border border-app-border bg-app-surface p-3.5 shadow-card";
     return (
       <li key={application.id} className={wrapper}>
-        <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <p className="font-display text-base font-semibold text-app-fg">{application.jobTitle}</p>
           <p className="text-sm text-app-muted">
             {application.companyName} ·{" "}
@@ -159,11 +157,19 @@ export function ApplicationsScreen() {
               date: new Date(application.statusChangedAt).toLocaleDateString(i18n.language),
             })}
           </p>
+          {layout === "row" ? (
+            <div>
+              <Badge tone="accent">{t(`applications.group.${groupOf(application.status)}`)}</Badge>
+            </div>
+          ) : null}
         </div>
-        {layout === "row" ? (
-          <Badge tone="accent">{t(`applications.group.${groupOf(application.status)}`)}</Badge>
-        ) : null}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center justify-end gap-2">
+          {isUnsent(application.status) ? (
+            <DeleteApplication
+              title={application.jobTitle}
+              onDelete={() => removeApplication(application)}
+            />
+          ) : null}
           <Button
             variant="secondary"
             size="sm"
@@ -172,12 +178,6 @@ export function ApplicationsScreen() {
           >
             {t("applications.details")}
           </Button>
-          {isUnsent(application.status) ? (
-            <DeleteApplication
-              title={application.jobTitle}
-              onDelete={() => removeApplication(application)}
-            />
-          ) : null}
         </div>
       </li>
     );
@@ -282,7 +282,6 @@ export function ApplicationsScreen() {
               <ApplicationDetail
                 key={selectedId}
                 applicationId={selectedId}
-                autoGenerate={autoGenerate}
                 onChanged={(application) =>
                   replace({
                     id: application.id,

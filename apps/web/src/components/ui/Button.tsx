@@ -1,9 +1,9 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ComponentPropsWithRef } from "react";
 
-export type ButtonVariant = "primary" | "accent" | "secondary" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "accent" | "secondary" | "ghost" | "danger" | "destructive";
 export type ButtonSize = "sm" | "md";
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends ComponentPropsWithRef<"button"> {
   variant?: ButtonVariant;
   size?: ButtonSize;
 }
@@ -13,6 +13,8 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
   accent: "bg-app-accent text-app-accent-fg hover:opacity-90",
   secondary: "border border-app-border bg-app-surface text-app-fg hover:border-app-subtle",
   ghost: "text-app-muted hover:bg-app-sunken hover:text-app-fg",
+  /** Solid red, for the button that deletes something. */
+  destructive: "bg-app-danger text-app-bg hover:opacity-90",
   danger: "border border-app-border bg-app-surface text-app-danger hover:bg-app-danger-soft",
 };
 

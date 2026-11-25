@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import {
@@ -91,18 +91,13 @@ function contentOf(record: DocumentRecord, draft: Draft): DocumentContent {
 
 interface ApplicationDocumentsProps {
   applicationId: string;
-  /** Generate both documents once on opening, when none exists. */
-  autoGenerate?: boolean;
 }
 
 /**
  * The CV and cover letter of one application: generate them with the AI, edit the text, save it after the profile checks, and export a PDF. Nothing is sent to
  * an employer; the app never submits.
  */
-export function ApplicationDocuments({
-  applicationId,
-  autoGenerate = false,
-}: ApplicationDocumentsProps) {
+export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProps) {
   const { t } = useTranslation();
   const bridge = useBridge();
   const [load, setLoad] = useState<LoadState>({ status: "loading" });
@@ -322,16 +317,8 @@ export function ApplicationDocuments({
     }
   }
 
-  const autoRun =
-    autoGenerate &&
-    records.cv === null &&
-    records["cover-letter"] === null &&
-    ai !== null &&
-    ai.configured;
-
   return (
     <section aria-labelledby="application-documents-title" className="flex flex-col gap-4">
-      <RunOnce enabled={autoRun} run={() => void generateBoth()} />
       <h4
         id="application-documents-title"
         className="font-display text-xl font-semibold text-app-fg"
@@ -557,16 +544,5 @@ function DocumentEditor({ draft, content, onDraft }: DocumentEditorProps) {
       </div>
     );
   }
-  return null;
-}
-
-/** Runs `run` once, the first time it is enabled. */
-function RunOnce({ enabled, run }: { enabled: boolean; run: () => void }) {
-  const done = useRef(false);
-  useEffect(() => {
-    if (!enabled || done.current) return;
-    done.current = true;
-    run();
-  }, [enabled, run]);
   return null;
 }

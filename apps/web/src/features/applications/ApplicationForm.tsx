@@ -271,18 +271,11 @@ export function ApplicationForm({ application, onChanged }: ApplicationFormProps
 
       {result !== null && result.ok && !submitted ? (
         <div className="flex flex-col items-start gap-2">
-          <Button
-            size="sm"
-            disabled={busy !== null || application.status !== "ready"}
-            onClick={() => void confirmSubmitted()}
-          >
+          <Button size="sm" disabled={busy !== null} onClick={() => void confirmSubmitted()}>
             {busy === "submit"
               ? t("applications.form.confirming")
               : t("applications.form.submitted")}
           </Button>
-          {application.status !== "ready" ? (
-            <p className="text-sm text-app-muted">{t("applications.form.readyFirst")}</p>
-          ) : null}
         </div>
       ) : null}
       {submitted ? (

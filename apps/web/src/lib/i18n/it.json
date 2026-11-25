@@ -505,7 +505,7 @@
       "bookmark": "Salva",
       "removeBookmark": "Rimuovi dai salvati",
       "prepare": "Prepara candidatura",
-      "prepared": "Candidatura avviata. Il suo stato è ora {{status}}.",
+      "prepared": "Candidatura preparata: il CV e la lettera di presentazione sono scritti.",
       "prepareCheck": {
         "sameJobWarning": "Questo annuncio ha già una candidatura: {{count}} per lo stesso annuncio o per un annuncio con la stessa impronta.",
         "sameCompanyWarning": "Questa azienda ha una candidatura modificata negli ultimi 90 giorni: {{count}}.",
@@ -514,7 +514,10 @@
         "cancel": "Annulla",
         "previous": "{{title}} presso {{company}}: {{status}}, modificata il {{date}}",
         "failed": "Non è stato possibile avviare la candidatura."
-      }
+      },
+      "preparedPartial": "La candidatura è stata creata, ma non è stato possibile scrivere il CV e la lettera. Puoi riprovare dalla candidatura.",
+      "generating": "Sto scrivendo il CV e la lettera di presentazione…",
+      "openApplication": "Apri la candidatura"
     },
     "openApplications": "Apri candidature",
     "subtitle_one": "{{count}} offerta aperta · {{fresh}} nuove",
@@ -698,11 +701,16 @@
         "offer": "Ho ricevuto un'offerta",
         "rejected": "È stata rifiutata",
         "withdrawn": "Mi sono ritirato"
+      },
+      "jobDescription": "Descrizione dell'offerta",
+      "guide": {
+        "unsent": "Questa candidatura non è ancora inviata. Per completarla:\n1. Scrivi il CV e la lettera di presentazione per questa offerta.\n2. Apri il modulo dell'azienda: l'app compila quello che può, tu controlli e invii di persona.\n3. Premi “Ho inviato la candidatura” così la candidatura passa a Inviata.",
+        "sent": "Hai inviato questa candidatura. Qui sotto puoi segnare com'è andata, aggiungere note e leggere la cronologia."
       }
     },
     "documents": {
       "heading": "Documenti",
-      "intro": "Genera un CV e una lettera di presentazione su misura dal tuo profilo e da questa offerta. Controlli e modifichi il testo, poi esporti un PDF. Non viene inviato nulla al datore di lavoro.",
+      "intro": "Un CV e una lettera di presentazione scritti per questa offerta a partire dal tuo profilo. Controlla il testo, modificalo se serve ed esporta un PDF.",
       "loading": "Caricamento dei documenti…",
       "loadFailed": "I documenti non si possono leggere.",
       "kinds": {
@@ -770,7 +778,7 @@
     },
     "form": {
       "heading": "Modulo di candidatura",
-      "intro": "Apre il modulo della candidatura in una sua finestra e compila ciò che il profilo copre. Lo controlli, lo modifichi e lo invii lì. L'app non invia mai nulla.",
+      "intro": "Apre il modulo dell'azienda in una finestra a parte e compila ciò che il tuo profilo copre. Lo controlli e lo invii tu: l'app non invia mai nulla.",
       "open": "Apri il modulo e compila",
       "opening": "Apertura del modulo…",
       "opened": "Il modulo è aperto nella sua finestra. Controllalo lì.",
@@ -801,7 +809,6 @@
       "confirming": "Salvataggio…",
       "confirmed": "Segnata come candidatura inviata.",
       "confirmFailed": "Lo stato non è stato cambiato.",
-      "readyFirst": "Segna la candidatura come pronta prima di confermare l'invio.",
       "inactive": "La compilazione automatica è disponibile mentre la candidatura è in preparazione o pronta.",
       "failures": {
         "not-found": "La candidatura non esiste più.",
@@ -850,10 +857,11 @@
     "delete": {
       "button": "Elimina {{title}}",
       "label": "Elimina",
-      "confirm": "Eliminare questa candidatura? Anche note e documenti vengono eliminati.",
+      "confirm": "La candidatura, le sue note, il CV e la lettera di presentazione vengono eliminati. L'operazione non si può annullare.",
       "yes": "Elimina",
       "cancel": "Annulla",
-      "failed": "Non è stato possibile eliminare la candidatura."
+      "failed": "Non è stato possibile eliminare la candidatura.",
+      "title": "Eliminare \"{{title}}\"?"
     }
   }
 }

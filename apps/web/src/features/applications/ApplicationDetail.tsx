@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { ExternalLink, X } from "lucide-react";
+import { ChevronDown, ExternalLink, X } from "lucide-react";
 import {
   APPLICATION_STATUSES,
   canTransition,
@@ -27,8 +27,6 @@ type DetailState =
 
 interface ApplicationDetailProps {
   applicationId: string;
-  /** Generate the documents on opening, when the AI allows it without a consent step. */
-  autoGenerate?: boolean;
   /** Called after a note is added, so the list shows the application as it is now. */
   onChanged: (application: ApplicationDetailRecord) => void;
   /** Deletes an application not sent yet; the list drops it and closes the panel. */
@@ -39,7 +37,6 @@ interface ApplicationDetailProps {
 /** The timeline of one application (its status changes and notes), with a form to add a note. */
 export function ApplicationDetail({
   applicationId,
-  autoGenerate = false,
   onChanged,
   onDelete,
   onClose,
@@ -129,11 +126,17 @@ export function ApplicationDetail({
 
   return (
     <section aria-labelledby="application-detail-title" className="flex flex-col gap-5">
-      <div>
+      <div className="flex items-center justify-between gap-3">
         <Button variant="ghost" size="sm" onClick={onClose}>
           <X aria-hidden="true" className="size-4" />
           {t("applications.detail.close")}
         </Button>
+        {state.status === "ready" && isUnsent(state.application.status) ? (
+          <DeleteApplication
+            title={state.application.jobTitle}
+            onDelete={() => onDelete(state.application.id)}
+          />
+        ) : null}
       </div>
       <div className="flex items-start justify-between gap-3">
         <h3
@@ -182,24 +185,46 @@ export function ApplicationDetail({
       {state.status === "ready" ? (
         <>
           <div className="flex flex-col gap-3">
+            <p className="text-app-muted">
+              {state.application.companyName}
+              {job !== null
+                ? ` · ${job.locations.length > 0 ? job.locations.join(" / ") : t("jobs.results.noLocation")}`
+                : ""}
+            </p>
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-app-muted">
-                {state.application.companyName}
-                {job !== null
-                  ? ` · ${job.locations.length > 0 ? job.locations.join(" / ") : t("jobs.results.noLocation")}`
-                  : ""}
-              </p>
               <Badge tone="accent">
                 {t(`applications.group.${groupOf(state.application.status)}`)}
               </Badge>
-            </div>
-            {job !== null && job.workMode !== "unknown" ? (
-              <div className="flex flex-wrap items-center gap-2">
+              {job !== null && job.workMode !== "unknown" ? (
                 <Badge>{t(`jobs.results.workMode.${job.workMode}`)}</Badge>
-              </div>
-            ) : null}
+              ) : null}
+            </div>
           </div>
-          <ApplicationDocuments applicationId={state.application.id} autoGenerate={autoGenerate} />
+
+          <p className="rounded-2xl bg-app-sunken/60 p-4 text-sm leading-relaxed whitespace-pre-line text-app-fg">
+            {t(
+              isUnsent(state.application.status)
+                ? "applications.detail.guide.unsent"
+                : "applications.detail.guide.sent",
+            )}
+          </p>
+
+          {job !== null ? (
+            <details className="group rounded-2xl border border-app-border bg-app-surface">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3.5 font-sans text-sm font-semibold text-app-fg">
+                {t("applications.detail.jobDescription")}
+                <ChevronDown
+                  aria-hidden="true"
+                  className="size-4 text-app-muted transition-transform group-open:rotate-180"
+                />
+              </summary>
+              <p className="px-5 pb-4 text-sm leading-relaxed whitespace-pre-line text-app-fg">
+                {job.description === "" ? t("jobs.detail.noDescription") : job.description}
+              </p>
+            </details>
+          ) : null}
+
+          <ApplicationDocuments applicationId={state.application.id} />
           <ApplicationForm
             application={state.application}
             onChanged={(application) => {
@@ -231,16 +256,6 @@ export function ApplicationDetail({
               ) : null}
             </Card>
           ) : null}
-          {job !== null ? (
-            <Card as="div" className="flex flex-col gap-2">
-              <h4 className="font-sans text-sm font-semibold text-app-fg">
-                {t("jobs.detail.description")}
-              </h4>
-              <p className="text-sm leading-relaxed whitespace-pre-line text-app-fg">
-                {job.description === "" ? t("jobs.detail.noDescription") : job.description}
-              </p>
-            </Card>
-          ) : null}
           <Card as="div">
             <form onSubmit={(event) => void addNote(event)} className="flex flex-col gap-3">
               <TextArea
@@ -260,14 +275,6 @@ export function ApplicationDetail({
             <p role="alert" className="text-sm text-app-danger">
               {t("applications.detail.noteFailed")}
             </p>
-          ) : null}
-          {isUnsent(state.application.status) ? (
-            <div>
-              <DeleteApplication
-                title={state.application.jobTitle}
-                onDelete={() => onDelete(state.application.id)}
-              />
-            </div>
           ) : null}
           <Card as="div" className="flex flex-col gap-3">
             <h4 className="font-sans text-sm font-semibold text-app-fg">

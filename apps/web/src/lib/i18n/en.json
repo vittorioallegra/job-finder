@@ -505,7 +505,7 @@
       "bookmark": "Bookmark",
       "removeBookmark": "Remove bookmark",
       "prepare": "Prepare application",
-      "prepared": "Application started. Its status is now {{status}}.",
+      "prepared": "Application prepared: your CV and cover letter are written.",
       "prepareCheck": {
         "sameJobWarning": "This job already has an application: {{count}} for this same posting or a posting with the same fingerprint.",
         "sameCompanyWarning": "This company has an application changed in the last 90 days: {{count}}.",
@@ -514,7 +514,10 @@
         "cancel": "Cancel",
         "previous": "{{title}} at {{company}}: {{status}}, changed {{date}}",
         "failed": "The application could not be started."
-      }
+      },
+      "preparedPartial": "The application was created, but its CV and cover letter could not be written. You can try again from the application.",
+      "generating": "Writing your CV and cover letter…",
+      "openApplication": "Open the application"
     },
     "openApplications": "Open applications",
     "subtitle_one": "{{count}} open job · {{fresh}} new",
@@ -698,11 +701,16 @@
         "offer": "I got an offer",
         "rejected": "It was rejected",
         "withdrawn": "I withdrew"
+      },
+      "jobDescription": "Job description",
+      "guide": {
+        "unsent": "This application is not sent yet. To finish it:\n1. Write your CV and cover letter for this job.\n2. Open the company's form: the app fills in what it can, and you check it and send it yourself.\n3. Press “I submitted it” so the application moves to Applied.",
+        "sent": "You sent this application. Below you can record what happened next, add notes, and read the history."
       }
     },
     "documents": {
       "heading": "Documents",
-      "intro": "Generate a tailored CV and cover letter from your profile and this job. You review and edit the text, then export a PDF. Nothing is sent to the employer.",
+      "intro": "A CV and a cover letter written for this job from your profile. Check the text, edit it if needed, and export a PDF.",
       "loading": "Loading documents…",
       "loadFailed": "The documents could not be read.",
       "kinds": {
@@ -770,7 +778,7 @@
     },
     "form": {
       "heading": "Application form",
-      "intro": "Opens the application's form in its own window and fills what your profile covers. You review, edit and submit it there. The app never submits.",
+      "intro": "Opens the company's form in its own window and fills in what your profile covers. You check it and send it yourself: the app never sends anything.",
       "open": "Open form and autofill",
       "opening": "Opening the form…",
       "opened": "The form is open in its own window. Review it there.",
@@ -801,7 +809,6 @@
       "confirming": "Saving…",
       "confirmed": "Marked as applied.",
       "confirmFailed": "The status could not be changed.",
-      "readyFirst": "Mark the application ready before you confirm a submission.",
       "inactive": "Autofill is available while the application is being prepared or ready.",
       "failures": {
         "not-found": "The application no longer exists.",
@@ -850,10 +857,11 @@
     "delete": {
       "button": "Delete {{title}}",
       "label": "Delete",
-      "confirm": "Delete this application? Its notes and documents go too.",
+      "confirm": "The application, its notes, its CV and its cover letter are deleted. This cannot be undone.",
       "yes": "Delete",
       "cancel": "Cancel",
-      "failed": "The application could not be deleted."
+      "failed": "The application could not be deleted.",
+      "title": "Delete \"{{title}}\"?"
     }
   }
 }

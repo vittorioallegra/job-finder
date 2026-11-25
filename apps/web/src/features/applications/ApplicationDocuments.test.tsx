@@ -1,4 +1,4 @@
-// protects=the documents panel shows loading, error and AI-unavailable states, sends a generate call without any consent step also for a cloud provider, shows a generated document as editable text, reports a save that breaks the profile by its issues, exports a PDF and offers to reveal it, names every AI failure under its own message, starts from the posting's language with the user's pick sent to generation, and generates both documents on opening when asked to;
+// protects=the documents panel shows loading, error and AI-unavailable states, sends a generate call without any consent step also for a cloud provider, shows a generated document as editable text, reports a save that breaks the profile by its issues, exports a PDF and offers to reveal it, names every AI failure under its own message, starts from the posting's language with the user's pick sent to generation, and generates both documents with one button;
 // fails_when=a generate call needs a consent the user cannot give here, an AI failure is shown without the settings link, a refused save is reported as saved, an export without a file is reported as exported, the panel shows a blank page on a failed read, or the posting's language is ignored or the user's choice is not sent;
 // no_claim=the layout, the real bridge and the PDF itself are not checked here; the desktop service and PDF tests cover the rules and the file;
 import { act } from "react";
@@ -147,12 +147,12 @@ describe("application documents panel", () => {
     container.remove();
   });
 
-  async function render(bridge: JobFinderBridge, autoGenerate = false) {
+  async function render(bridge: JobFinderBridge) {
     await act(async () => {
       root.render(
         <MemoryRouter>
           <BridgeProvider bridge={bridge}>
-            <ApplicationDocuments applicationId="a1" autoGenerate={autoGenerate} />
+            <ApplicationDocuments applicationId="a1" />
           </BridgeProvider>
         </MemoryRouter>,
       );
@@ -196,28 +196,18 @@ describe("application documents panel", () => {
     expect(button(container, "Generate CV and cover letter").disabled).toBe(true);
   });
 
-  it("generates the CV and the letter at once when asked to", async () => {
+  it("generates the CV and then the letter with one button, for a cloud provider too, without a consent step", async () => {
     const kinds: string[] = [];
     const generate = vi.fn(async (request: { kind: string }) => {
       kinds.push(request.kind);
       return { ok: true as const, document: coverLetter("Hi.") };
     });
-    await render(bridgeWith({ generate }), true);
-    await act(async () => {});
-
-    expect(kinds).toEqual(["cv", "cover-letter"]);
-  });
-
-  it("generates both documents at once for a cloud provider too, without a consent step", async () => {
-    const kinds: string[] = [];
-    const generate = vi.fn(async (request: { kind: string }) => {
-      kinds.push(request.kind);
-      return { ok: true as const, document: coverLetter("Hi.") };
-    });
-    await render(bridgeWith({ generate }, cloudSettings), true);
-    await act(async () => {});
-
+    await render(bridgeWith({ generate }, cloudSettings));
     expect(container.querySelector('input[type="checkbox"]')).toBeNull();
+
+    await act(async () => button(container, "Generate CV and cover letter").click());
+    await act(async () => {});
+
     expect(kinds).toEqual(["cv", "cover-letter"]);
     expect(generate).toHaveBeenCalledWith({ applicationId: "a1", kind: "cv", language: "en" });
   });

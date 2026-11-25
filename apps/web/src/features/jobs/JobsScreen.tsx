@@ -532,7 +532,7 @@ export function JobsScreen() {
                 jobId={selectedJobId}
                 onChanged={jobsChanged}
                 onClose={() => setSelectedJobId(null)}
-                onApplicationStarted={(id) => navigate(`/applications?open=${id}&generate=1`)}
+                onOpenApplication={(id) => navigate(`/applications?open=${id}`)}
               />
             </Drawer>
           ) : null}

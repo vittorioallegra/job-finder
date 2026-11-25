@@ -1,4 +1,4 @@
-// protects=the applications screen shows the loading, empty and error states with a retry, lists applications with no status selector and the statuses before submitting as one "To send" group, deletes only an unsent application after one confirmation and reports a failure, offers the moves after sending in the detail only, keeps the close button first and the timeline last, filters the list and the board by group and company, shows the job's description in the detail, adds notes to the timeline, and reports the CSV export's count or its failure;
+// protects=the applications screen shows the loading, empty and error states with a retry, lists applications with no status selector and the statuses before submitting as one "To send" group, deletes only an unsent application after one confirmation and reports a failure, offers the moves after sending in the detail only, keeps the close button first and the timeline last, filters the list and the board by group and company, shows the job's description in a closed accordion at the top of the detail, with the delete button in the top row, adds notes to the timeline, and reports the CSV export's count or its failure;
 // fails_when=a card offers a status selector, a sent application can be deleted, a delete needs no confirmation or leaves the card after a failure, a move the machine forbids is offered, the board counts or filters are wrong, a note is not shown, an error shows a blank page, or the export result is not reported;
 // no_claim=layout, keyboard focus order and the real bridge's storage are not checked here; the desktop repository and export tests cover the rules and the file;
 import { act } from "react";
@@ -44,6 +44,16 @@ function select(container: HTMLElement, label: string): HTMLSelectElement {
   const control = found?.htmlFor ? document.getElementById(found.htmlFor) : null;
   if (!(control instanceof HTMLSelectElement)) throw new Error(`no select ${label}`);
   return control;
+}
+
+/** A button inside the open confirmation dialog, which is rendered outside the screen's container. */
+function dialogButton(text: string): HTMLButtonElement {
+  const dialog = document.querySelector("[role=alertdialog]");
+  const found = [...(dialog?.querySelectorAll("button") ?? [])].find(
+    (node) => node.textContent?.trim() === text,
+  );
+  if (!found) throw new Error(`no dialog button ${text}`);
+  return found;
 }
 
 /** Sets a controlled field's value the way a user's typing does, so React sees the change. */
@@ -171,16 +181,18 @@ describe("applications screen", () => {
       (container.querySelector('button[aria-label^="Delete "]') as HTMLButtonElement).click();
     });
     expect(remove).not.toHaveBeenCalled();
+    expect(document.querySelector("[role=alertdialog]")).not.toBeNull();
     await act(async () => {
-      button(container, "Cancel").click();
+      dialogButton("Cancel").click();
     });
+    expect(document.querySelector("[role=alertdialog]")).toBeNull();
     expect(remove).not.toHaveBeenCalled();
 
     await act(async () => {
       (container.querySelector('button[aria-label^="Delete "]') as HTMLButtonElement).click();
     });
     await act(async () => {
-      button(container, "Delete").click();
+      dialogButton("Delete").click();
     });
     await act(async () => {});
     expect(remove).toHaveBeenCalledWith({ applicationId: "a1" });
@@ -195,7 +207,7 @@ describe("applications screen", () => {
       (container.querySelector('button[aria-label^="Delete "]') as HTMLButtonElement).click();
     });
     await act(async () => {
-      button(container, "Delete").click();
+      dialogButton("Delete").click();
     });
     await act(async () => {});
     expect(container.querySelector("[role=alert]")?.textContent).toContain("could not be deleted");
@@ -252,7 +264,8 @@ describe("applications screen", () => {
     await act(async () => {});
 
     const dialog = container.querySelector("[role=dialog]") as HTMLElement;
-    expect(dialog.textContent).toContain("You will build APIs.");
+    expect(dialog.querySelector("details")?.textContent).toContain("You will build APIs.");
+    expect(dialog.querySelector("details")?.hasAttribute("open")).toBe(false);
     expect(dialog.textContent).toContain("Milan, Italy");
   });
 
@@ -272,6 +285,10 @@ describe("applications screen", () => {
 
     const dialog = container.querySelector("[role=dialog]") as HTMLElement;
     expect(dialog.querySelector("button")?.textContent).toContain("Close");
+    // The red delete button sits in the top row, before the title.
+    const del = dialog.querySelector('button[aria-label^="Delete "]') as HTMLElement;
+    const title = dialog.querySelector("#application-detail-title") as HTMLElement;
+    expect(del.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(dialog.querySelector('a[href="https://x.test/1"]')?.textContent).toContain(
       "Open posting",
     );

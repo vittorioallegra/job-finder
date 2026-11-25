@@ -1,4 +1,4 @@
-// protects=the job detail bookmarks a job and removes the bookmark, starts preparing without a warning when no earlier application exists and then hides the prepare, dismiss and bookmark buttons, asks one confirmation for an earlier application at the same company, asks two for the same job or fingerprint, and shows the failure when the start is refused, and reports the started application so the screen can continue there;
+// protects=the job detail bookmarks a job and removes the bookmark, prepares in the background without a warning when no earlier application exists (starting it, writing both documents and staying on the page) and then hides the prepare, dismiss and bookmark buttons, offers only the bookmark of a saved job, asks one confirmation for an earlier application at the same company, asks two for the same job or fingerprint, and shows the failure when the start is refused;
 // fails_when=a bookmark is not sent or its state is wrong, a warning starts the application without a confirmation, the same job starts after one confirmation, a refused start shows no message, or a duplicate's details are missing;
 // no_claim=the layout, keyboard order and the engine's duplicate rules are not covered here; the desktop repository tests cover the guard counts and the core tests cover the confirmation rule;
 import { act } from "react";
@@ -62,9 +62,11 @@ describe("job detail: bookmark and preparation", () => {
     container.remove();
   });
 
+  const names = () => Array.from(container.querySelectorAll("button")).map((b) => b.textContent);
+
   async function render(
     bridge: JobFinderBridge,
-    onApplicationStarted?: (applicationId: string) => void,
+    onOpenApplication?: (applicationId: string) => void,
   ) {
     await act(async () => {
       root.render(
@@ -73,7 +75,7 @@ describe("job detail: bookmark and preparation", () => {
             jobId="job-1"
             onChanged={() => {}}
             onClose={() => {}}
-            onApplicationStarted={onApplicationStarted}
+            onOpenApplication={onOpenApplication}
           />
         </BridgeProvider>,
       );
@@ -122,6 +124,8 @@ describe("job detail: bookmark and preparation", () => {
     });
     expect(bridge.applications.bookmark).toHaveBeenCalledWith({ jobId: "job-1", bookmarked: true });
     expect(container.textContent).toContain("Application: To send");
+    // A saved job is already in the tracker: only the bookmark can be undone here.
+    expect(names()).toEqual(["Close", "Remove bookmark"]);
 
     await act(async () => {
       button(container, "Remove bookmark").click();
@@ -133,23 +137,52 @@ describe("job detail: bookmark and preparation", () => {
     expect(container.textContent).not.toContain("Application: To send");
   });
 
-  it("starts preparing at once when no earlier application exists", async () => {
-    const bridge = bridgeWith({});
-    const started = vi.fn();
-    await render(bridge, started);
+  it("prepares in the background: starts the application, writes both documents, and stays on the page", async () => {
+    const base = bridgeWith({});
+    const kinds: string[] = [];
+    const bridge = {
+      ...base,
+      documents: {
+        ...base.documents,
+        generate: vi.fn(async ({ kind }: { kind: string }) => {
+          kinds.push(kind);
+          return { ok: true as const, document: {} };
+        }),
+      },
+    } as unknown as JobFinderBridge;
+    const open = vi.fn();
+    await render(bridge, open);
 
     await act(async () => {
       button(container, "Prepare application").click();
     });
     await act(async () => {});
     expect(bridge.applications.start).toHaveBeenCalledWith({ jobId: "job-1", confirmations: 0 });
-    expect(container.textContent).toContain("Application started. Its status is now Preparing.");
-    expect(started).toHaveBeenCalledTimes(1);
-    for (const name of ["Prepare application", "Dismiss", "Bookmark"]) {
-      expect(
-        Array.from(container.querySelectorAll("button")).some((b) => b.textContent === name),
-      ).toBe(false);
-    }
+    expect(kinds).toEqual(["cv", "cover-letter"]);
+    expect(container.textContent).toContain("Application prepared: your CV and cover letter");
+    // No redirect: the panel offers a link and the user decides.
+    expect(open).not.toHaveBeenCalled();
+    await act(async () => {
+      button(container, "Open the application").click();
+    });
+    expect(open).toHaveBeenCalledWith("a1");
+    expect(names()).not.toContain("Prepare application");
+    expect(names()).not.toContain("Dismiss");
+    expect(names()).not.toContain("Bookmark");
+  });
+
+  it("says so when the documents of a prepared application could not be written, and stops after the first failure", async () => {
+    const base = bridgeWith({});
+    const generate = vi.fn(async () => ({ ok: false as const, code: "invalid-key" as const }));
+    const bridge = { ...base, documents: { ...base.documents, generate } } as JobFinderBridge;
+    await render(bridge, vi.fn());
+
+    await act(async () => {
+      button(container, "Prepare application").click();
+    });
+    await act(async () => {});
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(container.querySelector("[role=alert]")?.textContent).toContain("could not be written");
   });
 
   it("asks one confirmation for an earlier application at the same company", async () => {
