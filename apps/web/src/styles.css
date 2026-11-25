@@ -121,6 +121,11 @@ body {
   background: var(--app-bg);
 }
 
+/* Keeps the page from shifting when a drawer hides its scrollbar. */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   color: var(--app-fg);
