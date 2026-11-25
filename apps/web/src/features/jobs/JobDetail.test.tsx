@@ -1,4 +1,4 @@
-// protects=the job detail bookmarks a job and removes the bookmark, starts preparing without a warning when no earlier application exists, asks one confirmation for an earlier application at the same company, asks two for the same job or fingerprint, and shows the failure when the start is refused;
+// protects=the job detail bookmarks a job and removes the bookmark, starts preparing without a warning when no earlier application exists and then hides the prepare, dismiss and bookmark buttons, asks one confirmation for an earlier application at the same company, asks two for the same job or fingerprint, and shows the failure when the start is refused;
 // fails_when=a bookmark is not sent or its state is wrong, a warning starts the application without a confirmation, the same job starts after one confirmation, a refused start shows no message, or a duplicate's details are missing;
 // no_claim=the layout, keyboard order and the engine's duplicate rules are not covered here; the desktop repository tests cover the guard counts and the core tests cover the confirmation rule;
 import { act } from "react";
@@ -135,6 +135,11 @@ describe("job detail: bookmark and preparation", () => {
     await act(async () => {});
     expect(bridge.applications.start).toHaveBeenCalledWith({ jobId: "job-1", confirmations: 0 });
     expect(container.textContent).toContain("Application started. Its status is now Preparing.");
+    for (const name of ["Prepare application", "Dismiss", "Bookmark"]) {
+      expect(
+        Array.from(container.querySelectorAll("button")).some((b) => b.textContent === name),
+      ).toBe(false);
+    }
   });
 
   it("asks one confirmation for an earlier application at the same company", async () => {

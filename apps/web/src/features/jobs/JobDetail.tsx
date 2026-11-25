@@ -390,12 +390,14 @@ function PreparePanel({
   }
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={onPrepare} disabled={prepare.status === "busy"}>
-          {t("jobs.detail.prepare")}
-        </Button>
-        {actions}
-      </div>
+      {prepare.status === "done" ? null : (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={onPrepare} disabled={prepare.status === "busy"}>
+            {t("jobs.detail.prepare")}
+          </Button>
+          {actions}
+        </div>
+      )}
       {prepare.status === "done" ? (
         <p role="status" className="text-sm text-app-good">
           {t("jobs.detail.prepared", {
