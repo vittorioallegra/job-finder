@@ -262,6 +262,21 @@ export function JobsScreen() {
     bridge.ingest.cancel(activeRunId).catch(() => {});
   }
 
+  /** Companies done of the run's total, from its events: a scan or a failure ends a company. */
+  const scanProgress = (() => {
+    const started = events.find((event) => event.kind === "run-started");
+    const total = started?.kind === "run-started" ? started.companyCount : undefined;
+    if (total === undefined || total === 0) return null;
+    const done = new Set(
+      events.flatMap((event) =>
+        event.kind === "company-scanned" || event.kind === "company-failed"
+          ? [event.companyId]
+          : [],
+      ),
+    ).size;
+    return { done: Math.min(done, total), total };
+  })();
+
   function describeEvent(event: IngestEvent): string {
     switch (event.kind) {
       case "run-started":
@@ -361,9 +376,28 @@ export function JobsScreen() {
                   {t("jobs.scan.heading")}
                 </h2>
                 <p role="status" className="ml-auto text-[13px] text-app-muted">
-                  {activeRunId === null ? t("jobs.scan.idle") : t("jobs.scan.running")}
+                  {activeRunId === null
+                    ? t("jobs.scan.idle")
+                    : scanProgress !== null
+                      ? t("jobs.scan.runningProgress", scanProgress)
+                      : t("jobs.scan.running")}
                 </p>
               </div>
+              {activeRunId !== null && scanProgress !== null ? (
+                <div
+                  role="progressbar"
+                  aria-label={t("jobs.scan.progressLabel")}
+                  aria-valuemin={0}
+                  aria-valuemax={scanProgress.total}
+                  aria-valuenow={scanProgress.done}
+                  className="h-1.5 overflow-hidden rounded-full bg-app-sunken"
+                >
+                  <div
+                    className="h-full rounded-full bg-app-accent transition-[width]"
+                    style={{ width: `${(scanProgress.done / scanProgress.total) * 100}%` }}
+                  />
+                </div>
+              ) : null}
               <div className="flex flex-wrap items-center gap-3 rounded-lg bg-app-sunken p-3">
                 <Building2
                   aria-hidden="true"

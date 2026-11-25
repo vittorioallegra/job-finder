@@ -358,6 +358,8 @@ describe("runIngestion", () => {
       "company-scanned",
       "run-finished",
     ]);
+    // The start tells how many companies the run will scan, for the "3 of 12" progress.
+    expect(trace.events[0]).toMatchObject({ kind: "run-started", companyCount: 2 });
     expect(trace.events.at(-1)).toMatchObject({ kind: "run-finished", status: "succeeded" });
     expect(trace.finished).toEqual(["succeeded"]);
   });

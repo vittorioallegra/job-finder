@@ -17,7 +17,11 @@ export interface IngestEventBase {
 /** Progress and run log entries. Failures carry a code (never a message); the renderer words them. */
 export type IngestEvent = IngestEventBase &
   (
-    | { kind: "run-started" }
+    | {
+        kind: "run-started";
+        /** Companies the run will scan, for the "3 of 12" progress. Absent in runs recorded before it existed. */
+        companyCount?: number;
+      }
     | { kind: "company-started"; companyId: string; companyName: string }
     | {
         kind: "company-scanned";

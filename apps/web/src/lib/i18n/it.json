@@ -404,7 +404,9 @@
       "running": "Scansione in corso…",
       "idle": "Nessuna scansione in corso.",
       "alreadyRunning": "Una scansione è già in corso.",
-      "engineUnavailable": "Il motore in background non è disponibile. Riprova tra poco."
+      "engineUnavailable": "Il motore in background non è disponibile. Riprova tra poco.",
+      "runningProgress": "Scansione in corso · {{done}}/{{total}} aziende",
+      "progressLabel": "Avanzamento della scansione"
     },
     "score": {
       "heading": "Punteggi di affinità",

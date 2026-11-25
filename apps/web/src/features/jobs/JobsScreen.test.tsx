@@ -146,8 +146,11 @@ describe("jobs screen", () => {
     await act(async () => {});
     const emit = (event: IngestEvent) => act(() => listeners.forEach((l) => l(event)));
 
-    await emit({ runId: "run-1", seq: 0, at: 1, kind: "run-started" });
+    await emit({ runId: "run-1", seq: 0, at: 1, kind: "run-started", companyCount: 3 });
     expect(container.textContent).toContain("Scan started.");
+    // Progress: no company done yet, out of three.
+    expect(container.textContent).toContain("Scanning · 0/3 companies");
+    expect(container.querySelector("[role=progressbar]")?.getAttribute("aria-valuemax")).toBe("3");
     // The log follows the scan: a new line scrolls it to the bottom.
     const log = container.querySelector<HTMLOListElement>('ol[aria-labelledby="jobs-log-title"]')!;
     let scrolledTo = 0;
@@ -174,7 +177,11 @@ describe("jobs screen", () => {
       jobCount: 2,
       closedCount: 1,
     });
+    // One company is done: 1/3, and a company counted twice would not count twice.
+    expect(container.textContent).toContain("Scanning · 1/3 companies");
+    expect(container.querySelector("[role=progressbar]")?.getAttribute("aria-valuenow")).toBe("1");
     await emit({ runId: "run-1", seq: 2, at: 3, kind: "run-finished", status: "succeeded" });
+    expect(container.querySelector("[role=progressbar]")).toBeNull();
 
     expect(container.textContent).toContain("Acme: 2 postings read, 1 closed.");
     expect(scrolledTo).toBe(480);

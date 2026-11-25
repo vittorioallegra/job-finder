@@ -404,7 +404,9 @@
       "running": "Scanning…",
       "idle": "No scan is running.",
       "alreadyRunning": "A scan is already running.",
-      "engineUnavailable": "The background engine is not available. Try again in a moment."
+      "engineUnavailable": "The background engine is not available. Try again in a moment.",
+      "runningProgress": "Scanning · {{done}}/{{total}} companies",
+      "progressLabel": "Scan progress"
     },
     "score": {
       "heading": "Affinity scores",

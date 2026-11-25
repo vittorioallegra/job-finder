@@ -150,10 +150,10 @@ export async function runIngestion(options: RunIngestionOptions): Promise<Ingest
   await store.beginRun(runId, now());
   let outcome: IngestRunOutcome;
   try {
-    await record({ kind: "run-started" });
     const companies = (await store.listCompanies()).filter(
       (company) => options.companyId === undefined || company.id === options.companyId,
     );
+    await record({ kind: "run-started", companyCount: companies.length });
     outcome = "succeeded";
     // Companies are scanned a few at a time: most of a scan is waiting for the network. The HTTP
     // client still queues requests per host, so boards on one host stay at its polite rate.
