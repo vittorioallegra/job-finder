@@ -284,8 +284,8 @@ function sentencesOf(text: string): string[] {
  * - a bullet whose number is not in its source bullet becomes the source bullet's own text, and a
  *   bullet pointing at no source bullet is dropped;
  * - sentences of the summary and paragraphs of a letter with a number the profile lacks are dropped;
- * - entries keep the profile's order. Which experiences and degrees appear is the model's choice
- *   (the most relevant ones); nothing is added back.
+ * - entries keep the profile's order. Which experiences, degrees and courses appear is the model's
+ *   choice (the most relevant ones), except that a CV with no degree gets the profile's first one.
  * Nothing is added that the profile does not state. What is left still goes through
  * `validateDocument`.
  */
@@ -357,6 +357,25 @@ export function repairDocument(content: DocumentContent, profile: Profile): Docu
   });
 
   // Entries keep the profile's order (newest first), whatever order the model chose.
+  // A CV always shows its main degree: when the model kept only courses, the first degree of the
+  // profile (the newest) is added, in the profile's wording.
+  const hasDegree = education.some(
+    (entry) => profile.education[entry.source]?.category === "degree",
+  );
+  if (!hasDegree) {
+    const index = profile.education.findIndex((item) => item.category === "degree");
+    const item = profile.education[index];
+    if (item && !usedEducation.has(index)) {
+      education.push({
+        source: index,
+        institution: item.institution,
+        degree: item.degree,
+        grade: item.grade,
+        startDate: item.startDate,
+        endDate: item.endDate,
+      });
+    }
+  }
   experience.sort((a, b) => a.source - b.source);
   education.sort((a, b) => a.source - b.source);
 

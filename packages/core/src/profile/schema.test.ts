@@ -1,4 +1,4 @@
-// protects=the profile schema accepts an empty or complete profile and rejects malformed contact, link, skill, currency and oversized entries, and the scoring snapshot changes only with scoring fields;
+// protects=the profile schema accepts an empty or complete profile and rejects malformed contact, link, skill, currency and oversized entries, and the scoring snapshot changes only with scoring fields, and an education entry has a category (degree or course) inferred from its title when missing;
 // fails_when=a malformed email, non-HTTP link, blank skill name, lowercase currency or oversized list passes validation, or editing links or application defaults changes the scoring snapshot;
 // no_claim=the schema does not check that an email or link is reachable, nor that dates are real calendar dates.
 import { describe, expect, it } from "vitest";
@@ -8,6 +8,7 @@ import {
   scoringSnapshot,
   applyCvExtraction,
   CvExtractionSchema,
+  inferEducationCategory,
   type Profile,
 } from "./schema";
 
@@ -101,5 +102,74 @@ describe("CV extraction", () => {
     const merged = applyCvExtraction(complete(), extraction);
     expect(merged.headline).toBe("Engineer");
     expect(merged.applicationDefaults.noticePeriod).toBe("1 month");
+  });
+});
+
+describe("education category", () => {
+  it("tells a degree from a course by the title, for an entry saved without a category, and keeps a given one", () => {
+    const parsed = ProfileSchema.parse({
+      ...emptyProfile(),
+      education: [
+        {
+          institution: "UniPa",
+          degree: "BSc in Computer and Telecommunications Engineering",
+          grade: "",
+          startDate: "",
+          endDate: "",
+        },
+        {
+          institution: "Biogem",
+          degree: "UIIP Program – IT Specialist Academy: Mobile Apps & Digital",
+          grade: "",
+          startDate: "",
+          endDate: "",
+        },
+        {
+          institution: "PoliTo",
+          degree: "Laurea in Informatica",
+          grade: "",
+          startDate: "",
+          endDate: "",
+        },
+        {
+          institution: "Acme",
+          degree: "Platform course",
+          category: "degree",
+          grade: "",
+          startDate: "",
+          endDate: "",
+        },
+      ],
+    });
+
+    expect(parsed.education.map((item) => item.category)).toEqual([
+      "degree",
+      "course",
+      "degree",
+      "degree",
+    ]);
+    expect(inferEducationCategory("MSc")).toBe("degree");
+    expect(inferEducationCategory("")).toBe("course");
+  });
+
+  it("does not count the education category as a scoring change, so existing scores stay valid", () => {
+    const withCourse = {
+      ...complete(),
+      education: [
+        {
+          institution: "A",
+          degree: "BSc",
+          category: "degree" as const,
+          grade: "",
+          startDate: "",
+          endDate: "",
+        },
+      ],
+    };
+    const recategorised = {
+      ...withCourse,
+      education: [{ ...withCourse.education[0]!, category: "course" as const }],
+    };
+    expect(scoringSnapshot(recategorised)).toBe(scoringSnapshot(withCourse));
   });
 });

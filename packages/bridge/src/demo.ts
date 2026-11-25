@@ -295,6 +295,7 @@ function demoProfile(): Profile {
       {
         institution: "Example University",
         degree: "MSc in Computer Engineering",
+        category: "degree" as const,
         grade: "",
         startDate: "2016",
         endDate: "2018",

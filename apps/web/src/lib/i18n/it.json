@@ -262,7 +262,8 @@
       "salaryPeriod": "Periodo",
       "relocate": "Disponibile al trasferimento",
       "question": "Domanda",
-      "answer": "Risposta"
+      "answer": "Risposta",
+      "educationType": "Tipo"
     },
     "periods": {
       "none": "Non indicato",
@@ -332,7 +333,11 @@
     },
     "searchChanged": "Hai cambiato i ruoli o i luoghi che cerchi.",
     "searchChangedAction": "Cerca le aziende per questi",
-    "unsaved": "Modifiche non salvate."
+    "unsaved": "Modifiche non salvate.",
+    "educationType": {
+      "degree": "Titolo universitario",
+      "course": "Corso o programma"
+    }
   },
   "onboarding": {
     "title": "Configura il profilo",

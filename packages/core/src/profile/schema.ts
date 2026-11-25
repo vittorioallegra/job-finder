@@ -59,9 +59,25 @@ export const ExperienceSchema = z.strictObject({
   bullets: z.array(z.string().trim().max(PROFILE_LIMITS.bulletText)).max(PROFILE_LIMITS.bullets),
 });
 
+/** A university degree, or a course or program (an academy, a bootcamp, a certificate course). */
+export const EDUCATION_CATEGORIES = ["degree", "course"] as const;
+export type EducationCategory = (typeof EDUCATION_CATEGORIES)[number];
+
+const DEGREE_WORDS =
+  /\b(bachelor|bsc|b\.sc|master|msc|m\.sc|mba|phd|ph\.d|doctorate|laurea|dottorato|diploma|magistrale|triennale|ingegneria)\b/i;
+
+/**
+ * The category of an education entry written without one: a degree when its title names a degree
+ * ("BSc in ...", "Laurea ..."), otherwise a course or program.
+ */
+export function inferEducationCategory(degree: string): EducationCategory {
+  return DEGREE_WORDS.test(degree) ? "degree" : "course";
+}
+
 const EducationShape = z.strictObject({
   institution: shortText,
   degree: shortText,
+  category: z.enum(EDUCATION_CATEGORIES),
   /** The final mark, such as "110/110" or "First class"; optional. */
   grade: shortText,
   startDate: dateText,
@@ -73,7 +89,17 @@ const EducationShape = z.strictObject({
  * ("BSc" and "Computer Engineering" become "BSc, Computer Engineering"), so nothing is lost.
  */
 function migrateEducation(value: unknown): unknown {
-  if (typeof value !== "object" || value === null || !("field" in value)) return value;
+  if (typeof value !== "object" || value === null) return value;
+  // Profiles saved before the category existed get one from the title of the entry.
+  const given = (value as Record<string, unknown>).category;
+  if (given !== "degree" && given !== "course") {
+    const degreeText = (value as Record<string, unknown>).degree;
+    value = {
+      ...(value as Record<string, unknown>),
+      category: inferEducationCategory(typeof degreeText === "string" ? degreeText : ""),
+    };
+  }
+  if (!("field" in (value as object))) return value;
   const { field, ...rest } = value as Record<string, unknown>;
   const degree = typeof rest.degree === "string" ? rest.degree.trim() : "";
   const subject = typeof field === "string" ? field.trim() : "";
@@ -256,7 +282,13 @@ export function scoringFields(profile: ScoringFields): ScoringFields {
  * answers does not change them, so it does not start a new profile version.
  */
 export function scoringSnapshot(profile: ScoringFields): string {
-  return JSON.stringify(scoringFields(profile));
+  const fields = scoringFields(profile);
+  // The education category only helps documents, and profiles saved before it existed have none:
+  // leaving it out keeps their scores (stored under the hash of this snapshot) valid.
+  return JSON.stringify({
+    ...fields,
+    education: fields.education.map(({ category: _category, ...rest }) => rest),
+  });
 }
 
 /**
@@ -342,10 +374,11 @@ export const CvExtractionDraftSchema = withEmptyDefaults(
     ),
     education: looseList(
       withEmptyDefaults(
-        { institution: "", degree: "", grade: "", ...EMPTY_DATES },
+        { institution: "", degree: "", category: "", grade: "", ...EMPTY_DATES },
         {
           institution: looseText,
           degree: looseText,
+          category: looseText,
           grade: looseText,
           startDate: looseText,
           endDate: looseText,
@@ -431,6 +464,10 @@ export function normalizeCvExtraction(draft: CvExtractionDraft): CvExtraction {
     education: draft.education.slice(0, 20).map((item) => ({
       institution: short(item.institution),
       degree: short(item.degree),
+      category:
+        item.category === "degree" || item.category === "course"
+          ? item.category
+          : inferEducationCategory(item.degree),
       grade: short(item.grade),
       startDate: date(item.startDate),
       endDate: date(item.endDate),

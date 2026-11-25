@@ -262,7 +262,8 @@
       "salaryPeriod": "Period",
       "relocate": "Willing to relocate",
       "question": "Question",
-      "answer": "Answer"
+      "answer": "Answer",
+      "educationType": "Type"
     },
     "periods": {
       "none": "Not set",
@@ -332,7 +333,11 @@
     },
     "searchChanged": "You changed the roles or places you are looking for.",
     "searchChangedAction": "Find companies for them",
-    "unsaved": "Unsaved changes."
+    "unsaved": "Unsaved changes.",
+    "educationType": {
+      "degree": "University degree",
+      "course": "Course or program"
+    }
   },
   "onboarding": {
     "title": "Set up your profile",

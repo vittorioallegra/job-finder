@@ -39,6 +39,8 @@ export interface ExperienceDraft {
 export interface EducationDraft {
   institution: string;
   degree: string;
+  /** A university degree, or a course or program. */
+  category: "degree" | "course";
   grade: string;
   startDate: string;
   endDate: string;
@@ -182,7 +184,10 @@ export function profileFromDraft(draft: ProfileDraft): Profile | null {
     experience: draft.experience
       .filter((item) => !isBlank(Object.values(item)))
       .map((item) => ({ ...item, bullets: splitList(item.bullets, /\n/) })),
-    education: draft.education.filter((item) => !isBlank(Object.values(item))),
+    // The category is always set, so it does not count when telling an empty entry from a filled one.
+    education: draft.education.filter(
+      (item) => !isBlank([item.institution, item.degree, item.grade, item.startDate, item.endDate]),
+    ),
     skills: draft.skills
       .filter((item) => !isBlank(Object.values(item)))
       .map((item) => ({

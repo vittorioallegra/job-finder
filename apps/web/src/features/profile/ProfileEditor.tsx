@@ -263,7 +263,14 @@ export function ProfileEditor({ initialDraft, stored = true, onSaved }: ProfileE
         <ListEditor
           items={draft.education}
           onItems={(items) => set("education", items)}
-          newItem={() => ({ institution: "", degree: "", grade: "", startDate: "", endDate: "" })}
+          newItem={() => ({
+            institution: "",
+            degree: "",
+            category: "degree" as const,
+            grade: "",
+            startDate: "",
+            endDate: "",
+          })}
           addLabel={t("profile.add.education")}
           entryLabel={(number) => t("profile.entry", { number })}
           removeLabel={(number) => t("profile.remove", { number })}
@@ -278,6 +285,17 @@ export function ProfileEditor({ initialDraft, stored = true, onSaved }: ProfileE
                 label={t("profile.fields.degree")}
                 value={item.degree}
                 onChange={(event) => change({ degree: event.target.value })}
+              />
+              <SelectInput
+                label={t("profile.fields.educationType")}
+                value={item.category}
+                options={[
+                  { value: "degree", label: t("profile.educationType.degree") },
+                  { value: "course", label: t("profile.educationType.course") },
+                ]}
+                onChange={(event) =>
+                  change({ category: event.target.value as "degree" | "course" })
+                }
               />
               <TextInput
                 label={t("profile.fields.grade")}

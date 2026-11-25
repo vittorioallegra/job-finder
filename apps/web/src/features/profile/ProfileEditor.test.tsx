@@ -167,7 +167,14 @@ describe("profile editor", () => {
     await render(bridge, {
       ...sample(),
       education: [
-        { institution: "PoliMi", degree: "MSc", grade: "", startDate: "2012", endDate: "2014" },
+        {
+          institution: "PoliMi",
+          degree: "MSc",
+          category: "degree",
+          grade: "",
+          startDate: "2012",
+          endDate: "2014",
+        },
       ],
       skills: [{ name: "Go", level: "expert", aliases: ["Golang"] }],
       languages: [{ name: "English", level: "C1 (IELTS 7.5)" }],

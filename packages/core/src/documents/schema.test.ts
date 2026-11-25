@@ -52,6 +52,7 @@ function profile(): Profile {
       {
         institution: "Politecnico di Milano",
         degree: "MSc in Computer Science",
+        category: "degree",
         grade: "110/110",
         startDate: "2011",
         endDate: "2013",
@@ -296,7 +297,10 @@ describe("validation across languages", () => {
     expect(validateDocument(repaired, p)).toEqual([]);
     if (repaired.kind !== "cv") return;
     expect(repaired.cv.experience.map((entry) => entry.source)).toEqual([0, 1]);
-    expect(repaired.cv.education).toEqual([]);
+    // The model chose no degree: a CV shows its main degree, so the profile's first one is added.
+    expect(repaired.cv.education.map((entry) => entry.degree)).toEqual([
+      profile().education[0]?.degree,
+    ]);
 
     const onlyOlder = repairDocument(
       { kind: "cv", cv: cv({ experience: [{ ...cv().experience[0]!, source: 1 }] }) },
@@ -304,5 +308,35 @@ describe("validation across languages", () => {
     );
     if (onlyOlder.kind !== "cv") return;
     expect(onlyOlder.cv.experience.map((entry) => entry.source)).toEqual([1]);
+  });
+
+  it("keeps the degree and adds no course the model left out, and swaps nothing when the model kept a degree", () => {
+    const p: Profile = {
+      ...profile(),
+      education: [
+        { ...profile().education[0]!, category: "course", degree: "Mobile Apps Academy" },
+        { ...profile().education[0]!, category: "degree", degree: "BSc in Engineering" },
+      ],
+    };
+    const education = (source: number) => ({
+      source,
+      institution: p.education[source]!.institution,
+      degree: p.education[source]!.degree,
+      grade: p.education[source]!.grade,
+      startDate: p.education[source]!.startDate,
+      endDate: p.education[source]!.endDate,
+    });
+
+    const onlyCourse = repairDocument({ kind: "cv", cv: cv({ education: [education(0)] }) }, p);
+    const onlyDegree = repairDocument({ kind: "cv", cv: cv({ education: [education(1)] }) }, p);
+
+    if (onlyCourse.kind !== "cv" || onlyDegree.kind !== "cv") return;
+    // The model kept a course and dropped the degree: the degree comes back, in the profile's order.
+    expect(onlyCourse.cv.education.map((entry) => entry.degree)).toEqual([
+      "Mobile Apps Academy",
+      "BSc in Engineering",
+    ]);
+    // The model kept the degree and left the course out: that is its choice.
+    expect(onlyDegree.cv.education.map((entry) => entry.degree)).toEqual(["BSc in Engineering"]);
   });
 });
