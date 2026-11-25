@@ -695,7 +695,7 @@
       },
       "jobDescription": "Descrizione dell'offerta",
       "guide": {
-        "unsent": "Questa candidatura non è ancora inviata. Per completarla:\n1. Scrivi il CV e la lettera di presentazione per questa offerta.\n2. Apri il modulo dell'azienda: l'app compila quello che può, tu controlli e invii di persona.\n3. Premi “Ho inviato la candidatura” così la candidatura passa a Inviata.",
+        "unsent": "Questa candidatura non è ancora inviata. Per completarla:\n1. Genera il CV e la lettera di presentazione per questa offerta.\n2. Apri il modulo dell'azienda: l'app compila quello che può, tu controlli e invii di persona.\n3. Premi “Ho inviato la candidatura” così la candidatura passa a Inviata.",
         "sent": "Hai inviato questa candidatura. Qui sotto puoi segnare com'è andata, aggiungere note e leggere la cronologia."
       },
       "noteHint": "Note private, restano solo in questa app e nell'esportazione CSV. Non vengono inviate al datore di lavoro."
