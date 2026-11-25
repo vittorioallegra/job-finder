@@ -50,6 +50,13 @@ export interface AutofillServiceOptions {
   /** How long the form may take to load. */
   loadTimeoutMs?: number;
   /**
+   * How long to wait for fields to appear after the page has loaded: many forms are drawn by
+   * scripts a moment later. The wait ends as soon as one field is found.
+   */
+  fieldWaitMs?: number;
+  /** How often the page is looked at again while waiting for fields. */
+  fieldPollMs?: number;
+  /**
    * The AI fallback. Omitted, a request for the fallback reports the AI as not configured; the
    * rules-based fill runs either way.
    */
@@ -63,6 +70,8 @@ export interface AutofillService {
 /** Statuses in which the application is being prepared: the form may be filled. */
 const PREPARING_STATUSES = new Set(["preparing", "ready"]);
 const DEFAULT_LOAD_TIMEOUT_MS = 30_000;
+const DEFAULT_FIELD_WAIT_MS = 8_000;
+const DEFAULT_FIELD_POLL_MS = 400;
 /** Field ids the page script stamps (`c<frame index>-<n>`). Any other id is ignored. */
 const FIELD_ID = /^c\d+-\d+$/;
 
@@ -91,6 +100,22 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** Looks for fields until one is found or the wait is over, since scripts may draw the form late. */
+async function discoverFieldsWhenDrawn(
+  session: CdpSession,
+  contexts: FrameContext[],
+  waitMs: number,
+  pollMs: number,
+) {
+  const deadline = Date.now() + waitMs;
+  let found = await discoverFields(session, contexts);
+  while (found.fields.length === 0 && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+    found = await discoverFields(session, contexts);
+  }
+  return found;
 }
 
 /** Lists the fields of every frame, and remembers which frame holds each one. */
@@ -171,6 +196,8 @@ async function applyActions(
  */
 export function createAutofillService(options: AutofillServiceOptions): AutofillService {
   const loadTimeoutMs = options.loadTimeoutMs ?? DEFAULT_LOAD_TIMEOUT_MS;
+  const fieldWaitMs = options.fieldWaitMs ?? DEFAULT_FIELD_WAIT_MS;
+  const fieldPollMs = options.fieldPollMs ?? DEFAULT_FIELD_POLL_MS;
   let current: ApplyWindow | null = null;
 
   async function start(request: AutofillStartRequest): Promise<AutofillStartResult> {
@@ -227,7 +254,12 @@ export function createAutofillService(options: AutofillServiceOptions): Autofill
       const contexts = await session.open().catch(() => {
         throw new AutofillFailure("debugger-failed");
       });
-      const { fields, contextOf } = await discoverFields(session, contexts);
+      const { fields, contextOf } = await discoverFieldsWhenDrawn(
+        session,
+        contexts,
+        fieldWaitMs,
+        fieldPollMs,
+      );
       const provider: AtsId | "generic" = detectAts({ url: window.currentUrl() })?.ats ?? "generic";
       const sources: AutofillSources = {
         profile: saved.profile,

@@ -1,4 +1,4 @@
-// protects=the document service generates a document only after the profile and the key are in place, stores what the engine returns, refuses saved edits that break the profile, exports and reveals PDFs only for stored documents, and writes each document in the posting's language (or the UI language when the posting's is missing or unsupported), unless the user picks another;
+// protects=the document service generates a document only after the profile and the key are in place, stores what the engine returns, refuses saved edits that break the profile, exports and reveals PDFs only for stored documents, and writes each document in the posting's language (or English when the posting's is missing or unsupported), unless the user picks another;
 // fails_when=a cloud provider is refused for lack of a consent step, a document is generated without a profile, an engine answer that breaks the rules is stored, a saved edit with an invented employer is stored, a PDF is written for a missing document, reveal opens a file that was never exported, an Italian posting gets an English document, a user's pick is ignored, or an export renders in a language other than the stored one;
 // no_claim=the engine answers and the PDF bytes are scripted doubles; the AI itself and the Chromium print are not exercised here;
 import { mkdtempSync } from "node:fs";
@@ -263,7 +263,7 @@ describe("document service", () => {
     expect(revealed).toEqual(["/store/a1/cover-letter.pdf"]);
   });
 
-  it("writes the document in the posting's language, and in the UI language when the posting's is unsupported", async () => {
+  it("writes the document in the posting's language, and in English when the posting's is unsupported, whatever the UI language", async () => {
     await database.db.update(jobs).set({ language: "it" }).where(eq(jobs.id, "j1"));
     await build().generate({ applicationId: "a1", kind: "cover-letter" });
     expect(requests[0]).toMatchObject({ language: "it" });
@@ -278,9 +278,9 @@ describe("document service", () => {
       applicationId: "a1",
       kind: "cover-letter",
     });
-    expect(requests[1]).toMatchObject({ language: "it" });
+    expect(requests[1]).toMatchObject({ language: "en" });
     expect((await build({ settings: settingsFor(false, "it") }).get("a1")).defaultLanguage).toEqual(
-      { language: "it", source: "ui" },
+      { language: "en", source: "default" },
     );
   });
 

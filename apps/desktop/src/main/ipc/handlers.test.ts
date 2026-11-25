@@ -184,7 +184,7 @@ function spyServices() {
           applicationId,
           cv: null,
           coverLetter: null,
-          defaultLanguage: { language: "en" as const, source: "ui" as const },
+          defaultLanguage: { language: "en" as const, source: "default" as const },
         };
       },
       generate: async (request: { kind: string }) => {

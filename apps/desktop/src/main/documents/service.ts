@@ -104,7 +104,7 @@ export function createDocumentService(options: DocumentServiceOptions): Document
   ): Promise<DocumentLanguageChoice> {
     const chosen = await repository.chosenLanguage(applicationId);
     if (chosen !== null) return { language: chosen, source: "chosen" };
-    return documentLanguageFor(postingLanguage, await uiLanguage());
+    return documentLanguageFor(postingLanguage);
   }
 
   return {

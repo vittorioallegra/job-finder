@@ -763,11 +763,15 @@
         },
         "hint": {
           "posting": "Default: {{language}}, the language of the posting.",
-          "ui": "Default: {{language}}, the app language. The posting's language is unknown or not supported.",
-          "chosen": "Your choice for this application."
+          "chosen": "Your choice for this application.",
+          "default": "Default: English. The posting's language is unknown or not supported."
         }
       },
-      "writtenIn": "Written in {{language}}."
+      "writtenIn": "Written in {{language}}.",
+      "writing": {
+        "cv": "Writing your CV… this can take a minute. You can leave this page: it keeps going.",
+        "cover-letter": "Writing your cover letter… this can take a minute. You can leave this page: it keeps going."
+      }
     },
     "form": {
       "heading": "Application form",

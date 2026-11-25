@@ -78,7 +78,7 @@ function documentsOf(
     applicationId: "a1",
     cv: null,
     coverLetter: null,
-    defaultLanguage: { language: "en", source: "ui" },
+    defaultLanguage: { language: "en", source: "default" },
     ...overrides,
   };
 }
@@ -241,7 +241,7 @@ describe("application documents panel", () => {
         get: vi.fn(async () =>
           documentsOf({
             coverLetter: coverLetter("Ciao.", { language: "it" }),
-            defaultLanguage: { language: "en", source: "ui" },
+            defaultLanguage: { language: "en", source: "default" },
           }),
         ),
       }),
@@ -267,6 +267,8 @@ describe("application documents panel", () => {
     await render(bridge);
     await act(async () => button(container, "Generate CV and cover letter").click());
     expect(generate).toHaveBeenCalledTimes(1);
+    // Visible feedback while it works, not only a disabled button.
+    expect(container.querySelector("[role=status]")?.textContent).toContain("Writing your CV");
 
     // The user leaves: the panel goes away, but the run is not tied to it.
     await act(async () => root.render(<div />));
@@ -277,6 +279,9 @@ describe("application documents panel", () => {
     // Back on the application while the letter is still being written.
     await render(bridge);
     expect(button(container, "Generating…").disabled).toBe(true);
+    expect(container.querySelector("[role=status]")?.textContent).toContain(
+      "Writing your cover letter",
+    );
 
     await act(async () => pending.shift()?.());
     await act(async () => {});

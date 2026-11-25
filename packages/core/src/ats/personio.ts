@@ -40,6 +40,8 @@ function parse(body: string, board: BoardRef): ParsedPage | undefined {
         source: "personio",
         sourceJobId: id,
         url: `https://${board.slug}.jobs.personio.de/job/${id}`,
+        // The posting page only reveals its form after a click; this page is the form itself.
+        applyUrl: `https://${board.slug}.jobs.personio.de/job/${id}/apply`,
         companyName: companyOf(board, field("subcompany")),
         title,
         description,

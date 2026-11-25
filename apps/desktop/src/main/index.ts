@@ -34,7 +34,6 @@ import { createDocumentService } from "./documents/service";
 import { createAutofillService } from "./autofill/service";
 import { createAutofillAi } from "./autofill/ai-fill";
 import { documentLanguageFor } from "@job-finder/core/documents/language";
-import { explanationLanguage } from "./scoring/service";
 import { openApplyWindow } from "./autofill/electron-window";
 import { documentFilePath } from "./documents/files";
 import { createPdfRenderer } from "./documents/pdf";
@@ -353,9 +352,7 @@ if (gotSingleInstanceLock) {
         engine: supervisor,
         language: async (applicationId) => {
           const posting = await documentRepository.jobOf(applicationId);
-          const { ui } = await settingsRepository.get();
-          const uiLanguage = explanationLanguage(ui.language, app.getLocale());
-          return documentLanguageFor(posting?.language, uiLanguage).language;
+          return documentLanguageFor(posting?.language).language;
         },
       }),
     });

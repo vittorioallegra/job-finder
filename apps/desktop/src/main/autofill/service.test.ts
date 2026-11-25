@@ -150,6 +150,8 @@ function serviceWith(
     saved?: { profile: Profile } | null;
     exists?: Record<DocumentKind, boolean>;
     loadTimeoutMs?: number;
+    fieldWaitMs?: number;
+    fieldPollMs?: number;
     ai?: AiFill;
   } = {},
 ) {
@@ -170,6 +172,9 @@ function serviceWith(
       return next.win;
     },
     loadTimeoutMs: overrides.loadTimeoutMs,
+    // Tests do not wait for a form that never appears, unless they say so.
+    fieldWaitMs: overrides.fieldWaitMs ?? 0,
+    fieldPollMs: overrides.fieldPollMs ?? 5,
     ai: overrides.ai,
   });
   return { service, opened };
@@ -202,6 +207,27 @@ describe("autofill service on the Greenhouse fixture", () => {
     ]);
     expect((document.querySelector("#first_name") as HTMLInputElement).value).toBe("Maria");
     expect(window.win.closed).not.toHaveBeenCalled();
+  });
+
+  it("waits for a form that scripts draw after the page has loaded, and fills it", async () => {
+    // protects=a form drawn by scripts a moment after load is found by looking again, and filled; fails_when=the fill runs once on an empty page and reports no fields; no_claim=a real page's timing, which the page does by itself;
+    const window = scriptedWindow("greenhouse.html");
+    const load = window.win.load;
+    window.win.load = async (target) => {
+      await load(target);
+      const html = document.body.innerHTML;
+      document.body.innerHTML = "";
+      setTimeout(() => {
+        document.body.innerHTML = html;
+      }, 30);
+    };
+    const { service } = serviceWith([window], { fieldWaitMs: 1000, fieldPollMs: 10 });
+
+    const result = await service.start({ applicationId: "a1" });
+
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    expect(result.filled).toEqual(expect.arrayContaining(["First Name", "Email"]));
   });
 
   it("never sends an Input command, never submits, and never clicks a button", async () => {

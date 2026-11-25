@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Loader2 } from "lucide-react";
 import { Link } from "react-router";
 import {
   DOCUMENT_AI_UNAVAILABLE_CODES,
@@ -114,6 +115,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
   const generation = useGeneration(applicationId);
   // Results up to this version are already in the page (or were stored before it opened).
   const seenVersion = useRef(generation.version);
+  const scrollTarget = useRef<DocumentKind | null>(null);
   const busy =
     generation.running !== null
       ? { kind: generation.running, action: "generate" as Action }
@@ -238,6 +240,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
   function applyGeneration(state: GenerationState) {
     if (state.version <= seenVersion.current) return;
     seenVersion.current = state.version;
+    scrollTarget.current = state.last?.records[0]?.kind ?? null;
     for (const record of state.last?.records ?? []) {
       applyRecord(record);
       setNotice(record.kind, { tone: "ok", text: t("applications.documents.generated") });
@@ -348,6 +351,16 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
         </div>
       ) : null}
 
+      {generation.running !== null ? (
+        <p
+          role="status"
+          className="flex items-center gap-2 rounded-2xl bg-app-accent-soft p-4 text-sm text-app-fg"
+        >
+          <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden="true" />
+          {t(`applications.documents.writing.${generation.running}`)}
+        </p>
+      ) : null}
+
       <SelectInput
         label={t("applications.documents.language.label")}
         options={languageOptions}
@@ -396,83 +409,93 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
         const stale =
           record !== null && record.exportedAt !== null && record.updatedAt > record.exportedAt;
         return (
-          <Card
-            as="section"
+          <div
             key={kind}
-            aria-labelledby={`application-documents-${kind}`}
-            className="flex flex-col gap-3"
+            ref={(element) => {
+              // A document that was just written comes into view, so the user sees what was done.
+              if (element && scrollTarget.current === kind) {
+                scrollTarget.current = null;
+                element.scrollIntoView?.({ behavior: "smooth", block: "start" });
+              }
+            }}
           >
-            <CardTitle level={3} id={`application-documents-${kind}`}>
-              {t(`applications.documents.kinds.${kind}`)}
-            </CardTitle>
-            {record === null ? (
-              <p className="text-sm text-app-muted">{t("applications.documents.notGenerated")}</p>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-center gap-2">
-                  {record.language !== null ? (
-                    <Badge>
-                      {t("applications.documents.writtenIn", {
-                        language: t(`applications.documents.language.options.${record.language}`),
-                      })}
-                    </Badge>
+            <Card
+              as="section"
+              aria-labelledby={`application-documents-${kind}`}
+              className="flex flex-col gap-3"
+            >
+              <CardTitle level={3} id={`application-documents-${kind}`}>
+                {t(`applications.documents.kinds.${kind}`)}
+              </CardTitle>
+              {record === null ? (
+                <p className="text-sm text-app-muted">{t("applications.documents.notGenerated")}</p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {record.language !== null ? (
+                      <Badge>
+                        {t("applications.documents.writtenIn", {
+                          language: t(`applications.documents.language.options.${record.language}`),
+                        })}
+                      </Badge>
+                    ) : null}
+                    {record.exportedAt !== null ? (
+                      <Badge tone="good">
+                        {t("applications.documents.exportedAt", {
+                          date: new Date(record.exportedAt).toLocaleString(),
+                        })}
+                      </Badge>
+                    ) : null}
+                    {stale ? <Badge tone="fair">{t("applications.documents.stale")}</Badge> : null}
+                  </div>
+                  {draft ? (
+                    <DocumentEditor
+                      draft={draft}
+                      content={record.content}
+                      onDraft={(next) => setDrafts((current) => ({ ...current, [kind]: next }))}
+                    />
                   ) : null}
-                  {record.exportedAt !== null ? (
-                    <Badge tone="good">
-                      {t("applications.documents.exportedAt", {
-                        date: new Date(record.exportedAt).toLocaleString(),
-                      })}
-                    </Badge>
-                  ) : null}
-                  {stale ? <Badge tone="fair">{t("applications.documents.stale")}</Badge> : null}
-                </div>
-                {draft ? (
-                  <DocumentEditor
-                    draft={draft}
-                    content={record.content}
-                    onDraft={(next) => setDrafts((current) => ({ ...current, [kind]: next }))}
-                  />
-                ) : null}
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={busy !== null || !draft}
-                    onClick={() => void save(kind, record)}
-                  >
-                    {working && busy?.action === "save"
-                      ? t("applications.documents.saving")
-                      : t("applications.documents.save")}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={busy !== null}
-                    onClick={() => void exportPdf(kind)}
-                  >
-                    {working && busy?.action === "export"
-                      ? t("applications.documents.exporting")
-                      : t("applications.documents.export")}
-                  </Button>
-                  {record.exportedAt !== null ? (
-                    <Button variant="secondary" size="sm" onClick={() => void reveal(kind)}>
-                      {t("applications.documents.reveal")}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={busy !== null || !draft}
+                      onClick={() => void save(kind, record)}
+                    >
+                      {working && busy?.action === "save"
+                        ? t("applications.documents.saving")
+                        : t("applications.documents.save")}
                     </Button>
-                  ) : null}
-                </div>
-              </>
-            )}
-            <div className="flex justify-end border-t border-app-border pt-3">
-              <Button size="sm" disabled={generateDisabled} onClick={() => generate([kind])}>
-                {working && busy?.action === "generate"
-                  ? t("applications.documents.generating")
-                  : record === null
-                    ? t("applications.documents.generate")
-                    : t("applications.documents.generateAgain")}
-              </Button>
-            </div>
-            {notice ? noticeView(notice) : null}
-          </Card>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={busy !== null}
+                      onClick={() => void exportPdf(kind)}
+                    >
+                      {working && busy?.action === "export"
+                        ? t("applications.documents.exporting")
+                        : t("applications.documents.export")}
+                    </Button>
+                    {record.exportedAt !== null ? (
+                      <Button variant="secondary" size="sm" onClick={() => void reveal(kind)}>
+                        {t("applications.documents.reveal")}
+                      </Button>
+                    ) : null}
+                  </div>
+                </>
+              )}
+              <div className="flex justify-end border-t border-app-border pt-3">
+                <Button size="sm" disabled={generateDisabled} onClick={() => generate([kind])}>
+                  {working && busy?.action === "generate"
+                    ? t("applications.documents.generating")
+                    : record === null
+                      ? t("applications.documents.generate")
+                      : t("applications.documents.generateAgain")}
+                </Button>
+              </div>
+              {notice ? noticeView(notice) : null}
+            </Card>
+          </div>
         );
       })}
     </section>

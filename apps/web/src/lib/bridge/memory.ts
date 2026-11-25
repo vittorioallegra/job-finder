@@ -249,7 +249,7 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
         applicationId,
         cv: null,
         coverLetter: null,
-        defaultLanguage: { language: "en" as const, source: "ui" as const },
+        defaultLanguage: { language: "en" as const, source: "default" as const },
       }),
       generate: async () => ({ ok: false as const, code: "engine-unavailable" as const }),
       setLanguage: async () => true,

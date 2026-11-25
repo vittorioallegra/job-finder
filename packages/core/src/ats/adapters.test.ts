@@ -110,6 +110,7 @@ describe("ATS adapters on recorded responses", () => {
     expect(jobs).toHaveLength(2);
     const [first] = jobs;
     expect(first?.url).toBe(`https://personio.jobs.personio.de/job/${first?.sourceJobId}`);
+    expect(first?.applyUrl).toBe(`${first?.url}/apply`);
     expect(first?.locations[0]?.city).toBe("Berlin");
     expect(first?.locations[0]?.countryCode).toBeUndefined();
     expect(first?.employmentType).toBe("full_time");
