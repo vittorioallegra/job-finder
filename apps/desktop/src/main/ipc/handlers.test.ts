@@ -133,6 +133,7 @@ function spyServices() {
       return { ok: false as const, code: "engine-unavailable" as const };
     },
     widen: async () => {},
+    status: () => ({ running: false, phase: null, stored: 0 }),
   };
   const services: IpcServices = {
     settings,
@@ -350,6 +351,7 @@ describe("IPC sender and payload guard", () => {
         "companies:add",
         "companies:list",
         "companies:remove",
+        "discovery:background-status",
         "discovery:from-profile",
         "discovery:search",
         "documents:export",

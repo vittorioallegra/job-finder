@@ -28,3 +28,13 @@ export type ProfileDiscoveryResult =
 export type DiscoverySearchResult =
   | { ok: true; candidates: DiscoveryCandidate[]; searchBlocked?: true }
   | { ok: false; code: DiscoverySearchFailureCode };
+
+/**
+ * The background reading of job directories and board lists that follows a profile search:
+ * whether it runs, what it reads now, and how many postings it has stored (this run, or the last).
+ */
+export interface BackgroundReadStatus {
+  running: boolean;
+  phase: "postings" | "boards" | null;
+  stored: number;
+}

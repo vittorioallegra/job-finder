@@ -648,6 +648,9 @@
       "nothingNew_other": "Trovate {{count}} aziende, tutte già nel tuo elenco.",
       "none": "Nessuna azienda trovata per i tuoi ruoli e luoghi. Prova ruoli più ampi, o aggiungi una chiave di ricerca nelle Impostazioni.",
       "scanning": "Sto leggendo le loro offerte.",
+      "backgroundPostings": "Sto leggendo in background gli annunci delle directory pubbliche. Salvati finora: {{count}}.",
+      "backgroundBoards": "Sto leggendo in background le pagine di lavoro di migliaia di aziende, 2000 alla volta. Salvati finora: {{count}}.",
+      "backgroundDone": "Lettura in background finita: {{count}} annunci salvati. Ogni nuova ricerca ne legge altri.",
       "blocked": "La ricerca senza chiave è stata bloccata; una chiave di ricerca gratuita nelle Impostazioni dà più risultati.",
       "failure": {
         "no-roles": "Aggiungi prima almeno un ruolo nel profilo.",

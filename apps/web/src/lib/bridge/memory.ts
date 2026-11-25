@@ -265,6 +265,7 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
     discovery: {
       search: async () =>
         structuredClone(options.discovery ?? { ok: false, code: "engine-unavailable" }),
+      backgroundStatus: async () => ({ running: false, phase: null, stored: 0 }),
       fromProfile: async () =>
         structuredClone(options.profileDiscovery ?? { ok: false, code: "engine-unavailable" }),
     },

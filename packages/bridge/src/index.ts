@@ -34,6 +34,7 @@ import type { CvImportRequest, CvImportResult, Profile, ProfileRecord } from "./
 import type {
   DiscoverySearchRequest,
   DiscoverySearchResult,
+  BackgroundReadStatus,
   ProfileDiscoveryResult,
 } from "./discovery";
 import type { ScoreStartRequest, ScoreStartResult } from "./scoring";
@@ -162,6 +163,8 @@ export interface JobFinderBridge {
     search(input: DiscoverySearchRequest): Promise<DiscoverySearchResult>;
     /** Finds and adds the companies the profile's roles and places point to, then scans them. */
     fromProfile(): Promise<ProfileDiscoveryResult>;
+    /** What the background reading that follows a profile search is doing. */
+    backgroundStatus(): Promise<BackgroundReadStatus>;
   };
   readonly app: {
     /** The engine state and the newer release, if the update check found one. */

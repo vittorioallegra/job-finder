@@ -389,8 +389,9 @@ if (gotSingleInstanceLock) {
       wideCursor: directoryJobStore.wideCursor,
       wideChecked: directoryJobStore.wideChecked,
       storeJobs: async (postings) => {
-        await directoryJobStore.store(postings);
+        const stored = await directoryJobStore.store(postings);
         await refreshCompanyCountries(database.db);
+        return stored;
       },
       knownHosts: async () =>
         (await ingestRepository.listCompanies()).flatMap((company) => {

@@ -6,7 +6,12 @@ import type {
 } from "@job-finder/core/discovery/types";
 import type { NormalizedJob } from "@job-finder/core/normalize";
 import { WIDE_SLICE } from "@job-finder/core/discovery";
-import type { DiscoverySearchRequest, DiscoverySearchResult, SecretName } from "@job-finder/bridge";
+import type {
+  BackgroundReadStatus,
+  DiscoverySearchRequest,
+  DiscoverySearchResult,
+  SecretName,
+} from "@job-finder/bridge";
 import { EngineUnavailableError } from "../engine/supervisor";
 import type { SecretStore } from "../secrets/store";
 import type { SettingsRepository } from "../settings/repository";
@@ -27,6 +32,8 @@ export interface DiscoveryService {
    * places. One at a time; a call while one runs does nothing. Never throws.
    */
   widen(request: DiscoverySearchRequest): Promise<void>;
+  /** What the background reading is doing now, or did last. */
+  status(): BackgroundReadStatus;
 }
 
 export interface DiscoveryServiceOptions {
@@ -61,11 +68,18 @@ const KEYED_SECRETS: Record<KeyedSearchConfig["provider"], SecretName> = {
  */
 export function createDiscoveryService(options: DiscoveryServiceOptions): DiscoveryService {
   let widening = false;
+  let status: BackgroundReadStatus = { running: false, phase: null, stored: 0 };
   return {
+    status: () => ({ ...status }),
     async widen(request) {
       const current = options.engine();
       if (!current || widening || !options.storeJobs || !options.wideCursor) return;
       widening = true;
+      status = { running: true, phase: "postings", stored: 0 };
+      const keep = async (jobs: NormalizedJob[]): Promise<void> => {
+        const stored = await options.storeJobs?.(jobs);
+        if (typeof stored === "number") status = { ...status, stored: status.stored + stored };
+      };
       try {
         // The postings of the job directories first, then the next slice of the board lists.
         const postings = await current.discoverCompanies(
@@ -73,8 +87,9 @@ export function createDiscoveryService(options: DiscoveryServiceOptions): Discov
           { duckduckgo: false, keyed: [] },
         );
         if (postings.ok && postings.jobs && postings.jobs.length > 0) {
-          await options.storeJobs(postings.jobs);
+          await keep(postings.jobs);
         }
+        status = { ...status, phase: "boards" };
         const offset = await options.wideCursor.get();
         const knownBoards = options.knownBoards ? await options.knownBoards() : [];
         const outcome = await current.discoverCompanies(
@@ -88,13 +103,14 @@ export function createDiscoveryService(options: DiscoveryServiceOptions): Discov
           { duckduckgo: false, keyed: [] },
         );
         if (!outcome.ok) return;
-        if (outcome.jobs && outcome.jobs.length > 0) await options.storeJobs(outcome.jobs);
+        if (outcome.jobs && outcome.jobs.length > 0) await keep(outcome.jobs);
         if (outcome.wideChecked) await options.wideChecked?.record(outcome.wideChecked);
         if (outcome.wideNext !== undefined) await options.wideCursor.set(outcome.wideNext);
       } catch {
         // A failed wide scan only means no new postings this time.
       } finally {
         widening = false;
+        status = { ...status, running: false, phase: null };
       }
     },
     async search(request) {

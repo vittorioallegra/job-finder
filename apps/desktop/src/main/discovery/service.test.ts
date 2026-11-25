@@ -167,4 +167,49 @@ describe("discovery service", () => {
     expect(result).toEqual({ ok: false, code: "search-failed" });
     expect(JSON.stringify(result)).not.toContain("secret detail");
   });
+
+  it("reads the postings first and then the next slice of the board lists in the background, reports what it stored, and remembers where it stopped", async () => {
+    const asked: Asked[] = [];
+    const posting = { title: "x" } as never;
+    const answers: DiscoveryOutcome[] = [
+      { ok: true, candidates: [], jobs: [posting, posting] },
+      {
+        ok: true,
+        candidates: [],
+        jobs: [posting],
+        wideNext: 2000,
+        wideChecked: [{ board: "greenhouse/gone", kind: "dead" }],
+      },
+    ];
+    let cursor = 0;
+    const checked: unknown[] = [];
+    const seenWhileRunning: boolean[] = [];
+    const service = createDiscoveryService({
+      engine: () => engineAnswering(async () => answers.shift() as DiscoveryOutcome, asked),
+      settings: settingsWith(),
+      secrets: noKeys,
+      storeJobs: async (jobs) => {
+        seenWhileRunning.push(service.status().running);
+        return jobs.length;
+      },
+      wideCursor: { get: async () => cursor, set: async (value) => void (cursor = value) },
+      wideChecked: {
+        skip: async () => ["greenhouse/old"],
+        record: async (e) => void checked.push(...e),
+      },
+    });
+
+    expect(service.status()).toEqual({ running: false, phase: null, stored: 0 });
+    await service.widen({ keywords: ["dev"], locations: ["Italia"] });
+
+    expect(asked[0]?.criteria).toMatchObject({ postings: true });
+    expect(asked[1]?.criteria).toMatchObject({
+      wide: { offset: 0, count: expect.any(Number) },
+      skipBoards: ["greenhouse/old"],
+    });
+    expect(seenWhileRunning).toEqual([true, true]);
+    expect(service.status()).toEqual({ running: false, phase: null, stored: 3 });
+    expect(cursor).toBe(2000);
+    expect(checked).toEqual([{ board: "greenhouse/gone", kind: "dead" }]);
+  });
 });

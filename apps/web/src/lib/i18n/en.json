@@ -648,6 +648,9 @@
       "nothingNew_other": "Found {{count}} companies, all already in your list.",
       "none": "No company found for your roles and places. Try broader roles, or add a search key in Settings.",
       "scanning": "Their jobs are being read now.",
+      "backgroundPostings": "Reading the postings of public job directories in the background. Stored so far: {{count}}.",
+      "backgroundBoards": "Reading the job pages of thousands of companies in the background, 2000 at a time. Stored so far: {{count}}.",
+      "backgroundDone": "Background reading finished: {{count}} postings stored. Each new search reads more.",
       "blocked": "The keyless search was blocked; a free search key in Settings gives more results.",
       "failure": {
         "no-roles": "Add at least one role in your profile first.",

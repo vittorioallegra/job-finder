@@ -179,6 +179,8 @@ export async function handleInvoke(
       return services.ingestion.start((payload as IngestStartRequest | undefined)?.companyId);
     case "discovery:search":
       return services.discovery.search(payload as DiscoverySearchRequest);
+    case "discovery:background-status":
+      return services.discovery.status();
     case "discovery:from-profile":
       return services.profileDiscovery.run();
     case "ingest:cancel":

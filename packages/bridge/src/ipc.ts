@@ -19,7 +19,11 @@ import {
   IngestCancelRequestSchema,
   IngestStartRequestSchema,
 } from "./ingest";
-import type { DiscoverySearchResult, ProfileDiscoveryResult } from "./discovery";
+import type {
+  BackgroundReadStatus,
+  DiscoverySearchResult,
+  ProfileDiscoveryResult,
+} from "./discovery";
 import { DiscoverySearchRequestSchema } from "./discovery";
 import type {
   ApplicationDocuments,
@@ -102,6 +106,7 @@ export const IPC_REQUEST_SCHEMAS = {
   "ingest:latest": z.undefined(),
   "discovery:search": DiscoverySearchRequestSchema,
   "discovery:from-profile": z.undefined(),
+  "discovery:background-status": z.undefined(),
   "scores:start": ScoreStartRequestSchema,
   "documents:get": DocumentGetRequestSchema,
   "documents:generate": DocumentGenerateRequestSchema,
@@ -150,6 +155,7 @@ export interface IpcResponses {
   "ingest:latest": LatestRun | null;
   "discovery:search": DiscoverySearchResult;
   "discovery:from-profile": ProfileDiscoveryResult;
+  "discovery:background-status": BackgroundReadStatus;
   "scores:start": ScoreStartResult;
   "documents:get": ApplicationDocuments;
   "documents:generate": DocumentGenerateResult;

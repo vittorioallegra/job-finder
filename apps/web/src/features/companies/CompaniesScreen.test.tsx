@@ -178,6 +178,23 @@ describe("companies screen", () => {
     expect(container.textContent).toContain("Their jobs are being read now.");
   });
 
+  it("shows what the background reading is doing, and how much it stored once it ended", async () => {
+    const memory = createMemoryBridge({ companies: [] });
+    const withStatus = (status: { running: boolean; phase: "boards" | null; stored: number }) =>
+      ({
+        ...memory,
+        discovery: { ...memory.discovery, backgroundStatus: async () => status },
+      }) as JobFinderBridge;
+
+    await render(withStatus({ running: true, phase: "boards", stored: 7 }));
+    expect(container.textContent).toContain("2000 at a time. Stored so far: 7.");
+
+    act(() => root.unmount());
+    root = createRoot(container);
+    await render(withStatus({ running: false, phase: null, stored: 9 }));
+    expect(container.textContent).toContain("Background reading finished: 9 postings stored.");
+  });
+
   it("points to the profile when it names no role, and offers no search", async () => {
     await render(createMemoryBridge({ companies: [acme], profile: emptyProfile() }));
     expect(container.textContent).toContain("Say which roles you are looking for in your profile");

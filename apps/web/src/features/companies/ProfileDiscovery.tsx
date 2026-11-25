@@ -2,7 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 import { Sparkles } from "lucide-react";
-import type { JobFinderBridge, ProfileDiscoveryResult } from "@job-finder/bridge";
+import type {
+  BackgroundReadStatus,
+  JobFinderBridge,
+  ProfileDiscoveryResult,
+} from "@job-finder/bridge";
 import { Button } from "../../components/ui/Button";
 import { Card, CardTitle } from "../../components/ui/Card";
 
@@ -52,6 +56,26 @@ export function ProfileDiscovery({ bridge, onAdded }: ProfileDiscoveryProps) {
     }
   }, [bridge, onAdded]);
 
+  // The reading that follows a search runs in the background: show what it is doing.
+  const [background, setBackground] = useState<BackgroundReadStatus | null>(null);
+  useEffect(() => {
+    let active = true;
+    const poll = (): void => {
+      bridge.discovery.backgroundStatus().then(
+        (status) => {
+          if (active) setBackground(status);
+        },
+        () => {},
+      );
+    };
+    poll();
+    const timer = setInterval(poll, 3000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [bridge]);
+
   const [params, setParams] = useSearchParams();
   const wantsRun = params.get("discover") === "1";
   const runOnce = useRef(run);
@@ -95,6 +119,20 @@ export function ProfileDiscovery({ bridge, onAdded }: ProfileDiscoveryProps) {
         </p>
       ) : null}
       {result ? <Outcome result={result} /> : null}
+      {background?.running ? (
+        <p role="status" className="text-sm text-app-muted">
+          {t(
+            background.phase === "boards"
+              ? "companies.profileSearch.backgroundBoards"
+              : "companies.profileSearch.backgroundPostings",
+            { count: background.stored },
+          )}
+        </p>
+      ) : background && background.stored > 0 ? (
+        <p role="status" className="text-sm text-app-muted">
+          {t("companies.profileSearch.backgroundDone", { count: background.stored })}
+        </p>
+      ) : null}
     </Card>
   );
 }
