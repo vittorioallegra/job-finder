@@ -45,10 +45,20 @@ export interface AdapterFailure {
 }
 
 /**
- * `ok: true` means the board was read completely: every page, no failure in between. Only a
- * complete scan may later mark jobs as closed, so a failure never returns partial jobs.
+ * `ok: true` means the board was read without failure. Only a complete read (`complete` not
+ * false) may later mark jobs as closed, so a failure never returns partial jobs.
  */
-export type AdapterResult = { ok: true; jobs: NormalizedJob[] } | AdapterFailure;
+export type AdapterResult =
+  | {
+      ok: true;
+      jobs: NormalizedJob[];
+      /**
+       * False when the read found postings but may have missed others (a listing that continues,
+       * postings read from markup). The jobs are stored, but nothing is closed.
+       */
+      complete?: boolean;
+    }
+  | AdapterFailure;
 
 export interface FetchOptions {
   signal?: AbortSignal;

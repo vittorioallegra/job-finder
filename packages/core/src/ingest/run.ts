@@ -140,7 +140,8 @@ export async function runIngestion(options: RunIngestionOptions): Promise<Ingest
         await store.persist(plan);
       }
       if (signal.aborted) return { kind: "cancelled" };
-      const closedCount = await store.closeMissing(company.id, runId, now());
+      const closedCount =
+        result.complete === false ? 0 : await store.closeMissing(company.id, runId, now());
       return { kind: "scanned", jobCount: jobs.length, closedCount };
     } catch {
       return signal.aborted ? { kind: "cancelled" } : { kind: "failed", code: "storage-failed" };

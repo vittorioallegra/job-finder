@@ -1,5 +1,5 @@
-// protects=a generic careers page yields jobs only from a complete, successful read: it makes no request without an AI provider, renders only a page with no readable text, follows posting links one hop on the careers host, keeps a job whose posting page fails, and fails with no jobs whenever the listing is incomplete, empty, invalid or too large;
-// fails_when=a scan returns jobs after a failed page or an incomplete listing, a request is made without an AI provider, a posting link off the careers host is fetched, a page with no postings counts as a complete empty scan, an invalid answer is returned unchecked, or an oversized page is cut and read as complete;
+// protects=a generic careers page yields jobs only from a complete, successful read: it reads the postings a company declares as JobPosting data first (no AI), renders only a page with no readable text, follows posting links one hop on the careers host, keeps a job whose posting page fails, and keeps the postings of a listing that continues without closing any, and fails with no jobs when the listing is empty, invalid or too large;
+// fails_when=a scan returns jobs after a failed page, a listing that continues closes postings, a posting link off the careers host is fetched, a page with no postings counts as a complete empty scan, an invalid answer is returned unchecked, or an oversized page is cut and read as complete;
 // no_claim=real career pages and real model answers: the pages are hand-written fixtures and the model answers are scripted test doubles, so layouts and model quality beyond them are not shown;
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -181,23 +181,36 @@ describe("scanCareersPage", () => {
     expect(renders).toBe(0);
   });
 
-  it("makes no request at all when no AI provider is configured", async () => {
+  it("fails when no AI provider is configured and the company's pages declare no postings", async () => {
     const { http, requests } = scriptedWeb({ [CAREERS]: { body: fixture("static-listing.html") } });
 
     const result = await scanCareersPage(company, { http });
 
     expect(result).toMatchObject({ ok: false, code: "ai-unavailable" });
-    expect(requests).toEqual([]);
+    // Only the company's own pages are read, never a posting page.
+    expect(requests.every((url) => url.startsWith("https://careers.acme.example.test/"))).toBe(
+      true,
+    );
   });
 
-  it("fails with no jobs when the model reports that the listing continues", async () => {
+  it("keeps the postings of a listing that continues, but reads it as not complete", async () => {
     const { http } = scriptedWeb({ [CAREERS]: { body: fixture("static-listing.html") } });
     const { ai } = scriptedAi([listing(false, [{ title: "Data Analyst", url: ANALYST }])]);
 
     const result = await scanCareersPage(company, { http, ai });
 
-    expect(result).toMatchObject({ ok: false, code: "incomplete-listing" });
-    expect(result).not.toHaveProperty("jobs");
+    expect(result).toMatchObject({ ok: true, complete: false });
+    expect(result.ok && result.jobs.map((job) => job.title)).toEqual(["Data Analyst"]);
+  });
+
+  it("fails when a listing that continues shows no posting", async () => {
+    const { http } = scriptedWeb({ [CAREERS]: { body: fixture("static-listing.html") } });
+    const { ai } = scriptedAi([listing(false, [])]);
+
+    expect(await scanCareersPage(company, { http, ai })).toMatchObject({
+      ok: false,
+      code: "incomplete-listing",
+    });
   });
 
   it("fails with no-parseable-jobs when the model finds no postings, and never reads that as an empty complete scan", async () => {

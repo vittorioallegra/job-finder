@@ -7,6 +7,7 @@ import type { HttpClient, PageRenderErrorCode, PageRenderResult } from "../net";
 import { htmlToText, type NormalizedJob } from "../normalize";
 import { listingPrompt, ListingSchema, type Listing } from "./listing";
 import { reduceCareersPage, type ReducedCareersPage } from "./reduce";
+import { MAX_SITEMAP_POSTINGS, postingsFromPage, sitemapPostingUrls } from "./structured";
 
 /** Source id of postings read from a generic careers page. */
 export const CAREERS_SOURCE = "careers-page";
@@ -67,10 +68,18 @@ export async function scanCareersPage(
   const fail = (code: AdapterFailureCode, url = careersUrl, status?: number): AdapterFailure =>
     status === undefined ? { ok: false, code, url } : { ok: false, code, url, status };
 
-  if (!ai) return fail("ai-unavailable");
-
   const page = await http.get(careersUrl, { signal });
   if (!page.ok) return fail(page.code, page.url, page.status);
+
+  // The company's own markup comes first: postings it declares as JobPosting data, then the ones
+  // its sitemap lists. No model reads them, so there is nothing to misread and nothing to pay.
+  const declared = postingsFromPage(page.body, careersUrl, company.name);
+  if (declared.length > 0) return { ok: true, jobs: declared, complete: false };
+  const fromSitemap = await readSitemapPostings(company, http, signal);
+  if (signal?.aborted) return fail("aborted");
+  if (fromSitemap !== undefined) return fromSitemap;
+
+  if (!ai) return fail("ai-unavailable");
 
   let reduced: ReducedCareersPage = reduceCareersPage(page.body, careersUrl);
   if (reduced.text.length < MIN_STATIC_TEXT_CHARS && options.renderPage) {
@@ -102,8 +111,11 @@ export async function scanCareersPage(
     return fail("ai-unavailable");
   }
 
-  if (!listing.listingComplete) return fail("incomplete-listing");
-  if (listing.postings.length === 0) return fail("no-parseable-jobs");
+  // A listing that continues is still read: its postings are stored, but none is closed.
+  const listingComplete = listing.listingComplete;
+  if (listing.postings.length === 0) {
+    return fail(listingComplete ? "no-parseable-jobs" : "incomplete-listing");
+  }
   if (listing.postings.length > MAX_POSTINGS) return fail("too-large");
 
   const postings = listPostings(listing, reduced, company);
@@ -130,7 +142,33 @@ export async function scanCareersPage(
       }),
     );
   }
-  return { ok: true, jobs };
+  return listingComplete ? { ok: true, jobs } : { ok: true, jobs, complete: false };
+}
+
+/**
+ * Postings listed by the company's sitemap, each read from its own page's JobPosting data. Returns
+ * undefined when the sitemap lists no posting pages or none of them carries the data.
+ */
+async function readSitemapPostings(
+  company: CareersCompany,
+  http: HttpClient,
+  signal?: AbortSignal,
+): Promise<AdapterResult | undefined> {
+  let urls: string[];
+  try {
+    urls = await sitemapPostingUrls(company.careersUrl, http, signal);
+  } catch {
+    return undefined;
+  }
+  if (urls.length === 0) return undefined;
+  const jobs: NormalizedJob[] = [];
+  for (const url of urls.slice(0, MAX_SITEMAP_POSTINGS)) {
+    if (signal?.aborted) return undefined;
+    const detail = await http.get(url, { signal });
+    if (!detail.ok) continue;
+    jobs.push(...postingsFromPage(detail.body, url, company.name));
+  }
+  return jobs.length === 0 ? undefined : { ok: true, jobs, complete: false };
 }
 
 /**

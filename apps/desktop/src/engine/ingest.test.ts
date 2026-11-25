@@ -111,7 +111,18 @@ describe("ingestion controller", () => {
     const controller = createIngestController({
       db,
       send: (message) => sent.push(message),
-      http: networkDown,
+      // The company's page answers but declares no postings, and no AI can read it.
+      http: {
+        ...networkDown,
+        get: async (url) => ({
+          ok: true as const,
+          url,
+          status: 200,
+          contentType: "text/html",
+          body: "<html></html>",
+          cached: false,
+        }),
+      },
       renderPage: noRender,
       now: () => 5,
     });
