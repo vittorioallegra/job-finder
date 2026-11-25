@@ -46,6 +46,13 @@ export const companies = sqliteTable("companies", {
    * its jobs name no country. Kept up to date after each scan; the places filter reads it.
    */
   country: text("country"),
+  /**
+   * How the company came to be followed: "manual" when the user added it, "discovery" when a company
+   * search did. Only a discovered company is dropped again when it has nothing for the profile.
+   */
+  origin: text("origin", { enum: ["manual", "discovery"] })
+    .notNull()
+    .default("discovery"),
 });
 
 /**

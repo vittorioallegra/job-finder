@@ -148,6 +148,7 @@ function spyServices() {
     profile,
     cvImport,
     repository,
+    companySummary: async () => ({ withOffers: 0 }),
     ingestion,
     discovery,
     profileDiscovery: {
@@ -350,6 +351,7 @@ describe("IPC sender and payload guard", () => {
         "autofill:start",
         "companies:add",
         "companies:list",
+        "companies:summary",
         "companies:remove",
         "discovery:background-status",
         "discovery:from-profile",

@@ -1,0 +1,1 @@
+ALTER TABLE `companies` ADD `origin` text DEFAULT 'discovery' NOT NULL;

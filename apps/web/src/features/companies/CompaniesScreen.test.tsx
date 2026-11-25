@@ -119,7 +119,7 @@ describe("companies screen", () => {
     };
     await render(createMemoryBridge({ companies: [acme, failed, empty, broken] }));
 
-    expect(container.textContent).toContain("Board: greenhouse");
+    expect(container.textContent).toContain("Job page on greenhouse");
     // Where each company is based, or that it is not known yet.
     expect(container.textContent).toContain("Based in Italy");
     expect(container.textContent).toContain("Country not known yet");

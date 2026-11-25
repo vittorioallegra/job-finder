@@ -129,6 +129,7 @@ export function createDirectoryJobStore(
             createdAt: startedAt,
             excludedAt: null,
             country: null,
+            origin: "discovery" as const,
           };
           await db.insert(companies).values(created);
           company = created;

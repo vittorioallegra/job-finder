@@ -572,6 +572,8 @@
   "companies": {
     "title": "Sources",
     "intro": "The companies whose job boards the app reads. It adds them by itself from what you are looking for; here you can add a specific company, or remove one you don't want.",
+    "offersFrom_one": "The jobs come from {{count}} company in all, the ones you follow and those found through public directories.",
+    "offersFrom_other": "The jobs come from {{count}} companies in all, the ones you follow and those found through public directories.",
     "backJobs": "Back to jobs",
     "loading": "Loading companies…",
     "loadFailed": "Companies could not be loaded.",
@@ -579,7 +581,7 @@
     "list": {
       "heading": "Companies",
       "empty": "No companies yet. Find boards below or add one by its careers page link.",
-      "board": "Board: {{ats}}",
+      "board": "Job page on {{ats}}",
       "careersPage": "Careers page, read with AI",
       "summary_one": "{{count}} company followed",
       "summary_other": "{{count}} companies followed",

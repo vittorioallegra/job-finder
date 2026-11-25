@@ -64,6 +64,8 @@ export interface IpcServices {
   profile: ProfileRepository;
   cvImport: CvImportService;
   repository: IngestRepository;
+  /** How many companies have open jobs in the profile's places. */
+  companySummary: () => Promise<{ withOffers: number }>;
   ingestion: IngestionService;
   discovery: DiscoveryService;
   profileDiscovery: ProfileDiscovery;
@@ -148,6 +150,8 @@ export async function handleInvoke(
       return undefined;
     case "companies:list":
       return services.repository.listCompanies();
+    case "companies:summary":
+      return services.companySummary();
     case "companies:add":
       // Added by hand: a company removed earlier comes back.
       return services.repository.addCompany({ ...(payload as CompanyAddRequest), restore: true });

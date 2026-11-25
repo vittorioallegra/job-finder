@@ -125,6 +125,7 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
       cancelImport: async () => undefined,
     },
     companies: {
+      summary: async () => ({ withOffers: 0 }),
       list: async () => structuredClone(companies),
       // No ATS detection here: the company is stored without a board, so it cannot be scanned.
       add: async (input) => {

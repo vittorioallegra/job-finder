@@ -26,6 +26,7 @@ import { createIngestRepository } from "./ingest/repository";
 import { createIngestionService } from "./ingest/service";
 import { createDiscoveryService } from "./discovery/service";
 import { createDirectoryJobStore } from "./ingest/directory-jobs";
+import { companiesWithOffers, pruneOffProfileCompanies } from "./ingest/prune";
 import { createProfileDiscovery } from "./discovery/from-profile";
 import { createProfileRepository } from "./profile/repository";
 import { createScoringService } from "./scoring/service";
@@ -225,6 +226,7 @@ if (gotSingleInstanceLock) {
         // The scan changed the jobs, so the companies' countries are read again before the
         // scheduler counts the new matches (which depend on them).
         void refreshCompanyCountries(database.db)
+          .then(() => pruneNow())
           .catch((error: unknown) =>
             logger.log("warn", `could not refresh company countries: ${String(error)}`),
           )
@@ -303,6 +305,16 @@ if (gotSingleInstanceLock) {
       engine: supervisor,
     });
     const profileRepository = createProfileRepository(database.db);
+    /** Drops the companies a search added that have nothing for the profile's places. */
+    const pruneNow = async (): Promise<void> => {
+      const preferences = (await profileRepository.get())?.profile.preferences ?? null;
+      const dropped = await pruneOffProfileCompanies(database.db, preferences);
+      if (dropped > 0)
+        logger.log("info", `dropped ${dropped} companies with no job in the profile's places`);
+    };
+    void pruneNow().catch((error: unknown) =>
+      logger.log("warn", `could not drop off-profile companies: ${String(error)}`),
+    );
     const cvImport = createCvImportService({
       settings: settingsRepository,
       secrets: secretStore,
@@ -559,6 +571,12 @@ if (gotSingleInstanceLock) {
         profile: profileRepository,
         cvImport,
         repository: ingestRepository,
+        companySummary: async () => ({
+          withOffers: await companiesWithOffers(
+            database.db,
+            (await profileRepository.get())?.profile.preferences ?? null,
+          ),
+        }),
         ingestion,
         discovery,
         profileDiscovery,

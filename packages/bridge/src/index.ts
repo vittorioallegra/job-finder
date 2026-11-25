@@ -96,6 +96,8 @@ export interface JobFinderBridge {
   readonly companies: {
     /** Companies the engine scans, in the order they were added. */
     list(): Promise<CompanyRecord[]>;
+    /** How many companies, followed or not, have open jobs in the profile's places. */
+    summary(): Promise<{ withOffers: number }>;
     /**
      * Removes a company from the sources: no more scans, its jobs leave the lists, and the company
      * search does not add it again. Adding it by hand brings it back. Resolves false when unknown.

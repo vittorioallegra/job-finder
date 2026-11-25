@@ -572,6 +572,8 @@
   "companies": {
     "title": "Fonti",
     "intro": "Le aziende di cui l'app legge le bacheche di lavoro. Le aggiunge da sola in base a cosa cerchi; qui puoi aggiungere un'azienda precisa o toglierne una che non ti interessa.",
+    "offersFrom_one": "Le offerte arrivano da {{count}} azienda in tutto, quelle che segui e quelle trovate dalle directory pubbliche.",
+    "offersFrom_other": "Le offerte arrivano da {{count}} aziende in tutto, quelle che segui e quelle trovate dalle directory pubbliche.",
     "backJobs": "Torna alle offerte",
     "loading": "Caricamento delle aziende…",
     "loadFailed": "Non è stato possibile caricare le aziende.",
@@ -579,7 +581,7 @@
     "list": {
       "heading": "Aziende",
       "empty": "Nessuna azienda ancora. Cerca bacheche qui sotto o aggiungine una con il link alla pagina di lavoro.",
-      "board": "Bacheca: {{ats}}",
+      "board": "Pagina di lavoro su {{ats}}",
       "careersPage": "Pagina di lavoro, letta con l'IA",
       "summary_one": "{{count}} azienda seguita",
       "summary_other": "{{count}} aziende seguite",

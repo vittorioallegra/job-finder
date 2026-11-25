@@ -61,6 +61,20 @@ export function CompaniesScreen() {
   const { t, i18n } = useTranslation();
   const bridge = useBridge();
   const [load, setLoad] = useState<LoadState>({ status: "loading" });
+  // How many companies the offers come from in all: the followed ones and those the directories gave.
+  const [withOffers, setWithOffers] = useState<number | null>(null);
+  useEffect(() => {
+    let active = true;
+    bridge.companies.summary().then(
+      (summary) => {
+        if (active) setWithOffers(summary.withOffers);
+      },
+      () => {},
+    );
+    return () => {
+      active = false;
+    };
+  }, [bridge]);
   const [keywords, setKeywords] = useState("");
   const [locations, setLocations] = useState("");
   const [search, setSearch] = useState<SearchState>({ status: "idle" });
@@ -262,7 +276,11 @@ export function CompaniesScreen() {
           </Link>
         }
         title={t("companies.title")}
-        description={t("companies.intro")}
+        description={
+          withOffers !== null && withOffers > 0
+            ? `${t("companies.intro")} ${t("companies.offersFrom", { count: withOffers })}`
+            : t("companies.intro")
+        }
       />
 
       {load.status === "loading" ? (

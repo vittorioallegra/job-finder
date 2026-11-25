@@ -186,7 +186,8 @@ export function createIngestRepository(db: AppDb): IngestRepository {
         slug: board?.slug ?? null,
         createdAt: now,
       };
-      await db.insert(companies).values(row);
+      // Added by hand (`restore`) or found by a company search: only the latter can be dropped again.
+      await db.insert(companies).values({ ...row, origin: input.restore ? "manual" : "discovery" });
       return { ok: true, company: { ...row, country: null, lastScan: null } };
     },
 
