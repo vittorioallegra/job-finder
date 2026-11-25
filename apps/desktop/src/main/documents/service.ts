@@ -1,6 +1,5 @@
 import {
   documentLanguageFor,
-  hasAiConsent,
   type ApplicationDocuments,
   type DocumentLanguage,
   type DocumentExportRequest,
@@ -81,9 +80,8 @@ export function documentLabels(language: MainLanguage): DocumentLabels {
 }
 
 /**
- * Main-process side of the documents. Generation checks the profile and the consent for a cloud
- * provider (the profile and the posting leave the machine), reads the AI settings and the key, and
- * hands the call to the engine; the answer is stored here. Saved edits and exports are checked
+ * Main-process side of the documents. Generation checks the profile, reads the AI settings and the
+ * key, and hands the call to the engine; the answer is stored here. Saved edits and exports are checked
  * against the profile before they are stored or rendered.
  */
 export function createDocumentService(options: DocumentServiceOptions): DocumentService {
@@ -112,9 +110,6 @@ export function createDocumentService(options: DocumentServiceOptions): Document
       const saved = await options.profile.get();
       if (saved === null) return { ok: false, code: "no-profile" };
       const { ai } = await options.settings.get();
-      if (!hasAiConsent(ai, request)) {
-        return { ok: false, code: "consent-required" };
-      }
       const language: DocumentLanguage =
         request.language ?? documentLanguageFor(postingLanguage, await uiLanguage()).language;
       const apiKey = await readAiKey(options.secrets, ai);

@@ -4,8 +4,6 @@ import { Link } from "react-router";
 import {
   DOCUMENT_AI_UNAVAILABLE_CODES,
   DOCUMENT_LANGUAGES,
-  aiConsentTarget,
-  isCloudAiEndpoint,
   type DocumentLanguage,
   type ApplicationDocuments as ApplicationDocumentsRecord,
   type DocumentContent,
@@ -14,12 +12,10 @@ import {
   type DocumentKind,
   type DocumentRecord,
 } from "@job-finder/bridge";
-import { useAiConsent } from "../../lib/useAiConsent";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Badge } from "../../components/ui/Badge";
 import { Button, buttonClass } from "../../components/ui/Button";
 import { Card, CardTitle } from "../../components/ui/Card";
-import { CheckboxInput } from "../../components/ui/CheckboxInput";
 import { SelectInput } from "../../components/ui/SelectInput";
 import { TextArea } from "../../components/ui/TextArea";
 
@@ -43,11 +39,6 @@ interface Notice {
 }
 
 interface AiState {
-  /** Consent is asked when the provider is a cloud service. */
-  cloud: boolean;
-  /** The provider and host a consent is given for. */
-  target: string;
-  provider: string;
   /** A model (and, for a local endpoint, a base URL) is set up. */
   configured: boolean;
 }
@@ -100,13 +91,12 @@ function contentOf(record: DocumentRecord, draft: Draft): DocumentContent {
 
 interface ApplicationDocumentsProps {
   applicationId: string;
-  /** Generate both documents once on opening, when none exists and no consent step is needed. */
+  /** Generate both documents once on opening, when none exists. */
   autoGenerate?: boolean;
 }
 
 /**
- * The CV and cover letter of one application: generate them with the AI (after consent for a cloud
- * provider), edit the text, save it after the profile checks, and export a PDF. Nothing is sent to
+ * The CV and cover letter of one application: generate them with the AI, edit the text, save it after the profile checks, and export a PDF. Nothing is sent to
  * an employer; the app never submits.
  */
 export function ApplicationDocuments({
@@ -118,7 +108,6 @@ export function ApplicationDocuments({
   const [load, setLoad] = useState<LoadState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [ai, setAi] = useState<AiState | null>(null);
-  const { consent, consentTarget, setConsent } = useAiConsent(ai?.target ?? null);
   const [language, setLanguage] = useState<DocumentLanguage>("en");
   const [drafts, setDrafts] = useState<Partial<Record<DocumentKind, Draft>>>({});
   const [busy, setBusy] = useState<{ kind: DocumentKind; action: Action } | null>(null);
@@ -131,9 +120,6 @@ export function ApplicationDocuments({
         if (!active) return;
         const { ai: aiSettings } = settings;
         setAi({
-          cloud: isCloudAiEndpoint(aiSettings),
-          target: aiConsentTarget(aiSettings),
-          provider: aiSettings.provider,
           configured:
             aiSettings.model.trim() !== "" &&
             (aiSettings.provider !== "openai-compatible" || aiSettings.baseUrl.trim() !== ""),
@@ -182,7 +168,6 @@ export function ApplicationDocuments({
   }
 
   const { documents } = load;
-  const providerName = ai === null ? "" : t(`settings.ai.providers.${ai.provider}`);
   const languageOptions = DOCUMENT_LANGUAGES.map((code) => ({
     value: code,
     label: t(`applications.documents.language.options.${code}`),
@@ -237,8 +222,6 @@ export function ApplicationDocuments({
       const result = await bridge.documents.generate({
         applicationId,
         kind,
-        consent,
-        consentTarget,
         language,
       });
       if (result.ok) {
@@ -323,8 +306,7 @@ export function ApplicationDocuments({
     records.cv === null &&
     records["cover-letter"] === null &&
     ai !== null &&
-    ai.configured &&
-    !ai.cloud;
+    ai.configured;
 
   return (
     <section aria-labelledby="application-documents-title" className="flex flex-col gap-4">
@@ -337,32 +319,16 @@ export function ApplicationDocuments({
       </h4>
       <p className="text-sm text-app-muted">{t("applications.documents.intro")}</p>
 
-      {ai !== null && (!ai.configured || ai.cloud) ? (
+      {ai !== null && !ai.configured ? (
         <div className="flex flex-col gap-3 rounded-2xl bg-app-fair-soft p-4">
-          {!ai.configured ? (
-            <>
-              <p role="status" className="text-sm text-app-fg">
-                {t("applications.documents.aiUnavailable")}
-              </p>
-              <div>
-                <Link to="/settings" className={buttonClass("secondary", "sm")}>
-                  {t("applications.documents.openSettings")}
-                </Link>
-              </div>
-            </>
-          ) : null}
-          {ai.cloud && ai.configured ? (
-            <>
-              <p className="text-sm text-app-fg">
-                {t("applications.documents.consentNote", { provider: providerName })}
-              </p>
-              <CheckboxInput
-                label={t("applications.documents.consent", { provider: providerName })}
-                checked={consent}
-                onChange={(event) => setConsent(event.target.checked)}
-              />
-            </>
-          ) : null}
+          <p role="status" className="text-sm text-app-fg">
+            {t("applications.documents.aiUnavailable")}
+          </p>
+          <div>
+            <Link to="/settings" className={buttonClass("secondary", "sm")}>
+              {t("applications.documents.openSettings")}
+            </Link>
+          </div>
         </div>
       ) : null}
 
@@ -381,10 +347,7 @@ export function ApplicationDocuments({
 
       {records.cv === null && records["cover-letter"] === null ? (
         <div>
-          <Button
-            disabled={busy !== null || !ai?.configured || (ai.cloud && !consent)}
-            onClick={() => void generateBoth()}
-          >
+          <Button disabled={busy !== null || !ai?.configured} onClick={() => void generateBoth()}>
             {busy !== null
               ? t("applications.documents.generating")
               : t("applications.documents.generateBoth")}
@@ -397,8 +360,7 @@ export function ApplicationDocuments({
         const draft = drafts[kind];
         const working = busy?.kind === kind;
         const notice = notices[kind];
-        const needsConsent = ai !== null && ai.cloud && !consent;
-        const generateDisabled = busy !== null || !ai?.configured || needsConsent;
+        const generateDisabled = busy !== null || !ai?.configured;
         const stale =
           record !== null && record.exportedAt !== null && record.updatedAt > record.exportedAt;
         return (

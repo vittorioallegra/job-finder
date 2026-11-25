@@ -710,8 +710,6 @@
       "generateAgain": "Generate again",
       "generating": "Generating…",
       "generated": "Generated. Review the text before you export it.",
-      "consentNote": "Generating sends your profile and this job's text to {{provider}}. Nothing is sent until you press Generate.",
-      "consent": "I agree to send my profile and this job's text to {{provider}}.",
       "aiUnavailable": "AI unavailable: no AI model is set up. Set one in Settings to generate documents.",
       "openSettings": "Open Settings",
       "summary": "Summary",
@@ -733,7 +731,6 @@
       "failures": {
         "not-found": "The application or its document was not found.",
         "no-profile": "Save your profile first: the documents are written from it.",
-        "consent-required": "Agree to send your profile and this job's text to the provider first.",
         "engine-unavailable": "AI unavailable: the background engine is not available. Try again in a moment.",
         "not-configured": "AI unavailable: the AI provider is not fully set up in Settings.",
         "invalid-key": "AI unavailable: the provider rejected the API key.",

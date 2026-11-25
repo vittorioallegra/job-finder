@@ -379,7 +379,7 @@ describe("IPC sender and payload guard", () => {
       "documents:generate",
       services,
       topFrame(),
-      { applicationId: "a1", kind: "cv", consent: false },
+      { applicationId: "a1", kind: "cv" },
       APP_ORIGIN,
     );
     await handleInvoke(

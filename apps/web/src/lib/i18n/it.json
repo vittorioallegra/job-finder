@@ -710,8 +710,6 @@
       "generateAgain": "Genera di nuovo",
       "generating": "Generazione in corso…",
       "generated": "Generato. Controlla il testo prima di esportarlo.",
-      "consentNote": "Generare invia il tuo profilo e il testo di questa offerta a {{provider}}. Non si invia nulla finché non premi Genera.",
-      "consent": "Accetto di inviare il mio profilo e il testo di questa offerta a {{provider}}.",
       "aiUnavailable": "AI non disponibile: non è impostato alcun modello. Impostane uno nelle Impostazioni per generare i documenti.",
       "openSettings": "Apri le Impostazioni",
       "summary": "Profilo",
@@ -733,7 +731,6 @@
       "failures": {
         "not-found": "La candidatura o il suo documento non sono stati trovati.",
         "no-profile": "Salva prima il tuo profilo: i documenti si scrivono a partire da lui.",
-        "consent-required": "Accetta prima di inviare al fornitore il tuo profilo e il testo di questa offerta.",
         "engine-unavailable": "AI non disponibile: il motore in background non è disponibile. Riprova tra poco.",
         "not-configured": "AI non disponibile: il fornitore AI non è configurato del tutto nelle Impostazioni.",
         "invalid-key": "AI non disponibile: il fornitore ha rifiutato la chiave API.",

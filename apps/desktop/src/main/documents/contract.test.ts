@@ -16,7 +16,6 @@ describe("document failure codes", () => {
     for (const code of DOCUMENT_AI_UNAVAILABLE_CODES) {
       expect(DOCUMENT_FAILURE_CODES).toContain(code);
     }
-    expect(DOCUMENT_AI_UNAVAILABLE_CODES).not.toContain("consent-required");
     expect(DOCUMENT_AI_UNAVAILABLE_CODES).not.toContain("invalid-output");
   });
 });

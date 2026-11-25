@@ -168,9 +168,9 @@ test("the journey runs from onboarding to a blocked second application", async (
     const applicationId = started.application?.id ?? "";
 
     for (const kind of ["cv", "cover-letter"]) {
-      expect(
-        await call(window, "documents", "generate", { applicationId, kind, consent: false }),
-      ).toMatchObject({ ok: true });
+      expect(await call(window, "documents", "generate", { applicationId, kind })).toMatchObject({
+        ok: true,
+      });
       expect(await call(window, "documents", "exportPdf", { applicationId, kind })).toMatchObject({
         ok: true,
       });

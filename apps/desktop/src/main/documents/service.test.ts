@@ -1,5 +1,5 @@
-// protects=the document service generates a document only after the profile, the consent for a cloud provider and the key are in place, stores what the engine returns, refuses saved edits that break the profile, exports and reveals PDFs only for stored documents, and writes each document in the posting's language (or the UI language when the posting's is missing or unsupported), unless the user picks another;
-// fails_when=a cloud provider is called without consent, a document is generated without a profile, an engine answer that breaks the rules is stored, a saved edit with an invented employer is stored, a PDF is written for a missing document, reveal opens a file that was never exported, an Italian posting gets an English document, a user's pick is ignored, or an export renders in a language other than the stored one;
+// protects=the document service generates a document only after the profile and the key are in place, stores what the engine returns, refuses saved edits that break the profile, exports and reveals PDFs only for stored documents, and writes each document in the posting's language (or the UI language when the posting's is missing or unsupported), unless the user picks another;
+// fails_when=a cloud provider is refused for lack of a consent step, a document is generated without a profile, an engine answer that breaks the rules is stored, a saved edit with an invented employer is stored, a PDF is written for a missing document, reveal opens a file that was never exported, an Italian posting gets an English document, a user's pick is ignored, or an export renders in a language other than the stored one;
 // no_claim=the engine answers and the PDF bytes are scripted doubles; the AI itself and the Chromium print are not exercised here;
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -41,7 +41,7 @@ const VALID_LETTER: DocumentContent = {
   letter: { paragraphs: ["I cut latency by 40% at Acme."] },
 };
 
-/** Settings with a local provider (no consent needed) or a cloud one. */
+/** Settings with a local provider or a cloud one. */
 function settingsFor(
   cloud: boolean,
   uiLanguage: "en" | "it" = "en",
@@ -149,7 +149,6 @@ describe("document service", () => {
     const result = await build().generate({
       applicationId: "a1",
       kind: "cover-letter",
-      consent: false,
     });
 
     expect(result).toMatchObject({
@@ -165,28 +164,24 @@ describe("document service", () => {
     expect((await build().get("a1")).coverLetter?.content).toEqual(VALID_LETTER);
   });
 
-  it("refuses a cloud provider without consent, before any engine call", async () => {
-    const result = await build({}, true).generate({
-      applicationId: "a1",
-      kind: "cv",
-      consent: false,
-    });
-
-    expect(result).toEqual({ ok: false, code: "consent-required" });
-    expect(requests).toHaveLength(0);
+  it("generates with a cloud provider without asking for consent", async () => {
+    const result = await build({}, true).generate({ applicationId: "a1", kind: "cv" });
+    expect(result).toMatchObject({ ok: true });
+    expect(requests).toHaveLength(1);
   });
 
   it("refuses to generate without a profile, and for a missing application", async () => {
     stored = null;
-    expect(await build().generate({ applicationId: "a1", kind: "cv", consent: false })).toEqual({
+    expect(await build().generate({ applicationId: "a1", kind: "cv" })).toEqual({
       ok: false,
       code: "no-profile",
     });
 
     stored = profile();
-    expect(
-      await build().generate({ applicationId: "missing", kind: "cv", consent: false }),
-    ).toEqual({ ok: false, code: "not-found" });
+    expect(await build().generate({ applicationId: "missing", kind: "cv" })).toEqual({
+      ok: false,
+      code: "not-found",
+    });
     expect(requests).toHaveLength(0);
   });
 
@@ -194,20 +189,20 @@ describe("document service", () => {
     engineAnswer = async () => {
       throw new EngineUnavailableError("stopped");
     };
-    expect(await build().generate({ applicationId: "a1", kind: "cv", consent: false })).toEqual({
+    expect(await build().generate({ applicationId: "a1", kind: "cv" })).toEqual({
       ok: false,
       code: "engine-unavailable",
     });
 
     engineAnswer = async () => ({ ok: false, code: "invalid-key" });
-    expect(await build().generate({ applicationId: "a1", kind: "cv", consent: false })).toEqual({
+    expect(await build().generate({ applicationId: "a1", kind: "cv" })).toEqual({
       ok: false,
       code: "invalid-key",
     });
   });
 
   it("stores edits that keep the profile's facts, and refuses one that invents a number", async () => {
-    await build().generate({ applicationId: "a1", kind: "cover-letter", consent: false });
+    await build().generate({ applicationId: "a1", kind: "cover-letter" });
 
     const ok = await build().save({
       applicationId: "a1",
@@ -231,7 +226,7 @@ describe("document service", () => {
   });
 
   it("exports a stored document to its PDF file and records the export time", async () => {
-    await build().generate({ applicationId: "a1", kind: "cover-letter", consent: false });
+    await build().generate({ applicationId: "a1", kind: "cover-letter" });
 
     const result = await build().exportPdf({ applicationId: "a1", kind: "cover-letter" });
 
@@ -245,7 +240,7 @@ describe("document service", () => {
       code: "not-found",
     });
 
-    await build().generate({ applicationId: "a1", kind: "cover-letter", consent: false });
+    await build().generate({ applicationId: "a1", kind: "cover-letter" });
     const failing = build({
       renderPdf: async () => {
         throw new Error("print failed");
@@ -259,7 +254,7 @@ describe("document service", () => {
   });
 
   it("reveals only an exported PDF", async () => {
-    await build().generate({ applicationId: "a1", kind: "cover-letter", consent: false });
+    await build().generate({ applicationId: "a1", kind: "cover-letter" });
     expect(await build().reveal({ applicationId: "a1", kind: "cover-letter" })).toBe(false);
     expect(revealed).toEqual([]);
 
@@ -270,7 +265,7 @@ describe("document service", () => {
 
   it("writes the document in the posting's language, and in the UI language when the posting's is unsupported", async () => {
     await database.db.update(jobs).set({ language: "it" }).where(eq(jobs.id, "j1"));
-    await build().generate({ applicationId: "a1", kind: "cover-letter", consent: false });
+    await build().generate({ applicationId: "a1", kind: "cover-letter" });
     expect(requests[0]).toMatchObject({ language: "it" });
     expect((await build().get("a1")).coverLetter?.language).toBe("it");
     expect((await build().get("a1")).defaultLanguage).toEqual({
@@ -282,7 +277,6 @@ describe("document service", () => {
     await build({ settings: settingsFor(false, "it") }).generate({
       applicationId: "a1",
       kind: "cover-letter",
-      consent: false,
     });
     expect(requests[1]).toMatchObject({ language: "it" });
     expect((await build({ settings: settingsFor(false, "it") }).get("a1")).defaultLanguage).toEqual(
@@ -295,7 +289,6 @@ describe("document service", () => {
     await build().generate({
       applicationId: "a1",
       kind: "cv",
-      consent: false,
       language: "en",
     });
 
@@ -308,7 +301,6 @@ describe("document service", () => {
     await build({ settings: settingsFor(false, "en") }).generate({
       applicationId: "a1",
       kind: "cover-letter",
-      consent: false,
     });
     await build({ settings: settingsFor(false, "en") }).save({
       applicationId: "a1",
@@ -336,7 +328,6 @@ describe("document service", () => {
     await build({ settings: settingsFor(false, "it") }).generate({
       applicationId: "a1",
       kind: "cover-letter",
-      consent: false,
     });
     await database.db
       .update(applicationDocuments)

@@ -36,16 +36,12 @@ export const DocumentGetRequestSchema = z.strictObject({ applicationId: identifi
 export type DocumentGetRequest = z.input<typeof DocumentGetRequestSchema>;
 
 /**
- * Generates a document with the AI. `consent` must be true when the AI provider is a cloud service,
- * because the profile and the posting are sent to it (the same rule as the CV import). `language`
- * overrides the language the posting and the UI would give; omitted, the default applies.
+ * Generates a document with the AI. `language` overrides the language the posting and the UI would
+ * give; omitted, the default applies.
  */
 export const DocumentGenerateRequestSchema = z.strictObject({
   applicationId: identifier,
   kind: z.enum(DOCUMENT_KINDS),
-  consent: z.boolean(),
-  /** The provider and host the consent was given for (`aiConsentTarget`). */
-  consentTarget: z.string().optional(),
   language: z.enum(DOCUMENT_LANGUAGES).optional(),
 });
 export type DocumentGenerateRequest = z.input<typeof DocumentGenerateRequestSchema>;
@@ -87,14 +83,13 @@ export interface ApplicationDocuments {
 }
 
 /**
- * Why a document action failed. `consent-required` and `no-profile` come before any AI call;
+ * Why a document action failed. `no-profile` comes before any AI call;
  * `engine-unavailable` means the engine could not answer; the rest mirror the AI layer's error codes (must equal `AI_ERROR_CODES` in
  * packages/core/src/ai, checked by a desktop test).
  */
 export const DOCUMENT_FAILURE_CODES = [
   "not-found",
   "no-profile",
-  "consent-required",
   "engine-unavailable",
   "export-failed",
   "not-configured",

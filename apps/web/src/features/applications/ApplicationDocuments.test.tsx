@@ -1,5 +1,5 @@
-// protects=the documents panel shows loading, error and AI-unavailable states, asks for consent before a cloud provider is used, shows a generated document as editable text, reports a save that breaks the profile by its issues, exports a PDF and offers to reveal it, names every AI failure under its own message, and starts from the posting's language with the user's pick sent to generation, generates both documents on opening when asked to and the AI needs no consent, and waits for the consent of a cloud provider;
-// fails_when=a generate call goes out without the consent a cloud provider needs, an AI failure is shown without the settings link, a refused save is reported as saved, an export without a file is reported as exported, the panel shows a blank page on a failed read, or the posting's language is ignored or the user's choice is not sent;
+// protects=the documents panel shows loading, error and AI-unavailable states, sends a generate call without any consent step also for a cloud provider, shows a generated document as editable text, reports a save that breaks the profile by its issues, exports a PDF and offers to reveal it, names every AI failure under its own message, starts from the posting's language with the user's pick sent to generation, and generates both documents on opening when asked to;
+// fails_when=a generate call needs a consent the user cannot give here, an AI failure is shown without the settings link, a refused save is reported as saved, an export without a file is reported as exported, the panel shows a blank page on a failed read, or the posting's language is ignored or the user's choice is not sent;
 // no_claim=the layout, the real bridge and the PDF itself are not checked here; the desktop service and PDF tests cover the rules and the file;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -196,7 +196,7 @@ describe("application documents panel", () => {
     expect(button(container, "Generate").disabled).toBe(true);
   });
 
-  it("generates the CV and the letter at once when asked to and no consent step is needed", async () => {
+  it("generates the CV and the letter at once when asked to", async () => {
     const kinds: string[] = [];
     const generate = vi.fn(async (request: { kind: string }) => {
       kinds.push(request.kind);
@@ -208,39 +208,18 @@ describe("application documents panel", () => {
     expect(kinds).toEqual(["cv", "cover-letter"]);
   });
 
-  it("waits for the consent of a cloud provider before generating both, with one button", async () => {
-    const generate = vi.fn(async () => ({ ok: true as const, document: coverLetter("Hi.") }));
+  it("generates both documents at once for a cloud provider too, without a consent step", async () => {
+    const kinds: string[] = [];
+    const generate = vi.fn(async (request: { kind: string }) => {
+      kinds.push(request.kind);
+      return { ok: true as const, document: coverLetter("Hi.") };
+    });
     await render(bridgeWith({ generate }, cloudSettings), true);
-    expect(generate).not.toHaveBeenCalled();
-    expect(button(container, "Generate CV and cover letter").disabled).toBe(true);
-
-    const consent = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
-    await act(async () => consent.click());
-    await act(async () => button(container, "Generate CV and cover letter").click());
     await act(async () => {});
 
-    expect(generate).toHaveBeenCalledTimes(2);
-  });
-
-  it("asks for consent before a cloud provider receives the profile, and sends it once given", async () => {
-    const generate = vi.fn(async () => ({ ok: true as const, document: coverLetter("Hi.") }));
-    await render(bridgeWith({ generate }, cloudSettings));
-
-    expect(container.textContent).toContain("Generating sends your profile");
-    const generateButton = button(container, "Generate");
-    expect(generateButton.disabled).toBe(true);
-
-    const consent = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
-    await act(async () => consent.click());
-    await act(async () => button(container, "Generate").click());
-
-    expect(generate).toHaveBeenCalledWith({
-      applicationId: "a1",
-      kind: "cv",
-      consent: true,
-      consentTarget: "anthropic",
-      language: "en",
-    });
+    expect(container.querySelector('input[type="checkbox"]')).toBeNull();
+    expect(kinds).toEqual(["cv", "cover-letter"]);
+    expect(generate).toHaveBeenCalledWith({ applicationId: "a1", kind: "cv", language: "en" });
   });
 
   it("shows the posting's language as the default, and sends the language the user picks", async () => {
