@@ -320,7 +320,7 @@
       "anyRole": "Ancora nessun ruolo: aggiungine almeno uno, così l'app sa quali aziende cercare.",
       "locations": "Luoghi",
       "addLocation": "Aggiungi un luogo",
-      "locationsHint": "Paesi, città o aree come UE o Europa. Le offerte da remoto devono essere aperte al luogo in cui vivi. Premi Invio o la virgola per aggiungerlo.",
+      "locationsHint": "Paesi, città o aree come UE o Europa. Un paese o un'area mantiene le offerte di aziende con sede lì, comprese quelle da remoto aperte a dove vivi; una città mantiene le offerte situate in quella città. Premi Invio o virgola per aggiungere.",
       "areaSuggestions": "UE|Europa|SEE|EMEA|Nord America",
       "anyLocation": "Qualsiasi luogo.",
       "workModes": "Modalità di lavoro",

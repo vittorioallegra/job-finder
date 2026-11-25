@@ -48,13 +48,18 @@ const comparableScope = sql`(' ' || ${["-", "/", ",", "(", ")", ";", ":", "|", "
   sql`lower(${jobs.remoteScope})`,
 )} || ' ')`;
 
+/** The home country of a job's company, or null when it is not known yet. */
+const companyCountry = sql`(select ${companies.country} from ${companies} where ${companies.id} = ${jobs.companyId})`;
+
 /** Words that only repeat the work mode, which has its own filter. */
 const MODE_WORDS = new Set(["remote", "remoto", "remota", "hybrid", "ibrido", "onsite"]);
 
 /**
  * The places condition (see `JobFilter.places`). Countries and areas match a location's country
- * code, or a remote scope that reaches them. Other text matches the city, region or location text.
- * Without a country to judge by, a remote job is kept: a posting that does not say is not a no.
+ * code, or a remote scope that reaches them, and the job's company must be based there too ("Italy"
+ * means Italian companies; a company whose country is not known yet is kept). Other text matches
+ * the city, region or location text. Without a country to judge by, a remote job is kept: a posting
+ * that does not say is not a no.
  */
 function placeCondition(places: readonly string[]): SQL | undefined {
   const countries = new Set<string>();
@@ -81,7 +86,8 @@ function placeCondition(places: readonly string[]): SQL | undefined {
   }
   if (countries.size > 0) {
     const codes = [...countries];
-    options.push(
+    const reaches: SQL[] = [];
+    reaches.push(
       sql`exists (select 1 from json_each(${jobs.locations}) as loc where json_extract(loc.value, '$.countryCode') in (${sql.join(
         codes.map((code) => sql`${code}`),
         sql`, `,
@@ -90,12 +96,17 @@ function placeCondition(places: readonly string[]): SQL | undefined {
     const terms = remoteScopeTerms(codes).map(
       (term) => sql`${comparableScope} like ${likePattern(` ${term} `)} escape '\\'`,
     );
-    options.push(sql`(${jobs.remoteScope} is not null and (${sql.join(terms, sql` or `)}))`);
-    options.push(
+    reaches.push(sql`(${jobs.remoteScope} is not null and (${sql.join(terms, sql` or `)}))`);
+    reaches.push(
       sql`(${jobs.remoteScope} is null
         and not exists (select 1 from json_each(${jobs.locations}) as loc where json_extract(loc.value, '$.countryCode') is not null)
         and (${jobs.workMode} = 'remote' or json_array_length(${jobs.locations}) = 0))`,
     );
+    const basedThere = sql`(${companyCountry} is null or ${companyCountry} in (${sql.join(
+      codes.map((code) => sql`${code}`),
+      sql`, `,
+    )}))`;
+    options.push(sql`((${sql.join(reaches, sql` or `)}) and ${basedThere})`);
   } else {
     // Only cities are named: a remote job has no city to compare, so it stays.
     options.push(sql`${jobs.workMode} = 'remote'`);

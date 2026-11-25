@@ -15,6 +15,7 @@ import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { mkdir, rm, writeFile } from "node:fs/promises";
+import { refreshCompanyCountries } from "./db/company-country";
 import { openAppDatabase, resolveMigrationsFolder, type AppDatabase } from "./db/database";
 import { executeDbCalls, reconcileInterruptedRuns } from "./db/operations";
 import { scoringCandidateIds } from "./db/scoring-operations";
@@ -203,6 +204,9 @@ if (gotSingleInstanceLock) {
     app.on("before-quit", () => {
       quitting = true;
     });
+    await refreshCompanyCountries(database.db).catch((error: unknown) =>
+      logger.log("warn", `could not refresh company countries: ${String(error)}`),
+    );
     const secretRows = createSettingsSecretRows(database.db);
     const secretStore = createSecretStore({ rows: secretRows });
     let supervisor: EngineSupervisor | null = null;
@@ -215,7 +219,13 @@ if (gotSingleInstanceLock) {
         );
       },
       onRunFinished: (runId, status) => {
-        void scheduler?.handleRunFinished(runId, status);
+        // The scan changed the jobs, so the companies' countries are read again before the
+        // scheduler counts the new matches (which depend on them).
+        void refreshCompanyCountries(database.db)
+          .catch((error: unknown) =>
+            logger.log("warn", `could not refresh company countries: ${String(error)}`),
+          )
+          .then(() => scheduler?.handleRunFinished(runId, status));
       },
       engine: () => supervisor,
       broadcast: (event) => {

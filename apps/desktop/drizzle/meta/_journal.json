@@ -141,6 +141,13 @@
       "when": 1795597896804,
       "tag": "0019_personio-apply-url",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1795605830168,
+      "tag": "0020_company-country",
+      "breakpoints": true
     }
   ]
 }

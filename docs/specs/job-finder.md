@@ -163,7 +163,8 @@ The list shows the jobs that match the profile's preferences, with no filter for
 
 - roles: the title names one of them
 - places: countries, areas (EU, Europe) and cities; remote jobs must be open to where the
-  person lives
+  person lives; a country or area also needs the company to be based there ("Italy" means
+  Italian companies, a company's country being where most of its open jobs are)
 - work mode: remote / hybrid / onsite
 - employment type: employee / freelance / internship
 - application status: applied jobs and dismissed jobs are hidden

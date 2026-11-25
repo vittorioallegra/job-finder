@@ -320,7 +320,7 @@
       "anyRole": "No role yet: add at least one, so the app knows which companies to look for.",
       "locations": "Places",
       "addLocation": "Add a place",
-      "locationsHint": "Countries, cities or areas such as EU or Europe. Remote jobs must be open to where you live. Press Enter or a comma to add.",
+      "locationsHint": "Countries, cities or areas such as EU or Europe. A country or area keeps jobs from companies based there, including their remote jobs open to where you live; a city keeps jobs located in it. Press Enter or a comma to add.",
       "areaSuggestions": "EU|Europe|EEA|EMEA|North America",
       "anyLocation": "Any place.",
       "workModes": "Work mode",

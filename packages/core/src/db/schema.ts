@@ -41,6 +41,11 @@ export const companies = sqliteTable("companies", {
    * the lists, and the company search does not add it again; applications keep their jobs.
    */
   excludedAt: integer("excluded_at"),
+  /**
+   * The company's home country (an ISO code): where most of its open jobs are located. Null while
+   * its jobs name no country. Kept up to date after each scan; the places filter reads it.
+   */
+  country: text("country"),
 });
 
 /**

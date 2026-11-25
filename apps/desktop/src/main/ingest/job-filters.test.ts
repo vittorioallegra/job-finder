@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { companies, jobFlags, jobScores, jobSources, jobs, profile } from "@job-finder/core";
 import { JobFilterSchema, type JobFilterInput } from "@job-finder/core/filters";
 import { openAppDatabase, type AppDatabase } from "../db/database";
+import { refreshCompanyCountries } from "../db/company-country";
 import { createIngestRepository, type IngestRepository } from "./repository";
 
 const repoMigrations = resolve(__dirname, "../../../drizzle");
@@ -310,6 +311,42 @@ describe("job filters over the fixture set", () => {
     );
     // A remote job limited to another country is left out.
     expect(await titles({ places: ["Stati Uniti"] })).toEqual(["Data Engineer"]);
+  });
+
+  it("keeps to companies based in the chosen country: Italy means Italian companies, also for remote jobs", async () => {
+    // protects=a country or an area in the places keeps jobs of companies based there (the country where most of their open jobs are) and of companies whose country is not known, even for remote jobs open to the country; fails_when=a remote job of a German company is listed for Italy, an Italian company is dropped, or a company with no known country is dropped; no_claim=how the company country is first computed from real scans;
+    await database.db.insert(jobs).values({
+      id: "j9",
+      companyId: "c2",
+      fingerprint: "fp-j9",
+      title: "Remote Support Engineer",
+      description: "Support work, remote in the EU.",
+      url: "https://x.test/j9",
+      applyUrl: "https://x.test/j9/apply",
+      language: "en",
+      locations: JSON.stringify([{ raw: "Remote - EU" }]),
+      workMode: "remote",
+      remoteScope: "EU",
+      employmentType: "full_time",
+      seniority: "mid",
+      visaSponsorship: "unknown",
+      firstSeenAt: NOW - DAY,
+      lastSeenAt: NOW,
+    });
+    // Before the countries are read, no company has one, so nothing is left out.
+    expect(await titles({ places: ["Italia"] })).toContain("Remote Support Engineer");
+
+    await refreshCompanyCountries(database.db);
+
+    // c1 is Italian (two open jobs in Milan), c2 German (Berlin and New York tie, DE comes first).
+    const italy = await titles({ places: ["Italia"], hideDismissed: false });
+    expect(italy).toEqual(["Backend Engineer", "Backend Intern", "Frontend Developer"].sort());
+    expect(italy).not.toContain("Remote Support Engineer");
+    expect(await titles({ places: ["Germania"] })).toContain("Remote Support Engineer");
+    // The EU reaches both companies' countries.
+    expect(await titles({ places: ["UE"] })).toContain("Remote Support Engineer");
+    // A city is not a country: Milan keeps its jobs whoever the company is.
+    expect(await titles({ places: ["Milan"] })).toContain("Backend Engineer");
   });
 
   it("shows only jobs the user has not viewed when new-only is set, and the viewed ones again after a flag change", async () => {
