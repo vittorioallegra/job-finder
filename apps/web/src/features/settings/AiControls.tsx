@@ -87,7 +87,10 @@ interface SecretFieldProps {
   onStatus: (status: SecretsStatus) => void;
 }
 
-/** Write-only key field: shows only whether a key is set, and clears its input after saving. */
+/**
+ * Write-only key field. Without a key it shows the input and Save; with one it shows only that a key
+ * is set and Remove, since a saved key is never shown again.
+ */
 export function SecretField({ bridge, name, label, secrets, onStatus }: SecretFieldProps) {
   const { t } = useTranslation();
   const [value, setValue] = useState("");
@@ -124,15 +127,19 @@ export function SecretField({ bridge, name, label, secrets, onStatus }: SecretFi
 
   return (
     <div className="flex flex-col gap-2">
-      <TextInput
-        label={label}
-        type="password"
-        autoComplete="off"
-        spellCheck={false}
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        hint={storageNote}
-      />
+      {isSet ? (
+        <p className="text-sm font-medium text-app-fg">{label}</p>
+      ) : (
+        <TextInput
+          label={label}
+          type="password"
+          autoComplete="off"
+          spellCheck={false}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          hint={storageNote}
+        />
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={isSet ? "good" : "neutral"}>
           {isSet ? t("settings.secrets.keySet") : t("settings.secrets.keyNotSet")}
@@ -141,17 +148,21 @@ export function SecretField({ bridge, name, label, secrets, onStatus }: SecretFi
           {message}
         </span>
         <span className="flex-1" />
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => void save()}
-          disabled={value.trim() === ""}
-        >
-          {t("settings.secrets.save")}
-        </Button>
-        <Button variant="danger" size="sm" onClick={() => void remove()} disabled={!isSet}>
-          {t("settings.secrets.remove")}
-        </Button>
+        {/* A saved key is not shown again: the field and Save give way to Remove. */}
+        {isSet ? (
+          <Button variant="danger" size="sm" onClick={() => void remove()}>
+            {t("settings.secrets.remove")}
+          </Button>
+        ) : (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void save()}
+            disabled={value.trim() === ""}
+          >
+            {t("settings.secrets.save")}
+          </Button>
+        )}
       </div>
     </div>
   );

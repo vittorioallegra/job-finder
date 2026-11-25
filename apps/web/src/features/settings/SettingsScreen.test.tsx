@@ -1,5 +1,5 @@
-// protects=the settings screen loads the saved values, saves only valid changes through the bridge, retries after a failed read, and never shows a stored key value; Linux hides launch at login; keys are kept without the system keychain; the AI connection test saves the changes on screen first, then shows the model or the AI unavailable reason; Ollama is set up from its installed models without a key field, with a context slider up to the model's limit; each provider keeps its own key; the context size shows only for a server and a search key only while its service is on;
-// fails_when=a value is sent without validation, a key value is rendered, a failed read shows a blank form, Linux shows launch at login, a failed AI test shows no reason, the test reads settings older than the screen, Ollama asks for a key, saves an unusable provider or hides why its models are missing;
+// protects=the settings screen loads and saves values through the bridge, never shows a stored key, leaves only Remove once a key is saved (the input and Save return after removing), keeps a key per provider, sets up Ollama;
+// fails_when=an invalid change is saved, a key value is shown, a saved key still shows its input or Save, Remove shows without a key, a key leaks across providers;
 // no_claim=visual layout, keyboard focus order and the real OS keychain are not checked here.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -285,7 +285,7 @@ describe("settings screen", () => {
     expect(container.textContent).toContain("Nothing was saved");
   });
 
-  it("saves a key, clears the input and never shows the value", async () => {
+  it("saves a key, then shows only Remove (no input, no Save) and never shows the value", async () => {
     const memory = createMemoryBridge();
     await render(memory);
     const keyInput = field(container, "API key") as HTMLInputElement;
@@ -297,9 +297,29 @@ describe("settings screen", () => {
       button(container, "Save key").click();
     });
     await act(async () => {});
-    expect(keyInput.value).toBe("");
+    // A saved key is not shown again: the input and Save are gone, only Remove is left.
+    const aiCard = container.querySelector('section[aria-labelledby="settings-ai"]') as HTMLElement;
+    expect(aiCard.querySelector('input[type="password"]')).toBeNull();
+    expect([...aiCard.querySelectorAll("button")].map((node) => node.textContent)).not.toContain(
+      "Save key",
+    );
+    expect([...aiCard.querySelectorAll("button")].map((node) => node.textContent)).toContain(
+      "Remove key",
+    );
     expect(container.textContent).toContain("A key is saved.");
     expect(container.innerHTML).not.toContain("sk-visible-test-value");
+
+    // Removing it brings the input back, empty, and takes Remove away.
+    await act(async () => {
+      [...aiCard.querySelectorAll("button")]
+        .find((node) => node.textContent === "Remove key")
+        ?.click();
+    });
+    await act(async () => {});
+    expect((field(container, "API key") as HTMLInputElement).value).toBe("");
+    expect([...aiCard.querySelectorAll("button")].map((node) => node.textContent)).not.toContain(
+      "Remove key",
+    );
   });
 
   it("keeps a key for each provider: a key saved for one is not shown as saved for another", async () => {
