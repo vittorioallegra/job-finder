@@ -25,6 +25,9 @@ const PRINT_STYLE = [
   "ul { margin: 2px 0 0 18px; padding: 0; }",
   "li { margin: 1px 0; }",
   ".contact, .meta { color: #444; }",
+  ".links a { color: #0b4f9c; text-decoration: none; }",
+  // On screen (the preview) the page shows as a sheet of paper; printing ignores this block.
+  "@media screen { html { background: #d9d9d9; } body { box-sizing: border-box; width: 210mm; min-height: 297mm; margin: 0 auto; padding: 16mm; background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,.25); } }",
 ].join("\n");
 
 /** Escapes text for HTML. Every value that reaches the page goes through it. */
@@ -57,6 +60,22 @@ function dateRange(start: string, end: string, labels: DocumentLabels): string {
 
 function contactLine(contact: Profile["contact"]): string {
   return joinPresent([contact.email, contact.phone, contact.location], " · ");
+}
+
+/**
+ * The profile's links (portfolio, LinkedIn, GitHub), each as its label and its address, so a form
+ * that asks for a portfolio is answered by the document too. Only http and https addresses are
+ * shown, as links.
+ */
+function linksLine(links: Profile["links"]): string {
+  const shown = links.filter((link) => /^https?:\/\//i.test(link.url));
+  if (shown.length === 0) return "";
+  const items = shown.map((link) => {
+    const url = escapeHtml(link.url);
+    const text = link.label === "" ? url : `${escapeHtml(link.label)}: ${url}`;
+    return `<a href="${url}">${text}</a>`;
+  });
+  return `<p class="contact links">${items.join(" · ")}</p>`;
 }
 
 function cvBody(cv: TailoredCv, labels: DocumentLabels): string {
@@ -110,12 +129,14 @@ export function renderDocumentHtml(
   contact: Profile["contact"],
   labels: DocumentLabels,
   language: string,
+  links: Profile["links"] = [],
 ): string {
   const name = contact.fullName;
   const title = content.kind === "cv" ? labels.cvTitle : labels.coverLetterTitle;
   const header = [
     `<h1>${escapeHtml(name)}</h1>`,
     contactLine(contact) ? `<p class="contact">${escapeHtml(contactLine(contact))}</p>` : "",
+    linksLine(links),
   ].join("");
   const body =
     content.kind === "cv"

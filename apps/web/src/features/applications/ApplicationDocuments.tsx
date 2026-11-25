@@ -333,24 +333,14 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
       if (result.ok) {
         applyRecord(result.document);
         setNotice(kind, { tone: "ok", text: t("applications.documents.exported") });
-      } else {
+      } else if (result.code !== "cancelled") {
+        // Closing the save dialog is not a failure: nothing is said.
         setNotice(kind, failureNotice(result.code));
       }
     } catch {
       setNotice(kind, failureNotice("export-failed"));
     } finally {
       setBusy(null);
-    }
-  }
-
-  async function reveal(kind: DocumentKind) {
-    setNotice(kind, null);
-    try {
-      const shown = await bridge.documents.reveal({ applicationId, kind });
-      if (!shown)
-        setNotice(kind, { tone: "error", text: t("applications.documents.revealFailed") });
-    } catch {
-      setNotice(kind, { tone: "error", text: t("applications.documents.revealFailed") });
     }
   }
 
@@ -494,11 +484,6 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
                         ? t("applications.documents.exporting")
                         : t("applications.documents.export")}
                     </Button>
-                    {record.exportedAt !== null ? (
-                      <Button variant="secondary" size="sm" onClick={() => void reveal(kind)}>
-                        {t("applications.documents.reveal")}
-                      </Button>
-                    ) : null}
                   </div>
                 </>
               )}
@@ -525,6 +510,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
             kind: t(`applications.documents.kinds.${previewing}`),
           })}
           closeLabel={t("applications.documents.close")}
+          wide
           onClose={() => setPreviewing(null)}
           footer={
             <Button variant="secondary" onClick={() => setPreviewing(null)}>
@@ -638,7 +624,7 @@ function DocumentPreview({
       // Nothing in the document runs: no scripts, no forms, no links followed.
       sandbox=""
       srcDoc={state.html}
-      className="h-[65vh] w-full rounded-lg border border-app-border bg-white"
+      className="h-[70vh] w-full rounded-lg border border-app-border bg-[#d9d9d9]"
     />
   );
 }

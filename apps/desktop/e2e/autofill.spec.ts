@@ -3,7 +3,7 @@
 // no_claim=the ATS markup is a hand-written fixture, not a recorded Greenhouse, Lever or Ashby form; only the local fixture server is contacted, and the file dialog is not opened;
 import { _electron as electron, expect, test } from "@playwright/test";
 import { createServer, type Server } from "node:http";
-import { mkdirSync, mkdtempSync, readFileSync, existsSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -72,7 +72,7 @@ async function serveFixtures(): Promise<Fixture> {
   };
 }
 
-/** Seeds one company, job and application that is ready to be filled, with a CV PDF on disk. */
+/** Seeds one company, job and application that is ready to be filled, with a stored CV. */
 function seedDatabase(userData: string, applyUrl: string) {
   const db = new DatabaseSync(join(userData, "job-finder.sqlite"));
   db.exec(
@@ -81,10 +81,15 @@ function seedDatabase(userData: string, applyUrl: string) {
       "INSERT INTO applications (id, job_id, status, created_at, status_changed_at) VALUES ('a1', 'j1', 'ready', 2, 2);" +
       "INSERT INTO application_events (id, application_id, status, note, at) VALUES ('e1', 'a1', 'ready', NULL, 2);",
   );
+  // The CV is a stored document: autofill prints it to a PDF when the form opens.
+  const cv = JSON.stringify({
+    kind: "cv",
+    cv: { summary: "Engineer.", experience: [], education: [], skills: [] },
+  });
+  db.prepare(
+    "INSERT INTO application_documents (application_id, kind, content, language, updated_at, exported_at) VALUES ('a1', 'cv', ?, 'en', 2, NULL)",
+  ).run(cv);
   db.close();
-  const folder = join(userData, "applications", "a1");
-  mkdirSync(folder, { recursive: true });
-  writeFileSync(join(folder, "cv.pdf"), Buffer.from("%PDF-1.4 test"));
 }
 
 async function waitForEngine(userData: string): Promise<void> {

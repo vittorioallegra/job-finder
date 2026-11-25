@@ -67,9 +67,6 @@ export const DocumentExportRequestSchema = z.strictObject({
 });
 export type DocumentExportRequest = z.input<typeof DocumentExportRequestSchema>;
 
-export const DocumentRevealRequestSchema = DocumentExportRequestSchema;
-export type DocumentRevealRequest = DocumentExportRequest;
-
 /**
  * One stored document. `updatedAt` and `exportedAt` are epoch milliseconds; `exportedAt` is null
  * before the first PDF. `language` is null for documents generated before languages were stored.
@@ -136,4 +133,4 @@ export type DocumentPreviewResult =
 
 export type DocumentExportResult =
   | { ok: true; document: DocumentRecord }
-  | { ok: false; code: "not-found" | "no-profile" | "export-failed" };
+  | { ok: false; code: "not-found" | "no-profile" | "export-failed" | "cancelled" };

@@ -164,8 +164,7 @@ function serviceWith(
     profile: {
       get: async () => (overrides.saved === undefined ? { profile: profile() } : overrides.saved),
     },
-    documentExists: (_id, kind) => exists[kind],
-    documentPath: (id, kind) => `/store/${id}/${kind}.pdf`,
+    documentFile: async (id, kind) => (exists[kind] ? `/store/${id}/${kind}.pdf` : null),
     openWindow: () => {
       const next = windows.shift() ?? scriptedWindow("generic.html");
       opened.push(next);

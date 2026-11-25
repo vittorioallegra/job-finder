@@ -42,10 +42,11 @@ export interface ApplyWindow {
 export interface AutofillServiceOptions {
   applications: { detail(applicationId: string): Promise<ApplicationDetail | null> };
   profile: { get(): Promise<{ profile: Profile } | null> };
-  /** Whether a PDF of the document exists for the application. */
-  documentExists(applicationId: string, kind: DocumentKind): boolean;
-  /** Where the PDF of the document is stored, for the upload. */
-  documentPath(applicationId: string, kind: DocumentKind): string;
+  /**
+   * A PDF of the application's stored document, written to a file for the upload, and its path; null
+   * when no such document is stored. The PDF is made when the form opens, so no earlier export is needed.
+   */
+  documentFile(applicationId: string, kind: DocumentKind): Promise<string | null>;
   openWindow(): ApplyWindow;
   /** How long the form may take to load. */
   loadTimeoutMs?: number;
@@ -261,15 +262,17 @@ export function createAutofillService(options: AutofillServiceOptions): Autofill
         fieldPollMs,
       );
       const provider: AtsId | "generic" = detectAts({ url: window.currentUrl() })?.ats ?? "generic";
+      const files: Record<DocumentKind, string | null> = {
+        cv: await options.documentFile(applicationId, "cv").catch(() => null),
+        "cover-letter": await options.documentFile(applicationId, "cover-letter").catch(() => null),
+      };
       const sources: AutofillSources = {
         profile: saved.profile,
-        documents: {
-          cv: options.documentExists(applicationId, "cv"),
-          "cover-letter": options.documentExists(applicationId, "cover-letter"),
-        },
+        documents: { cv: files.cv !== null, "cover-letter": files["cover-letter"] !== null },
       };
       const plan = planAutofill(fields, sources, provider);
-      const docPath = (kind: DocumentKind) => options.documentPath(applicationId, kind);
+      // A document the plan uploads is one the file was made for.
+      const docPath = (kind: DocumentKind) => files[kind] ?? "";
       const { taken, refused } = await applyActions(
         session,
         contexts,

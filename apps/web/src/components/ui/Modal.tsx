@@ -9,6 +9,8 @@ export interface ModalProps {
   children: ReactNode;
   /** Buttons at the bottom, next to the close button. */
   footer?: ReactNode;
+  /** Wide enough for an A4 page. */
+  wide?: boolean;
   onClose: () => void;
 }
 
@@ -17,7 +19,7 @@ export interface ModalProps {
  * Escape or a click outside closes it; focus goes to the close button and returns to the opener.
  * It stacks above a drawer, and Escape closes only the dialog.
  */
-export function Modal({ title, closeLabel, children, footer, onClose }: ModalProps) {
+export function Modal({ title, closeLabel, children, footer, wide = false, onClose }: ModalProps) {
   const closeButton = useRef<HTMLButtonElement>(null);
   const close = useRef(onClose);
   useEffect(() => {
@@ -46,7 +48,7 @@ export function Modal({ title, closeLabel, children, footer, onClose }: ModalPro
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative flex max-h-full w-full max-w-3xl flex-col rounded-2xl border border-app-border bg-app-bg shadow-pop"
+        className={`relative flex max-h-full w-full ${wide ? "max-w-5xl" : "max-w-3xl"} flex-col rounded-2xl border border-app-border bg-app-bg shadow-pop`}
       >
         <div className="flex items-center justify-between gap-3 border-b border-app-border px-6 py-4">
           <h2 className="font-display text-xl font-semibold text-app-fg">{title}</h2>

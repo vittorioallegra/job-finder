@@ -42,10 +42,13 @@ export interface DocumentService {
   save(request: DocumentSaveRequest): Promise<DocumentSaveResult>;
   /** The HTML the stored document is printed from, for the preview. */
   preview(request: DocumentExportRequest): Promise<DocumentPreviewResult>;
-  /** Renders the stored document to a PDF in the application's folder. */
+  /** Renders the stored document to a PDF and saves it where the user chooses. */
   exportPdf(request: DocumentExportRequest): Promise<DocumentExportResult>;
-  /** Shows the exported PDF in the file manager. False when there is none. */
-  reveal(request: DocumentExportRequest): Promise<boolean>;
+  /** The stored document as PDF bytes with a file name, for an upload; null when none is stored. */
+  pdfFile(
+    applicationId: string,
+    kind: DocumentExportRequest["kind"],
+  ): Promise<{ fileName: string; bytes: Uint8Array } | null>;
 }
 
 export interface DocumentServiceOptions {
@@ -56,16 +59,10 @@ export interface DocumentServiceOptions {
   engine: DocumentEngine;
   /** Renders one HTML document to PDF bytes (a hidden window in the app). */
   renderPdf(html: string): Promise<Uint8Array>;
-  /** Writes an exported PDF to the application's folder. */
-  writePdf(
-    applicationId: string,
-    kind: DocumentExportRequest["kind"],
-    bytes: Uint8Array,
-  ): Promise<void>;
-  /** Where the PDF of a document is stored, for reveal. */
-  pdfPath(applicationId: string, kind: DocumentExportRequest["kind"]): string;
-  /** Opens the file manager at a path. */
-  revealPath(path: string): void;
+  /** Asks where to save the PDF (a native dialog). Null when the user cancels. */
+  chooseFile(defaultName: string): Promise<string | null>;
+  /** Writes the PDF to the chosen path. */
+  writeFile(path: string, bytes: Uint8Array): Promise<void>;
   /** The OS locale, used when the UI language setting is "system". */
   systemLocale(): string;
   now?: () => number;
@@ -106,19 +103,30 @@ export function createDocumentService(options: DocumentServiceOptions): Document
    */
   async function renderStored(
     request: DocumentExportRequest,
-  ): Promise<{ ok: true; html: string } | { ok: false; code: "not-found" | "no-profile" }> {
+  ): Promise<
+    { ok: true; html: string; fileName: string } | { ok: false; code: "not-found" | "no-profile" }
+  > {
     const stored = await repository.find(request.applicationId, request.kind);
     if (stored === null) return { ok: false, code: "not-found" };
     const saved = await options.profile.get();
     if (saved === null) return { ok: false, code: "no-profile" };
     const language = stored.language ?? (await uiLanguage());
+    const labels = documentLabels(language);
     const html = renderDocumentHtml(
       stored.content,
       saved.profile.contact,
-      documentLabels(language),
+      labels,
       language,
+      saved.profile.links,
     );
-    return { ok: true, html };
+    // "Maria Rossi - Curriculum Vitae.pdf": a name that makes sense to the employer who receives it.
+    const title = stored.content.kind === "cv" ? labels.cvTitle : labels.coverLetterTitle;
+    const fileName = `${[saved.profile.contact.fullName, title]
+      .filter((part) => part.trim() !== "")
+      .join(" - ")
+      .replace(/[\\/:*?"<>|]+/g, " ")
+      .trim()}.pdf`;
+    return { ok: true, html, fileName };
   }
 
   /** The user's choice for the application, else the posting's language, else the UI's. */
@@ -220,10 +228,11 @@ export function createDocumentService(options: DocumentServiceOptions): Document
     async exportPdf(request) {
       const rendered = await renderStored(request);
       if (!rendered.ok) return rendered;
-      const { html } = rendered;
       try {
-        const bytes = await options.renderPdf(html);
-        await options.writePdf(request.applicationId, request.kind, bytes);
+        const bytes = await options.renderPdf(rendered.html);
+        const path = await options.chooseFile(rendered.fileName);
+        if (path === null) return { ok: false, code: "cancelled" };
+        await options.writeFile(path, bytes);
         const document = await repository.markExported(request.applicationId, request.kind, now());
         if (document === null) return { ok: false, code: "not-found" };
         return { ok: true, document };
@@ -232,11 +241,14 @@ export function createDocumentService(options: DocumentServiceOptions): Document
       }
     },
 
-    async reveal(request) {
-      const stored = await repository.find(request.applicationId, request.kind);
-      if (stored === null || stored.exportedAt === null) return false;
-      options.revealPath(options.pdfPath(request.applicationId, request.kind));
-      return true;
+    async pdfFile(applicationId, kind) {
+      const rendered = await renderStored({ applicationId, kind });
+      if (!rendered.ok) return null;
+      try {
+        return { fileName: rendered.fileName, bytes: await options.renderPdf(rendered.html) };
+      } catch {
+        return null;
+      }
     },
   };
 }

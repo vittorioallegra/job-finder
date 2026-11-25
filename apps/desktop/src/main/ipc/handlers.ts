@@ -202,8 +202,6 @@ export async function handleInvoke(
       return services.documents.save(payload as DocumentSaveRequest);
     case "documents:export":
       return services.documents.exportPdf(payload as DocumentExportRequest);
-    case "documents:reveal":
-      return services.documents.reveal(payload as DocumentExportRequest);
   }
 }
 

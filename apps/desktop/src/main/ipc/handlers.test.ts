@@ -197,8 +197,8 @@ function spyServices() {
         calls.push(`documents.export:${request.kind}`);
         return { ok: false as const, code: "not-found" as const };
       },
-      reveal: async () => false,
       preview: async () => ({ ok: false as const, code: "not-found" as const }),
+      pdfFile: async () => null,
     },
     applicationExport: {
       exportCsv: async () => {
@@ -355,7 +355,6 @@ describe("IPC sender and payload guard", () => {
         "documents:generate",
         "documents:get",
         "documents:preview",
-        "documents:reveal",
         "documents:save",
         "documents:set-language",
         "ingest:cancel",

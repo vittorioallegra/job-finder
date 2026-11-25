@@ -23,6 +23,10 @@
       "skills": "Skills",
       "greeting": "Dear hiring team,",
       "present": "Present"
+    },
+    "export": {
+      "dialogTitle": "Save PDF",
+      "filterName": "PDF files"
     }
   },
   "tray": {

@@ -1,5 +1,5 @@
-// protects=the document service generates a document only after the profile and the key are in place, stores what the engine returns, refuses saved edits that break the profile, exports and reveals PDFs only for stored documents, and writes each document in the posting's language (or English when the posting's is missing or unsupported), unless the user picks another;
-// fails_when=a cloud provider is refused for lack of a consent step, a document is generated without a profile, an engine answer that breaks the rules is stored, a saved edit with an invented employer is stored, a PDF is written for a missing document, reveal opens a file that was never exported, an Italian posting gets an English document, a user's pick is ignored, or an export renders in a language other than the stored one;
+// protects=the document service generates a document only after the profile and the key are in place, stores what the engine returns, refuses saved edits that break the profile, exports a PDF only to a file the user chooses (and writes nothing on cancel), hands out upload PDFs without a dialog, and writes each document in the posting's language (or English);
+// fails_when=a cloud provider is refused for lack of a consent step, a document is generated without a profile, an engine answer that breaks the rules is stored, a PDF is written for a missing document or after the dialog is cancelled, an upload PDF asks where to save, a user's pick is ignored, or an export renders in a language other than the stored one;
 // no_claim=the engine answers and the PDF bytes are scripted doubles; the AI itself and the Chromium print are not exercised here;
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -65,7 +65,9 @@ describe("document service", () => {
   let requests: GenerateDocumentRequest[];
   let engineAnswer: () => Promise<unknown>;
   let pdfWrites: string[];
-  let revealed: string[];
+  /** What the save dialog is asked for, and the path it answers with (null: the user cancels). */
+  let askedNames: string[];
+  let chosenPath: string | null;
   let stored: Profile | null;
 
   beforeEach(async () => {
@@ -110,7 +112,8 @@ describe("document service", () => {
       ]);
     requests = [];
     pdfWrites = [];
-    revealed = [];
+    askedNames = [];
+    chosenPath = "/chosen/cv.pdf";
     stored = profile();
     engineAnswer = async () => ({ ok: true, content: VALID_LETTER, warnings: [] });
   });
@@ -134,11 +137,13 @@ describe("document service", () => {
         },
       },
       renderPdf: async () => new Uint8Array([37, 80, 68, 70]),
-      writePdf: async (applicationId, kind) => {
-        pdfWrites.push(`${applicationId}/${kind}`);
+      chooseFile: async (defaultName) => {
+        askedNames.push(defaultName);
+        return chosenPath;
       },
-      pdfPath: (applicationId, kind) => `/store/${applicationId}/${kind}.pdf`,
-      revealPath: (path) => revealed.push(path),
+      writeFile: async (path) => {
+        pdfWrites.push(path);
+      },
       systemLocale: () => "en-US",
       now: () => NOW,
       ...overrides,
@@ -225,13 +230,39 @@ describe("document service", () => {
     });
   });
 
-  it("exports a stored document to its PDF file and records the export time", async () => {
+  it("exports a stored document to the file the user chooses, named after them, and records the export time", async () => {
     await build().generate({ applicationId: "a1", kind: "cover-letter" });
 
     const result = await build().exportPdf({ applicationId: "a1", kind: "cover-letter" });
 
-    expect(pdfWrites).toEqual(["a1/cover-letter"]);
+    expect(pdfWrites).toEqual(["/chosen/cv.pdf"]);
+    expect(askedNames[0]).toMatch(/\.pdf$/);
+    expect(askedNames[0]).toContain(" - ");
     expect(result).toMatchObject({ ok: true, document: { exportedAt: NOW } });
+  });
+
+  it("writes nothing and records no export when the user closes the save dialog", async () => {
+    await build().generate({ applicationId: "a1", kind: "cover-letter" });
+    chosenPath = null;
+
+    expect(await build().exportPdf({ applicationId: "a1", kind: "cover-letter" })).toEqual({
+      ok: false,
+      code: "cancelled",
+    });
+    expect(pdfWrites).toEqual([]);
+    expect((await build().get("a1")).coverLetter?.exportedAt).toBeNull();
+  });
+
+  it("hands out a PDF with a readable name for an upload, without asking where to save it", async () => {
+    expect(await build().pdfFile("a1", "cv")).toBeNull();
+    await build().generate({ applicationId: "a1", kind: "cover-letter" });
+
+    const file = await build().pdfFile("a1", "cover-letter");
+
+    expect(file?.fileName).toMatch(/\.pdf$/);
+    expect(file?.bytes).toEqual(new Uint8Array([37, 80, 68, 70]));
+    expect(askedNames).toEqual([]);
+    expect(pdfWrites).toEqual([]);
   });
 
   it("does not export a missing document, and reports a failed render as export-failed", async () => {
@@ -268,16 +299,6 @@ describe("document service", () => {
     expect(preview.html).toContain("<html");
     expect(pdfWrites).toEqual([]);
     expect((await build().get("a1")).coverLetter?.exportedAt).toBeNull();
-  });
-
-  it("reveals only an exported PDF", async () => {
-    await build().generate({ applicationId: "a1", kind: "cover-letter" });
-    expect(await build().reveal({ applicationId: "a1", kind: "cover-letter" })).toBe(false);
-    expect(revealed).toEqual([]);
-
-    await build().exportPdf({ applicationId: "a1", kind: "cover-letter" });
-    expect(await build().reveal({ applicationId: "a1", kind: "cover-letter" })).toBe(true);
-    expect(revealed).toEqual(["/store/a1/cover-letter.pdf"]);
   });
 
   it("writes the document in the posting's language, and in English when the posting's is unsupported, whatever the UI language", async () => {

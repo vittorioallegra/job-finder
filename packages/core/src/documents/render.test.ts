@@ -1,4 +1,4 @@
-// protects=the rendered document is a plain single-column page whose every user value is escaped, with the profile's contact line and the labels passed in, stored dates shown as a CV writes them, and the letter opens with its greeting;
+// protects=the rendered document is a plain single-column page whose every user value is escaped, with the profile's contact line and the labels passed in, stored dates shown as a CV writes them, and the letter opens with its greeting, the profile's links as escaped http(s) links, and a paper-sheet look on screen only;
 // fails_when=a value from the profile or the document reaches the page unescaped, a table or script is emitted, the headings or language attribute are not the ones given, or a section with no content still gets a heading;
 // no_claim=the page is not checked in a PDF engine or an applicant tracking system; only its HTML structure and escaping are asserted;
 import { describe, expect, it } from "vitest";
@@ -128,5 +128,33 @@ describe("renderDocumentHtml", () => {
 describe("escapeHtml", () => {
   it("escapes the characters that can open a tag or close an attribute", () => {
     expect(escapeHtml(`&<>"'`)).toBe("&amp;&lt;&gt;&quot;&#39;");
+  });
+
+  it("shows the profile's links as clickable addresses under the contact line, in a CV and a letter, escaped and limited to http(s)", () => {
+    const links = [
+      { label: "Portfolio", url: "https://maria.example/work?a=1&b=2" },
+      { label: "", url: "https://github.com/maria" },
+      { label: "Bad", url: "javascript:alert(1)" },
+    ];
+    const letter: DocumentContent = {
+      kind: "cover-letter",
+      letter: { paragraphs: ["Hello."] },
+    };
+    for (const content of [cvContent, letter]) {
+      const html = renderDocumentHtml(content, contact, labels, "en", links);
+      expect(html).toContain(
+        '<a href="https://maria.example/work?a=1&amp;b=2">Portfolio: https://maria.example/work?a=1&amp;b=2</a>',
+      );
+      expect(html).toContain('<a href="https://github.com/maria">https://github.com/maria</a>');
+      expect(html).not.toContain("javascript:");
+    }
+    // Without links nothing is added.
+    expect(renderDocumentHtml(cvContent, contact, labels, "en")).not.toContain("<a ");
+  });
+
+  it("shows the page as a sheet of paper on screen (the preview) and prints without it", () => {
+    const html = renderDocumentHtml(cvContent, contact, labels, "en");
+    expect(html).toContain("@media screen");
+    expect(html).toContain("@page { size: A4");
   });
 });

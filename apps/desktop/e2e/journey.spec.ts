@@ -154,7 +154,7 @@ test("the journey runs from onboarding to a blocked second application", async (
     expect(job).toBeDefined();
     if (!job) return;
 
-    // Open the job and prepare it: a preparing application, a CV and a cover letter with PDFs.
+    // Open the job and prepare it: a preparing application, a stored CV and cover letter (autofill prints them to PDFs when the form opens).
     expect(await call(window, "jobs", "detail", { jobId: job.id })).not.toBeNull();
     await call(window, "jobs", "flag", { jobId: job.id, viewed: true });
 
@@ -169,9 +169,6 @@ test("the journey runs from onboarding to a blocked second application", async (
 
     for (const kind of ["cv", "cover-letter"]) {
       expect(await call(window, "documents", "generate", { applicationId, kind })).toMatchObject({
-        ok: true,
-      });
-      expect(await call(window, "documents", "exportPdf", { applicationId, kind })).toMatchObject({
         ok: true,
       });
     }

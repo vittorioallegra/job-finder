@@ -1,5 +1,5 @@
-// protects=the documents panel shows loading, error and AI-unavailable states, generates both documents with one button without consent, keeps writing after the panel closes, shows the language, shows a generated document as a card with Preview, Edit and Export buttons instead of fields, edits in a dialog that saves or drops its changes, previews the printed document in a sandboxed frame, reports a save that breaks the profile, exports a PDF and names every AI failure;
-// fails_when=a generate call needs a consent, a run stops when the panel closes, the card shows loose fields, cancelling the editor keeps the changes, the preview can run scripts, a refused save is reported as saved or hidden, an export without a file is reported as exported, or an AI failure lacks the settings link;
+// protects=the documents panel shows loading, error and AI-unavailable states, generates both documents with one button without consent, keeps writing after the panel closes, shows the language, shows a generated document as a card with Preview, Edit and Export buttons instead of fields, edits in a dialog that saves or drops its changes, previews the printed document in a sandboxed frame, reports a save that breaks the profile, saves a PDF through the system dialog (silent on cancel) and names every AI failure;
+// fails_when=a generate call needs a consent, a run stops when the panel closes, the card shows loose fields, cancelling the editor keeps the changes, the preview can run scripts, a refused save is reported as saved or hidden, a cancelled save dialog is reported as an error, or an AI failure lacks the settings link;
 // no_claim=the layout, the real bridge and the PDF itself are not checked here; the desktop service and PDF tests cover the rules and the file;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -138,7 +138,6 @@ function bridgeWith(
       setLanguage: vi.fn(async () => true),
       save: vi.fn(async () => ({ ok: false as const, code: "not-found" as const })),
       exportPdf: vi.fn(async () => ({ ok: false as const, code: "export-failed" as const })),
-      reveal: vi.fn(async () => true),
       preview: vi.fn(async () => ({ ok: true as const, html: "<html><body>CV</body></html>" })),
       ...documents,
     },
@@ -449,29 +448,28 @@ describe("application documents panel", () => {
     expect(container.querySelectorAll('a[href="/settings"]').length).toBe(0);
   });
 
-  it("exports the PDF, then offers to show it, which opens the file", async () => {
-    const exportPdf = vi.fn(async () => ({
-      ok: true as const,
-      document: coverLetter("Hi.", { exportedAt: 30 }),
-    }));
-    const reveal = vi.fn(async () => true);
+  it("saves the PDF through the system dialog, and says nothing when the user closes the dialog", async () => {
+    const exportPdf = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, document: coverLetter("Hi.", { exportedAt: 30 }) })
+      .mockResolvedValueOnce({ ok: false, code: "cancelled" });
     await render(
       bridgeWith({
         get: vi.fn(async () => documentsOf({ coverLetter: coverLetter("Hi.") })),
         exportPdf,
-        reveal,
       }),
     );
 
-    await act(async () => button(container, "Export PDF").click());
+    await act(async () => button(container, "Save PDF…").click());
     expect(exportPdf).toHaveBeenCalledWith({ applicationId: "a1", kind: "cover-letter" });
-    expect(container.textContent).toContain("PDF exported.");
+    expect(container.textContent).toContain("PDF saved.");
 
-    await act(async () => button(container, "Show PDF in folder").click());
-    expect(reveal).toHaveBeenCalledWith({ applicationId: "a1", kind: "cover-letter" });
+    await act(async () => button(container, "Save PDF…").click());
+    expect(container.querySelector("[role=alert]")).toBeNull();
+    expect(container.textContent).not.toContain("could not be exported");
   });
 
-  it("reports a failed export, and offers no reveal before a PDF exists", async () => {
+  it("reports a failed export", async () => {
     await render(
       bridgeWith({
         get: vi.fn(async () => documentsOf({ coverLetter: coverLetter("Hi.") })),
@@ -479,12 +477,7 @@ describe("application documents panel", () => {
       }),
     );
 
-    expect(
-      [...container.querySelectorAll("button")].some(
-        (node) => node.textContent === "Show PDF in folder",
-      ),
-    ).toBe(false);
-    await act(async () => button(container, "Export PDF").click());
+    await act(async () => button(container, "Save PDF…").click());
     expect(container.textContent).toContain("The PDF could not be exported.");
   });
 });

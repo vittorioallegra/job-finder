@@ -305,6 +305,7 @@ if (gotSingleInstanceLock) {
       systemLocale: () => app.getLocale(),
     });
     const documentsRoot = join(userData, "applications");
+    const uploadsRoot = join(app.getPath("temp"), "job-finder-uploads");
     const applicationRepository = createApplicationRepository(database.db, (applicationId) =>
       rm(join(documentsRoot, applicationId), { recursive: true, force: true }),
     );
@@ -328,23 +329,30 @@ if (gotSingleInstanceLock) {
       secrets: secretStore,
       engine: supervisor,
       renderPdf: createPdfRenderer({ openWindow: openPdfWindow }),
-      writePdf: async (applicationId, kind, bytes) => {
-        const path = documentFilePath(documentsRoot, applicationId, kind);
-        await mkdir(dirname(path), { recursive: true });
-        await writeFile(path, bytes);
+      chooseFile: async (defaultName) => {
+        const result = await dialog.showSaveDialog({
+          title: t("documents.export.dialogTitle"),
+          defaultPath: defaultName,
+          filters: [{ name: t("documents.export.filterName"), extensions: ["pdf"] }],
+        });
+        return result.canceled || result.filePath === undefined ? null : result.filePath;
       },
-      pdfPath: (applicationId, kind) => documentFilePath(documentsRoot, applicationId, kind),
-      revealPath: (path) => {
-        shell.showItemInFolder(path);
-      },
+      writeFile: (path, bytes) => writeFile(path, bytes),
       systemLocale: () => app.getLocale(),
     });
     const autofill = createAutofillService({
       applications: applicationRepository,
       profile: profileRepository,
-      documentExists: (applicationId, kind) =>
-        existsSync(documentFilePath(documentsRoot, applicationId, kind)),
-      documentPath: (applicationId, kind) => documentFilePath(documentsRoot, applicationId, kind),
+      documentFile: async (applicationId, kind) => {
+        // The form gets a fresh PDF made now; it lives in the temp folder, not in the app's data.
+        const file = await documents.pdfFile(applicationId, kind);
+        if (file === null) return null;
+        const folder = dirname(documentFilePath(uploadsRoot, applicationId, kind));
+        await mkdir(folder, { recursive: true });
+        const path = join(folder, file.fileName);
+        await writeFile(path, file.bytes);
+        return path;
+      },
       openWindow: openApplyWindow,
       ai: createAutofillAi({
         settings: settingsRepository,

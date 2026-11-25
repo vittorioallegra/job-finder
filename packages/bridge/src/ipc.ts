@@ -108,7 +108,6 @@ export const IPC_REQUEST_SCHEMAS = {
   "documents:set-language": DocumentSetLanguageRequestSchema,
   "documents:save": DocumentSaveRequestSchema,
   "documents:export": DocumentExportRequestSchema,
-  "documents:reveal": DocumentExportRequestSchema,
   "documents:preview": DocumentExportRequestSchema,
   "autofill:start": AutofillStartRequestSchema,
   "app:status": z.undefined(),
@@ -157,7 +156,6 @@ export interface IpcResponses {
   "documents:set-language": boolean;
   "documents:save": DocumentSaveResult;
   "documents:export": DocumentExportResult;
-  "documents:reveal": boolean;
   "documents:preview": DocumentPreviewResult;
   "autofill:start": AutofillStartResult;
   "app:status": AppStatus;
