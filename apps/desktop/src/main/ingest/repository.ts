@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, notLike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, notLike, or, sql } from "drizzle-orm";
 import {
   applications,
   companies,
@@ -20,6 +20,7 @@ import type {
   CompanyAddResult,
   CompanyRecord,
   CompanyScan,
+  ExcludedCompany,
   JobDetail,
   JobFlagRequest,
   JobListItem,
@@ -47,7 +48,15 @@ export interface IngestRepository {
    * row stays, so applications keep their jobs and the company search does not add it again.
    * Resolves false when it does not exist.
    */
-  removeCompany(companyId: string, now?: number): Promise<boolean>;
+  removeCompany(
+    companyId: string,
+    now?: number,
+    reason?: "user" | "auto" | "gone",
+  ): Promise<boolean>;
+  /** The companies left out of the sources (hidden directory companies are not among them). */
+  listExcluded(): Promise<ExcludedCompany[]>;
+  /** Brings a left-out company back, kept whatever the profile's places. False when unknown. */
+  restoreCompany(companyId: string): Promise<boolean>;
   /**
    * Open jobs matching the request. By affinity (the default), highest first, with the jobs
    * without a score for the current profile version last; by newest, the latest posting first.
@@ -191,10 +200,36 @@ export function createIngestRepository(db: AppDb): IngestRepository {
       return { ok: true, company: { ...row, country: null, lastScan: null } };
     },
 
-    async removeCompany(companyId, now = Date.now()) {
+    async listExcluded() {
+      const rows = await db
+        .select()
+        .from(companies)
+        .where(and(isNotNull(companies.excludedAt), notLike(companies.careersUrl, "directory:%")))
+        .orderBy(desc(companies.excludedAt));
+      return rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        careersUrl: row.careersUrl,
+        ats: row.ats,
+        country: row.country,
+        excludedAt: row.excludedAt ?? 0,
+        reason: row.excludedReason ?? "user",
+      }));
+    },
+
+    async restoreCompany(companyId) {
       const updated = await db
         .update(companies)
-        .set({ excludedAt: now })
+        .set({ excludedAt: null, excludedReason: null, origin: "manual" })
+        .where(and(eq(companies.id, companyId), isNotNull(companies.excludedAt)))
+        .returning({ id: companies.id });
+      return updated.length > 0;
+    },
+
+    async removeCompany(companyId, now = Date.now(), reason = "user") {
+      const updated = await db
+        .update(companies)
+        .set({ excludedAt: now, excludedReason: reason })
         .where(eq(companies.id, companyId))
         .returning({ id: companies.id });
       return updated.length > 0;

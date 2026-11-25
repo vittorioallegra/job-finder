@@ -1,9 +1,10 @@
-// protects=a company is stored with its supported board or as a generic careers page, one board or careers URL is stored once, the job list shows only open jobs ordered by affinity for the current profile version with unscored jobs last, the latest run comes back with its log in order, each company shows its most recent scan, and a removed company leaves the sources and the lists until it is added by hand;
+// protects=a company is stored with its supported board or as a generic careers page, one board or careers URL is stored once, the job list shows only open jobs ordered by affinity for the current profile version with unscored jobs last, the latest run comes back with its log in order, each company shows its most recent scan, a removed company leaves the sources and the lists, stays saved with who excluded it, is listed apart, and comes back kept;
 // fails_when=a board or careers URL already stored is stored again, a supported careers URL is stored without its board, a closed job is listed, a score of an older profile version orders a job, the run log is returned out of order or without its kinds, or a company shows an older scan than its latest;
 // no_claim=the careers URL is checked by its shape only, without a request, so a board that does not exist is still stored; the database schema is covered by the migration tests.
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { companies, jobs, jobScores, profile, runs } from "@job-finder/core";
 import type { IngestEvent } from "@job-finder/core/ingest/events";
@@ -289,5 +290,35 @@ describe("ingest repository", () => {
     expect(list[0]).toMatchObject({ score: 90, explanation: "Fit." });
     expect(list[2]).toMatchObject({ score: null, explanation: null });
     expect(list[3]).toMatchObject({ score: null, explanation: null });
+  });
+
+  it("keeps an excluded company saved with who excluded it, lists it apart, and brings it back kept", async () => {
+    const database = await openDatabase();
+    const repository = createIngestRepository(database.db);
+    await repository.addCompany(
+      { name: "Acme", careersUrl: "https://boards.greenhouse.io/acme" },
+      10,
+      () => "co-1",
+    );
+    await repository.addCompany(
+      { name: "Beta", careersUrl: "https://boards.greenhouse.io/beta" },
+      11,
+      () => "co-2",
+    );
+
+    expect(await repository.removeCompany("co-1", 20)).toBe(true);
+    expect(await repository.removeCompany("co-2", 21, "auto")).toBe(true);
+
+    expect(await repository.listCompanies()).toEqual([]);
+    expect((await repository.listExcluded()).map((c) => [c.id, c.reason])).toEqual([
+      ["co-2", "auto"],
+      ["co-1", "user"],
+    ]);
+    expect(await repository.restoreCompany("co-2")).toBe(true);
+    expect(await repository.restoreCompany("co-2")).toBe(false);
+    expect((await repository.listCompanies()).map((c) => c.id)).toEqual(["co-2"]);
+    const [row] = await database.db.select().from(companies).where(eq(companies.id, "co-2"));
+    expect(row).toMatchObject({ excludedAt: null, excludedReason: null, origin: "manual" });
+    database.close();
   });
 });

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Building2, ChevronRight } from "lucide-react";
 import { Link } from "react-router";
-import type { CompanyRecord, CompanyScan } from "@job-finder/bridge";
+import type { CompanyRecord, CompanyScan, ExcludedCompany } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -37,6 +37,20 @@ export function CompaniesScreen() {
     };
   }, [bridge]);
   const [removeFailed, setRemoveFailed] = useState(false);
+  const [excluded, setExcluded] = useState<ExcludedCompany[]>([]);
+  useEffect(() => {
+    let active = true;
+    bridge.companies.excluded().then(
+      (left) => {
+        if (active) setExcluded(left);
+      },
+      () => {},
+    );
+    return () => {
+      active = false;
+    };
+  }, [bridge]);
+
   useEffect(() => {
     let active = true;
     bridge.companies.list().then(
@@ -86,13 +100,33 @@ export function CompaniesScreen() {
     }
   }
 
-  /** Removes a company from the sources: no more scans, and the search does not add it again. */
+  /** Reads both lists again, after a company was excluded or brought back. */
+  async function reloadBoth() {
+    const [companies, left] = await Promise.all([
+      bridge.companies.list(),
+      bridge.companies.excluded(),
+    ]);
+    setLoad((previous) => (previous.status === "ready" ? { ...previous, companies } : previous));
+    setExcluded(left);
+  }
+
+  /** Excludes a company: it stays saved, but it is no longer scanned, listed or found again. */
   async function removeCompany(companyId: string) {
     setRemoveFailed(false);
     try {
       await bridge.companies.remove(companyId);
-      const companies = await bridge.companies.list();
-      setLoad((previous) => (previous.status === "ready" ? { ...previous, companies } : previous));
+      await reloadBoth();
+    } catch {
+      setRemoveFailed(true);
+    }
+  }
+
+  /** Brings an excluded company back into the sources. */
+  async function restoreCompany(companyId: string) {
+    setRemoveFailed(false);
+    try {
+      await bridge.companies.restore(companyId);
+      await reloadBoth();
     } catch {
       setRemoveFailed(true);
     }
@@ -237,6 +271,46 @@ export function CompaniesScreen() {
               )}
             </section>
           </details>
+          {excluded.length > 0 ? (
+            <details className="group rounded-2xl border border-app-border bg-app-surface shadow-card">
+              <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 select-none [&::-webkit-details-marker]:hidden">
+                <ChevronRight
+                  aria-hidden="true"
+                  className="size-4 text-app-muted transition-transform group-open:rotate-90"
+                  strokeWidth={1.8}
+                />
+                <h2 className="font-sans text-base font-semibold text-app-fg">
+                  {t("companies.excluded.summary", { count: excluded.length })}
+                </h2>
+              </summary>
+              <section className="flex flex-col gap-3 px-5 pb-5">
+                <p className="text-sm text-app-muted">{t("companies.excluded.hint")}</p>
+                <ul className="flex flex-col gap-2">
+                  {excluded.map((company) => (
+                    <li
+                      key={company.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-app-sunken p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-app-fg">{company.name}</p>
+                        <p className="text-sm text-app-muted">
+                          {t(`companies.excluded.reason.${company.reason}`)}
+                        </p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        aria-label={t("companies.excluded.restoreLabel", { name: company.name })}
+                        onClick={() => void restoreCompany(company.id)}
+                      >
+                        {t("companies.excluded.restore")}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </details>
+          ) : null}
         </>
       ) : null}
     </main>

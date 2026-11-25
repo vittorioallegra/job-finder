@@ -42,6 +42,11 @@ export const companies = sqliteTable("companies", {
    */
   excludedAt: integer("excluded_at"),
   /**
+   * Why it was excluded: "user" (the person excluded it; also what an older row without a reason
+   * means), "auto" (it had nothing for the profile's places) or "gone" (its board no longer exists).
+   */
+  excludedReason: text("excluded_reason", { enum: ["user", "auto", "gone"] }),
+  /**
    * The company's home country (an ISO code): where most of its open jobs are located. Null while
    * its jobs name no country. Kept up to date after each scan; the places filter reads it.
    */

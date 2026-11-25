@@ -47,7 +47,7 @@ export async function pruneOffProfileCompanies(
   if (rows.length === 0) return 0;
   await db
     .update(companies)
-    .set({ excludedAt: now })
+    .set({ excludedAt: now, excludedReason: "auto" })
     .where(
       inArray(
         companies.id,

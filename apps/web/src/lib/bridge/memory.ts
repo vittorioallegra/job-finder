@@ -125,6 +125,8 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
     companies: {
       summary: async () => ({ withOffers: 0 }),
       list: async () => structuredClone(companies),
+      excluded: async () => [],
+      restore: async () => false,
       remove: async (companyId) => {
         const index = companies.findIndex((company) => company.id === companyId);
         if (index < 0) return false;

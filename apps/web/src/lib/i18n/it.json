@@ -580,7 +580,7 @@
     "retry": "Riprova",
     "list": {
       "heading": "Aziende",
-      "empty": "Nessuna azienda ancora. Cerca bacheche qui sotto o aggiungine una con il link alla pagina di lavoro.",
+      "empty": "Nessuna azienda ancora. Usa \"Cerca nuove aziende\" qui sopra.",
       "board": "Pagina di lavoro su {{ats}}",
       "careersPage": "Pagina di lavoro, letta con l'IA",
       "summary_one": "{{count}} azienda seguita",
@@ -597,10 +597,10 @@
       "failed": "Ultima analisi non riuscita: {{reason}}."
     },
     "remove": {
-      "action": "Rimuovi",
-      "label": "Rimuovi {{name}} dalle fonti",
-      "failed": "Non è stato possibile rimuovere l'azienda. Riprova.",
-      "hint": "Un'azienda rimossa non viene più scansionata e le sue offerte spariscono dagli elenchi; la ricerca automatica non la aggiunge di nuovo. Aggiungendola a mano torna nell'elenco."
+      "action": "Escludi",
+      "label": "Escludi {{name}} dalle fonti",
+      "failed": "Non è stato possibile completare l'operazione. Riprova.",
+      "hint": "Un'azienda esclusa resta salvata, ma non viene più scansionata, le sue offerte spariscono dagli elenchi e la ricerca non la trova di nuovo. Puoi riattivarla dalla sezione \"Escluse\"."
     },
     "profileSearch": {
       "heading": "Aziende per i tuoi ruoli",
@@ -625,6 +625,18 @@
         "search-blocked": "Il servizio di ricerca ha bloccato la richiesta. Aggiungi una chiave di ricerca gratuita nelle Impostazioni e riprova.",
         "search-failed": "La ricerca non è riuscita. Riprova più tardi.",
         "engine-unavailable": "Il motore in background non è in esecuzione. Riprova tra poco."
+      }
+    },
+    "excluded": {
+      "summary_one": "{{count}} azienda esclusa",
+      "summary_other": "{{count}} aziende escluse",
+      "hint": "Non vengono più cercate né scansionate. Riattivandone una, torna tra quelle seguite e ci resta.",
+      "restore": "Riattiva",
+      "restoreLabel": "Riattiva {{name}}",
+      "reason": {
+        "user": "Esclusa da te",
+        "auto": "Esclusa dall'app: nessuna offerta nei tuoi luoghi",
+        "gone": "Esclusa dall'app: la sua pagina di lavoro non esiste più"
       }
     }
   },

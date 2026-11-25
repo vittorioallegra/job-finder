@@ -150,6 +150,10 @@ export async function handleInvoke(
       return services.repository.listCompanies();
     case "companies:summary":
       return services.companySummary();
+    case "companies:excluded":
+      return services.repository.listExcluded();
+    case "companies:restore":
+      return services.repository.restoreCompany((payload as { companyId: string }).companyId);
     case "companies:remove":
       return services.repository.removeCompany((payload as { companyId: string }).companyId);
     case "jobs:list":

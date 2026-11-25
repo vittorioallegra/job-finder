@@ -64,6 +64,20 @@ export interface CompanyRecord {
   lastScan: CompanyScan | null;
 }
 
+/** A company left out of the sources, with who left it out. */
+export interface ExcludedCompany {
+  id: string;
+  name: string;
+  careersUrl: string;
+  /** The ATS id, e.g. "greenhouse"; null for a careers page. */
+  ats: string | null;
+  country: string | null;
+  /** Epoch milliseconds. */
+  excludedAt: number;
+  /** "user": left out by the person; "auto": nothing for the profile's places; "gone": its board is gone. */
+  reason: "user" | "auto" | "gone";
+}
+
 /** Why a company could not be added. Any http(s) careers page is accepted; only a duplicate is refused. */
 export type CompanyAddFailureCode = "duplicate-company";
 

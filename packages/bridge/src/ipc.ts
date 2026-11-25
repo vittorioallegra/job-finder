@@ -6,7 +6,13 @@ import type { SecretsStatus } from "./secrets";
 import { SecretClearRequestSchema, SecretSetRequestSchema } from "./secrets";
 import type { CvImportResult, ProfileRecord } from "./profile";
 import { CvImportRequestSchema, ProfileSchema } from "./profile";
-import type { CompanyRecord, IngestStartResult, JobListItem, LatestRun } from "./ingest";
+import type {
+  CompanyRecord,
+  ExcludedCompany,
+  IngestStartResult,
+  JobListItem,
+  LatestRun,
+} from "./ingest";
 import {
   CompanyRemoveRequestSchema,
   IngestCancelRequestSchema,
@@ -78,6 +84,8 @@ export const IPC_REQUEST_SCHEMAS = {
   "companies:list": z.undefined(),
   "companies:summary": z.undefined(),
   "companies:remove": CompanyRemoveRequestSchema,
+  "companies:excluded": z.undefined(),
+  "companies:restore": CompanyRemoveRequestSchema,
   "jobs:list": JobsListRequestSchema,
   "jobs:detail": JobDetailRequestSchema,
   "jobs:flag": JobFlagRequestSchema,
@@ -126,6 +134,8 @@ export interface IpcResponses {
   "companies:list": CompanyRecord[];
   "companies:summary": { withOffers: number };
   "companies:remove": boolean;
+  "companies:excluded": ExcludedCompany[];
+  "companies:restore": boolean;
   "jobs:list": JobListItem[];
   "jobs:detail": JobDetail | null;
   "jobs:flag": boolean;

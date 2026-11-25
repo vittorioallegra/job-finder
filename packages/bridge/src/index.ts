@@ -36,6 +36,7 @@ import type { ScoreStartRequest, ScoreStartResult } from "./scoring";
 import type { JobDetail, JobDetailRequest, JobFlagRequest, JobsListRequest } from "./jobs";
 import type {
   CompanyRecord,
+  ExcludedCompany,
   IngestEvent,
   IngestStartResult,
   JobListItem,
@@ -96,6 +97,10 @@ export interface JobFinderBridge {
      * search does not add it again. Resolves false when unknown.
      */
     remove(companyId: string): Promise<boolean>;
+    /** The companies left out of the sources, the person's and the automatic ones. */
+    excluded(): Promise<ExcludedCompany[]>;
+    /** Brings a left-out company back into the sources, kept there whatever the profile's places. Resolves false when unknown. */
+    restore(companyId: string): Promise<boolean>;
   };
   readonly jobs: {
     /** Open jobs matching the filter, in the requested order. */

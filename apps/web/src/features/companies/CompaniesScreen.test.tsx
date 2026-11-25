@@ -1,4 +1,4 @@
-// protects=the sources page finds companies for the profile's roles (also on ?discover=1) or points to the profile without roles, shows what the background reading is doing, lists each company with its last scan and country in a panel that starts closed with its count and failures, lets a company be removed, and shows an error with a retry when the list cannot be read;
+// protects=the sources page finds companies for the profile's roles (also on ?discover=1) or points to the profile without roles, shows what the background reading is doing, lists each company with its last scan and country in a panel that starts closed with its count and failures, lets a company be excluded, lists the excluded ones with who excluded them and brings one back, and shows an error with a retry when the list cannot be read;
 // fails_when=a last scan is missing or wrong, the list starts open or hides its failures, a removed company stays listed, a failed read shows a blank page, or the page offers to add a company by hand;
 // no_claim=layout, keyboard focus order and the real search sources are not checked here; the core discovery tests and the engine runtime tests cover the search;
 import { act } from "react";
@@ -120,18 +120,52 @@ describe("companies screen", () => {
     expect(panel?.querySelector("summary")?.textContent).toContain("1 not read in the last scan");
   });
 
-  it("removes a company from the sources and lists the rest", async () => {
+  it("excludes a company from the sources and lists the rest", async () => {
     const memory = createMemoryBridge({ companies: [acme] });
     const remove = vi.fn(memory.companies.remove);
     await render({ ...memory, companies: { ...memory.companies, remove } });
     await act(async () => {
       container
-        .querySelector<HTMLButtonElement>('button[aria-label="Remove Acme from the sources"]')!
+        .querySelector<HTMLButtonElement>('button[aria-label="Exclude Acme from the sources"]')!
         .click();
     });
     await act(async () => {});
     expect(remove).toHaveBeenCalledWith(acme.id);
     expect(container.textContent).not.toContain(acme.careersUrl);
+  });
+
+  it("lists the excluded companies with who excluded them, and brings one back", async () => {
+    const memory = createMemoryBridge({ companies: [] });
+    let left = [
+      {
+        id: "x1",
+        name: "Far Away",
+        careersUrl: "https://boards.greenhouse.io/far",
+        ats: "greenhouse",
+        country: "US",
+        excludedAt: 5,
+        reason: "auto" as const,
+      },
+    ];
+    const restore = vi.fn(async () => {
+      left = [];
+      return true;
+    });
+    await render({
+      ...memory,
+      companies: { ...memory.companies, excluded: async () => left, restore },
+    });
+    expect(container.textContent).toContain("1 company excluded");
+    expect(container.textContent).toContain("Excluded by the app: no job in your places");
+
+    await act(async () => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Bring back Far Away"]')!
+        .click();
+    });
+    await act(async () => {});
+    expect(restore).toHaveBeenCalledWith("x1");
+    expect(container.textContent).not.toContain("company excluded");
   });
 
   it("finds companies for the profile's roles on ?discover=1 and says what it added", async () => {

@@ -580,7 +580,7 @@
     "retry": "Try again",
     "list": {
       "heading": "Companies",
-      "empty": "No companies yet. Find boards below or add one by its careers page link.",
+      "empty": "No companies yet. Use \"Find new companies\" above.",
       "board": "Job page on {{ats}}",
       "careersPage": "Careers page, read with AI",
       "summary_one": "{{count}} company followed",
@@ -597,10 +597,10 @@
       "failed": "Last scan failed: {{reason}}."
     },
     "remove": {
-      "action": "Remove",
-      "label": "Remove {{name}} from the sources",
-      "failed": "The company could not be removed. Try again.",
-      "hint": "A removed company is no longer scanned and its jobs leave the lists; the company search will not add it again. Adding it by hand brings it back."
+      "action": "Exclude",
+      "label": "Exclude {{name}} from the sources",
+      "failed": "The operation could not be completed. Try again.",
+      "hint": "An excluded company stays saved, but it is no longer scanned, its jobs leave the lists and the search does not find it again. You can bring it back from the \"Excluded\" section."
     },
     "profileSearch": {
       "heading": "Companies for your roles",
@@ -625,6 +625,18 @@
         "search-blocked": "The search service blocked the request. Add a free search key in Settings and try again.",
         "search-failed": "The search failed. Try again later.",
         "engine-unavailable": "The background engine is not running. Try again shortly."
+      }
+    },
+    "excluded": {
+      "summary_one": "{{count}} company excluded",
+      "summary_other": "{{count}} companies excluded",
+      "hint": "They are no longer searched or scanned. Bringing one back puts it among the followed ones, and it stays there.",
+      "restore": "Bring back",
+      "restoreLabel": "Bring back {{name}}",
+      "reason": {
+        "user": "Excluded by you",
+        "auto": "Excluded by the app: no job in your places",
+        "gone": "Excluded by the app: its job page no longer exists"
       }
     }
   },

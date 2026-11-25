@@ -128,6 +128,7 @@ export function createDirectoryJobStore(
             slug: null,
             createdAt: startedAt,
             excludedAt: null,
+            excludedReason: null,
             country: null,
             origin: "discovery" as const,
           };
