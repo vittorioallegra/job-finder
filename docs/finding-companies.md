@@ -26,3 +26,7 @@ Create an account, copy the key from its dashboard, choose the service in Settin
 ## Politeness
 
 All requests go through the shared HTTP client: one request per second per host, robots.txt respected, the Workable directory read only through its open API paths. Remotive asks for few requests: a run makes one per keyword.
+
+## Company registry and careers pages
+
+The web search finds boards named in results; it cannot know a company's country. DBpedia (the open data extracted from Wikipedia, whose robots.txt leaves its SPARQL endpoint open) can: its company entries carry the country and the website. For each country in the places, the app asks it once, then reads up to 40 company sites per run, 5 at a time, one request a second per host. From each site's home page it finds the careers link in several languages, then the ATS board the page embeds or links; when the site has no ATS the careers page itself becomes the source, read later by the generic careers reader (which uses the configured AI). Companies already followed and sites read earlier in the session are skipped. Coverage is what Wikipedia knows of the country: the larger employers, in every industry. Wikidata's query service is not used: its robots.txt disallows it.

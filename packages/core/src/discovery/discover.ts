@@ -5,6 +5,7 @@ import { commonCrawlSource } from "./commoncrawl";
 import { duckDuckGoSource } from "./duckduckgo";
 import { createKeyedSource } from "./keyed";
 import { discoverFromFeeds, KEYLESS_FEEDS, type JobFeed } from "./feeds";
+import { discoverFromRegistry } from "./registry";
 import { discoverWorkableDirectory } from "./workable-directory";
 import { buildQueries, MAX_QUERIES } from "./query";
 import type { BoardSource, SearchSource } from "./source";
@@ -28,6 +29,8 @@ export interface DiscoverOptions {
   directories?: boolean;
   /** Job feeds that name hiring companies. Defaults to the keyless ones. */
   feeds?: readonly JobFeed[];
+  /** Whether DBpedia is asked for the companies of the places' countries. Defaults to yes. */
+  registry?: boolean;
   maxQueries?: number;
   signal?: AbortSignal;
 }
@@ -61,8 +64,9 @@ export async function discoverCompanies(
   const addUrls = (urls: string[]): void => {
     for (const url of urls) {
       const candidate = toCandidate(url);
-      if (candidate && !seen.has(`${candidate.ats}/${candidate.slug}`)) {
-        seen.add(`${candidate.ats}/${candidate.slug}`);
+      const key = candidate && `${candidate.ats}/${candidate.slug}`;
+      if (candidate && key && !seen.has(key)) {
+        seen.add(key);
         candidates.push(candidate);
       }
     }
@@ -115,6 +119,21 @@ export async function discoverCompanies(
         seen.add(key);
         candidates.push(candidate);
       }
+    }
+  }
+
+  // Companies of the places' countries from DBpedia, each with the careers page its site shows.
+  if (options.registry !== false && !options.signal?.aborted) {
+    const registry = await discoverFromRegistry(criteria, {
+      http: options.http,
+      signal: options.signal,
+    });
+    if (registry.answered > 0) succeeded += 1;
+    for (const candidate of registry.candidates) {
+      const key = `${candidate.ats ?? "page"}/${candidate.slug ?? candidate.careersUrl}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      candidates.push(candidate);
     }
   }
 

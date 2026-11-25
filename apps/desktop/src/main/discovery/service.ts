@@ -26,6 +26,8 @@ export interface DiscoveryServiceOptions {
   engine: () => DiscoveryEngine | null;
   settings: Pick<SettingsRepository, "get">;
   secrets: Pick<SecretStore, "read">;
+  /** Hosts of the companies already followed, so a search does not look them up again. */
+  knownHosts?: () => Promise<string[]>;
 }
 
 /** Each keyed provider reads its own secret; the name is fixed here, never taken from the renderer. */
@@ -56,8 +58,9 @@ export function createDiscoveryService(options: DiscoveryServiceOptions): Discov
         }
         // One service at a time: with a usable key, DuckDuckGo stays out (settings saved before
         // the choice became single may still have both switched on).
+        const known = options.knownHosts ? await options.knownHosts() : [];
         const outcome = await current.discoverCompanies(
-          { keywords: request.keywords, locations: request.locations },
+          { keywords: request.keywords, locations: request.locations, known },
           { duckduckgo: search.duckduckgo && keyed.length === 0, keyed },
         );
         if (!outcome.ok) return { ok: false, code: outcome.code };

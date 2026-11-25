@@ -60,7 +60,7 @@ describe("discovery service", () => {
 
     const result = await service.search({ keywords: ["data"], locations: ["Milan"] });
 
-    expect(asked[0]?.criteria).toEqual({ keywords: ["data"], locations: ["Milan"] });
+    expect(asked[0]?.criteria).toEqual({ keywords: ["data"], locations: ["Milan"], known: [] });
     expect(result).toEqual(found);
   });
 

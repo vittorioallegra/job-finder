@@ -92,7 +92,8 @@ export async function serveJourneyFixtures(): Promise<JourneyFixtures> {
         (pathname === "/api/v1/jobs" ||
           pathname === "/jobs/api/search" ||
           pathname === "/api/remote-jobs" ||
-          pathname === "/api/job-board-api")
+          pathname === "/api/job-board-api" ||
+          pathname === "/sparql")
       ) {
         send(response, 404, "text/plain", "not found");
         return;

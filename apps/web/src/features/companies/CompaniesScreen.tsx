@@ -242,8 +242,10 @@ export function CompaniesScreen() {
   }
 
   function isAdded(candidate: DiscoveryCandidate, companies: CompanyRecord[]): boolean {
-    return companies.some(
-      (company) => company.ats === candidate.ats && company.slug === candidate.slug,
+    return companies.some((company) =>
+      candidate.ats === null
+        ? company.careersUrl === candidate.careersUrl
+        : company.ats === candidate.ats && company.slug === candidate.slug,
     );
   }
 
@@ -431,13 +433,17 @@ export function CompaniesScreen() {
                     const alreadyAdded = isAdded(candidate, load.companies);
                     return (
                       <li
-                        key={`${candidate.ats}/${candidate.slug}`}
+                        key={`${candidate.ats ?? "page"}/${candidate.slug ?? candidate.careersUrl}`}
                         className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-app-sunken p-3"
                       >
                         <div className="min-w-0">
                           <p className="font-medium text-app-fg">{candidate.name}</p>
                           <p className="mt-0.5">
-                            <Badge>{t("companies.list.board", { ats: candidate.ats })}</Badge>
+                            <Badge>
+                              {candidate.ats !== null
+                                ? t("companies.list.board", { ats: candidate.ats })
+                                : t("companies.list.careersPage")}
+                            </Badge>
                           </p>
                           <p className="mt-1 text-xs break-all text-app-muted">
                             {candidate.careersUrl}

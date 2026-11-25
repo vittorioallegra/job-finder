@@ -380,6 +380,14 @@ if (gotSingleInstanceLock) {
       engine: () => supervisor,
       settings: settingsRepository,
       secrets: secretStore,
+      knownHosts: async () =>
+        (await ingestRepository.listCompanies()).flatMap((company) => {
+          try {
+            return [new URL(company.careersUrl).hostname];
+          } catch {
+            return [];
+          }
+        }),
     });
     const profileDiscovery = createProfileDiscovery({
       preferences: async () => (await profileRepository.get())?.profile.preferences ?? null,
