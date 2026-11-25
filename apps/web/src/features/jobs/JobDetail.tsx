@@ -317,35 +317,6 @@ export function JobDetail({ jobId, onChanged, onClose }: JobDetailProps) {
                 : state.job.description}
             </p>
           </div>
-
-          <div className="flex flex-col gap-2">
-            <h4 className="font-sans text-sm font-semibold text-app-fg">
-              {t("jobs.detail.sources")}
-            </h4>
-            {state.job.sources.length === 0 ? (
-              <p className="text-sm text-app-muted">{t("jobs.detail.noSources")}</p>
-            ) : (
-              <ul className="flex flex-col gap-2 text-sm">
-                {state.job.sources.map((source) => (
-                  <li
-                    key={`${source.source}-${source.url}`}
-                    className="flex flex-col gap-0.5 rounded-xl border border-app-border bg-app-surface p-3"
-                  >
-                    <span className="font-medium text-app-fg">
-                      {source.source}
-                      {source.closed ? ` · ${t("jobs.detail.sourceClosed")}` : ""}
-                    </span>
-                    <span className="break-all text-xs text-app-muted">
-                      {t("jobs.detail.postingUrl", { url: source.url })}
-                    </span>
-                    <span className="break-all text-xs text-app-muted">
-                      {t("jobs.detail.applyUrl", { url: source.applyUrl })}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
         </>
       ) : null}
     </section>
