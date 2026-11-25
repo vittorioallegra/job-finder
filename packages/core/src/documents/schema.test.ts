@@ -262,7 +262,10 @@ describe("validation across languages", () => {
 
     expect(validateDocument(repaired, profile())).toEqual([]);
     if (repaired.kind !== "cv") return;
-    expect(repaired.cv.experience).toHaveLength(1);
+    // Every job of the profile is there, once, in the profile's order.
+    expect(repaired.cv.experience.map((entry) => entry.source)).toEqual(
+      profile().experience.map((_, index) => index),
+    );
     expect(repaired.cv.experience[0]?.company).toBe(profile().experience[0]?.company);
     expect(repaired.cv.summary).toBe("Ten years of APIs.");
     expect(repaired.cv.skills[0]?.name).toBe(profile().skills[0]?.name);
@@ -277,5 +280,24 @@ describe("validation across languages", () => {
       kind: "cover-letter",
       letter: { paragraphs: ["Plain paragraph."] },
     });
+  });
+
+  it("puts back the latest job and the degree when the model leaves them out, with the profile's own wording", () => {
+    const p = profile();
+    const answer = cv({ experience: [], education: [], skills: [] });
+
+    const repaired = repairDocument({ kind: "cv", cv: answer }, p);
+
+    expect(validateDocument(repaired, p)).toEqual([]);
+    if (repaired.kind !== "cv") return;
+    expect(repaired.cv.experience.map((entry) => entry.company)).toEqual(
+      p.experience.map((item) => item.company),
+    );
+    expect(repaired.cv.education.map((entry) => entry.degree)).toEqual(
+      p.education.map((item) => item.degree),
+    );
+    expect(repaired.cv.experience[0]?.bullets.map((bullet) => bullet.text)).toEqual(
+      p.experience[0]?.bullets.map((text) => text.trim()),
+    );
   });
 });

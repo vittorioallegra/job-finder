@@ -1,5 +1,5 @@
-// protects=generateDocument returns a document only after it passes the profile checks, sets small drifts right from the profile instead of rejecting the answer, retries once with the rules broken when nothing usable is left, reports an answer still unusable as invalid-output, maps provider failures to their codes, and asks for the text in the language it is given;
-// fails_when=an invented employer, date, skill or number reaches the result, a drifted answer is rejected instead of corrected, the retry omits the broken rules, a second unusable answer is accepted, a provider rejection is reported as invalid-output, more than two answers are requested, or the prompt names another language than the one given;
+// protects=generateDocument returns a document only after it passes the profile checks, adds back a job or a degree the model left out, sets small drifts right from the profile instead of rejecting the answer, retries once with the rules broken when nothing usable is left, reports an answer still unusable as invalid-output, maps provider failures to their codes, and asks for the text in the language it is given;
+// fails_when=a CV without the latest job or the degree, an invented employer, date, skill or number reaches the result, a drifted answer is rejected instead of corrected, the retry omits the broken rules, a second unusable answer is accepted, a provider rejection is reported as invalid-output, more than two answers are requested, or the prompt names another language than the one given;
 // no_claim=every provider answer is a scripted double, not a live model; the quality of real output is not shown;
 import { describe, expect, it } from "vitest";
 import type { AiProviderConfig } from "../ai/provider";
@@ -129,6 +129,49 @@ describe("generateDocument", () => {
     expect(entry?.bullets).toEqual([{ source: 0, text: "Cut latency by 40%" }]);
     expect(outcome.content.cv.summary).toBe("Cut latency.");
     expect(outcome.content.cv.skills).toEqual([]);
+    expect(bodies).toHaveLength(1);
+  });
+
+  it("adds back a job and a degree the model left out, even when its answer is otherwise valid", async () => {
+    const twoJobs: Profile = {
+      ...profile(),
+      experience: [
+        {
+          company: "Globex",
+          title: "Lead",
+          location: "Roma",
+          startDate: "2024",
+          endDate: "present",
+          bullets: ["Led the platform team"],
+        },
+        ...profile().experience,
+      ],
+      education: [
+        {
+          institution: "Politecnico",
+          degree: "MSc Computer Science",
+          grade: "",
+          startDate: "2014",
+          endDate: "2019",
+        },
+      ],
+    };
+    // The model keeps only the older job (source 1) and no degree.
+    const answer = {
+      ...VALID_CV,
+      experience: [{ ...VALID_CV.experience[0]!, source: 1 }],
+    };
+    const { fetchImpl, bodies } = scriptedFetch([() => chatCompletion(JSON.stringify(answer))]);
+
+    const outcome = await generateDocument(input({ profile: twoJobs }), { fetch: fetchImpl });
+
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok || outcome.content.kind !== "cv") return;
+    expect(outcome.content.cv.experience.map((entry) => entry.company)).toEqual(["Globex", "Acme"]);
+    expect(outcome.content.cv.experience[0]?.endDate).toBe("present");
+    expect(outcome.content.cv.education.map((entry) => entry.degree)).toEqual([
+      "MSc Computer Science",
+    ]);
     expect(bodies).toHaveLength(1);
   });
 

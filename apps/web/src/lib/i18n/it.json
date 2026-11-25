@@ -713,7 +713,6 @@
       "notGenerated": "Non ancora generato.",
       "generate": "Genera",
       "generateAgain": "Genera di nuovo",
-      "generated": "Generato. Controlla il testo prima di esportarlo.",
       "aiUnavailable": "AI non disponibile: non è impostato alcun modello. Impostane uno nelle Impostazioni per generare i documenti.",
       "openSettings": "Apri le Impostazioni",
       "summary": "Profilo",
@@ -775,7 +774,8 @@
       "previewLoading": "Preparo l'anteprima…",
       "previewFailed": "Non è stato possibile preparare l'anteprima. Salva il profilo e riprova.",
       "previewFrame": "Anteprima del documento come apparirà nel PDF",
-      "editIntro": "Modifica qui sotto la formulazione. Aziende, ruoli, date, titoli di studio e competenze vengono dal profilo, quindi non si modificano qui: cambiali nel profilo. Il testo salvato deve restare fedele al profilo."
+      "editIntro": "Modifica qui sotto la formulazione. Aziende, ruoli, date, titoli di studio e competenze vengono dal profilo, quindi non si modificano qui: cambiali nel profilo. Il testo salvato deve restare fedele al profilo.",
+      "generatedWord": "Generato"
     },
     "form": {
       "heading": "Modulo di candidatura",

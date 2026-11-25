@@ -283,7 +283,9 @@ function sentencesOf(text: string): string[] {
  * - an entry pointing at no profile item, or at one already used, is dropped;
  * - a bullet whose number is not in its source bullet becomes the source bullet's own text, and a
  *   bullet pointing at no source bullet is dropped;
- * - sentences of the summary and paragraphs of a letter with a number the profile lacks are dropped.
+ * - sentences of the summary and paragraphs of a letter with a number the profile lacks are dropped;
+ * - every experience and education entry of the profile is present, in the profile's order: one the
+ *   model left out (often the latest job or the degree) is added with the profile's own wording.
  * Nothing is added that the profile does not state. What is left still goes through
  * `validateDocument`.
  */
@@ -353,6 +355,39 @@ export function repairDocument(content: DocumentContent, profile: Profile): Docu
       entry.name === item.name || item.aliases.includes(entry.name) ? entry.name : item.name;
     return [{ source: entry.source, name }];
   });
+
+  // A CV that leaves out the latest job or the degree is wrong, not tailored: put them back.
+  for (const [index, item] of profile.experience.entries()) {
+    if (usedExperience.has(index)) continue;
+    experience.push({
+      source: index,
+      company: item.company,
+      title: item.title,
+      location: item.location,
+      startDate: item.startDate,
+      endDate: item.endDate,
+      bullets: item.bullets
+        .slice(0, DOCUMENT_LIMITS.bulletsPerEntry)
+        .flatMap((text, bulletIndex) =>
+          text.trim() === "" || text.length > DOCUMENT_LIMITS.bullet
+            ? []
+            : [{ source: bulletIndex, text: text.trim() }],
+        ),
+    });
+  }
+  for (const [index, item] of profile.education.entries()) {
+    if (usedEducation.has(index)) continue;
+    education.push({
+      source: index,
+      institution: item.institution,
+      degree: item.degree,
+      grade: item.grade,
+      startDate: item.startDate,
+      endDate: item.endDate,
+    });
+  }
+  experience.sort((a, b) => a.source - b.source);
+  education.sort((a, b) => a.source - b.source);
 
   const summary = sentencesOf(cv.summary)
     .filter((sentence) => !hasNumberOutside(sentence, profileNumbers))

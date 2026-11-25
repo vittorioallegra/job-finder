@@ -1,5 +1,5 @@
-// protects=the documents panel shows loading, error and AI-unavailable states, generates both documents with one button, keeps writing after the panel closes, writes the history (in preparation, then ready), empties the documents when the language changes, shows cards with Preview, Edit and Save PDF (a brief "PDF saved"), edits in a dialog, previews in a sandboxed frame, and names every AI failure;
-// fails_when=a run stops when the panel closes, the history misses a step, a language change keeps old documents, "PDF saved" stays for ever, the card shows loose fields or a tag, cancelling the editor keeps changes, the preview can run scripts, a refused save is hidden, or an AI failure lacks the settings link;
+// protects=the documents panel shows loading, error and AI-unavailable states, generates both documents with one button, keeps writing after the panel closes, writes the history (in preparation, then ready), empties the documents when the language changes, shows cards with Preview, Edit and Save PDF (a brief "PDF saved"), edits in a dialog, previews in a sandboxed frame, keeps Preview, Edit and Save PDF off while writing, says "Generated" briefly next to the button, and names every AI failure;
+// fails_when=a run stops when the panel closes, the history misses a step, a language change keeps old documents, "PDF saved" stays for ever, the card shows loose fields or a tag, cancelling the editor keeps changes, the preview can run scripts, a refused save is hidden, Preview stays active while writing, "Generated" stays for ever or sits under the button, or an AI failure lacks the settings link;
 // no_claim=the layout, the real bridge and the PDF itself are not checked here; the desktop service and PDF tests cover the rules and the file;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -298,7 +298,7 @@ describe("application documents panel", () => {
 
     await act(async () => pending.shift()?.());
     await act(async () => {});
-    expect(container.textContent).toContain("Generated.");
+    expect(container.textContent).toContain("Generated");
     expect(button(container, "Preview")).toBeTruthy();
   });
 
@@ -516,6 +516,46 @@ describe("application documents panel", () => {
         vi.advanceTimersByTime(3500);
       });
       expect(container.textContent).not.toContain("PDF saved.");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps Preview, Edit and Save PDF off while a document is being written, and says Generated next to the button for a moment", async () => {
+    vi.useFakeTimers();
+    try {
+      let finish: () => void = () => {};
+      const generate = vi.fn(
+        () =>
+          new Promise((resolve) => {
+            finish = () => resolve({ ok: true as const, document: coverLetter("New text.") });
+          }),
+      );
+      await render(
+        bridgeWith({
+          get: vi.fn(async () => documentsOf({ coverLetter: coverLetter("Old text.") })),
+          generate: generate as never,
+        }),
+      );
+      await act(async () => button(container, "Generate again").click());
+
+      for (const name of ["Preview", "Edit"]) {
+        // The button stays out of the way while its document is being rewritten.
+        expect(button(container, name).disabled).toBe(true);
+      }
+      expect(button(container, "Save PDF…").disabled).toBe(true);
+
+      await act(async () => finish());
+      await act(async () => {});
+      expect(button(container, "Preview").disabled).toBe(false);
+      const row = button(container, "Generate again").parentElement;
+      expect(row?.textContent).toContain("Generated");
+      expect(container.textContent).not.toContain("Review the text");
+
+      await act(async () => {
+        vi.advanceTimersByTime(3500);
+      });
+      expect(container.textContent).not.toContain("Generated");
     } finally {
       vi.useRealTimers();
     }

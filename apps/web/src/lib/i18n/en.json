@@ -713,7 +713,6 @@
       "notGenerated": "Not generated yet.",
       "generate": "Generate",
       "generateAgain": "Generate again",
-      "generated": "Generated. Review the text before you export it.",
       "aiUnavailable": "AI unavailable: no AI model is set up. Set one in Settings to generate documents.",
       "openSettings": "Open Settings",
       "summary": "Summary",
@@ -775,7 +774,8 @@
       "previewLoading": "Preparing the preview…",
       "previewFailed": "The preview could not be prepared. Save your profile and try again.",
       "previewFrame": "Preview of the document as it will look in the PDF",
-      "editIntro": "Change the wording below. Employers, titles, dates, degrees and skills come from your profile, so they are not editable here: edit them in your profile. Saved text must stay true to your profile."
+      "editIntro": "Change the wording below. Employers, titles, dates, degrees and skills come from your profile, so they are not editable here: edit them in your profile. Saved text must stay true to your profile.",
+      "generatedWord": "Generated"
     },
     "form": {
       "heading": "Application form",

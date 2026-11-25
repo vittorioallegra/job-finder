@@ -50,7 +50,10 @@ const DOCUMENT_MAX_OUTPUT_TOKENS = 8192;
 function isEmpty(content: DocumentContent): boolean {
   return content.kind === "cover-letter"
     ? content.letter.paragraphs.length === 0
-    : content.cv.experience.length === 0 && content.cv.skills.length === 0;
+    : content.cv.summary === "" &&
+        content.cv.experience.length === 0 &&
+        content.cv.education.length === 0 &&
+        content.cv.skills.length === 0;
 }
 
 /**
@@ -99,11 +102,9 @@ export async function generateDocument(
         content = { kind: "cover-letter", letter: result.value };
         attemptWarnings = result.warnings;
       }
+      // The answer is brought back to the profile's facts first (and completed: a CV never leaves
+      // out a job or a degree); a document left with nothing is asked again.
       issues = validateDocument(content, input.profile);
-      if (issues.length === 0) {
-        return { ok: true, content, warnings: attemptWarnings };
-      }
-      // Small drifts are set right from the profile; a document left with nothing is asked again.
       const repaired = repairDocument(content, input.profile);
       if (!isEmpty(repaired) && validateDocument(repaired, input.profile).length === 0) {
         return { ok: true, content: repaired, warnings: attemptWarnings };

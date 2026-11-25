@@ -95,8 +95,8 @@ function contentOf(record: DocumentRecord, draft: Draft): DocumentContent {
   return record.content;
 }
 
-/** How long "PDF saved" stays next to the button. */
-const SAVED_FLASH_MS = 3000;
+/** How long a word such as "PDF saved" stays next to its button. */
+const FLASH_MS = 3000;
 
 interface ApplicationDocumentsProps {
   applicationId: string;
@@ -120,7 +120,10 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
   const seenVersion = useRef(generation.version);
   const scrollTarget = useRef<DocumentKind | null>(null);
   const [previewing, setPreviewing] = useState<DocumentKind | null>(null);
-  const [savedFlash, setSavedFlash] = useState<DocumentKind | null>(null);
+  // A short word next to the button that was just used ("saved", "generated"), gone after a moment.
+  const [flash, setFlash] = useState<{ kind: DocumentKind; word: "saved" | "generated" } | null>(
+    null,
+  );
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
@@ -243,6 +246,13 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
     };
   }
 
+  /** Says a word next to a button for a moment. */
+  function showFlash(kind: DocumentKind, word: "saved" | "generated") {
+    setFlash({ kind, word });
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    flashTimer.current = setTimeout(() => setFlash(null), FLASH_MS);
+  }
+
   /** Starts writing the given documents. The run goes on if the user leaves; see `startGeneration`. */
   function generate(kinds: DocumentKind[]) {
     for (const kind of kinds) setNotice(kind, null);
@@ -256,8 +266,9 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
     scrollTarget.current = state.last?.records[0]?.kind ?? null;
     for (const record of state.last?.records ?? []) {
       applyRecord(record);
-      setNotice(record.kind, { tone: "ok", text: t("applications.documents.generated") });
     }
+    const last = state.last?.records.at(-1);
+    if (last) showFlash(last.kind, "generated");
     if (state.last?.failure) {
       setNotice(state.last.failure.kind, failureNotice(state.last.failure.code));
     }
@@ -343,9 +354,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
       if (result.ok) {
         applyRecord(result.document);
         // Said next to the button for a moment only, then it goes away.
-        setSavedFlash(kind);
-        if (flashTimer.current) clearTimeout(flashTimer.current);
-        flashTimer.current = setTimeout(() => setSavedFlash(null), SAVED_FLASH_MS);
+        showFlash(kind, "saved");
       } else if (result.code !== "cancelled") {
         // Closing the save dialog is not a failure: nothing is said.
         setNotice(kind, failureNotice(result.code));
@@ -477,14 +486,18 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
               ) : (
                 <>
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" onClick={() => setPreviewing(kind)}>
+                    <Button
+                      size="sm"
+                      disabled={generation.running === kind}
+                      onClick={() => setPreviewing(kind)}
+                    >
                       <Eye className="size-4" strokeWidth={1.8} aria-hidden="true" />
                       {t("applications.documents.preview")}
                     </Button>
                     <Button
                       variant="secondary"
                       size="sm"
-                      disabled={busy !== null || !draft}
+                      disabled={busy !== null || !draft || generation.running === kind}
                       onClick={() => {
                         setNotice(kind, null);
                         setEditing(kind);
@@ -496,14 +509,14 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
                     <Button
                       variant="secondary"
                       size="sm"
-                      disabled={busy !== null}
+                      disabled={busy !== null || generation.running === kind}
                       onClick={() => void exportPdf(kind)}
                     >
                       {working && busy?.action === "export"
                         ? t("applications.documents.exporting")
                         : t("applications.documents.export")}
                     </Button>
-                    {savedFlash === kind ? (
+                    {flash?.kind === kind && flash.word === "saved" ? (
                       <span role="status" className="self-center text-sm text-app-good">
                         {t("applications.documents.exported")}
                       </span>
@@ -511,15 +524,22 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
                   </div>
                 </>
               )}
-              <div className="flex justify-end border-t border-app-border pt-3">
+              <div className="flex items-center justify-end gap-3 border-t border-app-border pt-3">
                 {generation.running === kind ? (
                   writingView(kind)
                 ) : (
-                  <Button size="sm" disabled={generateDisabled} onClick={() => generate([kind])}>
-                    {record === null
-                      ? t("applications.documents.generate")
-                      : t("applications.documents.generateAgain")}
-                  </Button>
+                  <>
+                    {flash?.kind === kind && flash.word === "generated" ? (
+                      <span role="status" className="text-sm text-app-good">
+                        {t("applications.documents.generatedWord")}
+                      </span>
+                    ) : null}
+                    <Button size="sm" disabled={generateDisabled} onClick={() => generate([kind])}>
+                      {record === null
+                        ? t("applications.documents.generate")
+                        : t("applications.documents.generateAgain")}
+                    </Button>
+                  </>
                 )}
               </div>
               {notice && editing !== kind ? noticeView(notice) : null}
