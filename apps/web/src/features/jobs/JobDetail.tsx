@@ -243,6 +243,8 @@ export function JobDetail({ jobId, onChanged, onClose, onOpenApplication }: JobD
               {state.job.closedAt !== null ? (
                 <Badge tone="weak">{t("jobs.detail.closed")}</Badge>
               ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
               {state.job.applicationStatus !== null ? (
                 <Badge tone="accent">
                   {t("jobs.results.applicationStatus", {
@@ -250,8 +252,6 @@ export function JobDetail({ jobId, onChanged, onClose, onOpenApplication }: JobD
                   })}
                 </Badge>
               ) : null}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
               {state.job.workMode !== "unknown" ? (
                 <Badge>{t(`jobs.results.workMode.${state.job.workMode}`)}</Badge>
               ) : null}
