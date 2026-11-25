@@ -1,4 +1,4 @@
-// protects=the applications screen shows the loading, empty and error states with a retry, lists applications with no status selector and the statuses before submitting as one "To send" group, deletes only an unsent application after one confirmation and reports a failure, offers the moves after sending in the detail only, keeps the close button first and the timeline last, filters the list and the board by group and company, adds notes to the timeline, and reports the CSV export's count or its failure;
+// protects=the applications screen shows the loading, empty and error states with a retry, lists applications with no status selector and the statuses before submitting as one "To send" group, deletes only an unsent application after one confirmation and reports a failure, offers the moves after sending in the detail only, keeps the close button first and the timeline last, filters the list and the board by group and company, shows the job's description in the detail, adds notes to the timeline, and reports the CSV export's count or its failure;
 // fails_when=a card offers a status selector, a sent application can be deleted, a delete needs no confirmation or leaves the card after a failure, a move the machine forbids is offered, the board counts or filters are wrong, a note is not shown, an error shows a blank page, or the export result is not reported;
 // no_claim=layout, keyboard focus order and the real bridge's storage are not checked here; the desktop repository and export tests cover the rules and the file;
 import { act } from "react";
@@ -227,6 +227,33 @@ describe("applications screen", () => {
     await act(async () => {});
     expect(update).toHaveBeenCalledWith({ applicationId: "a1", status: "interviewing" });
     expect(container.textContent).toContain("Interviewing");
+  });
+
+  it("shows the job's description in the detail, for a reminder", async () => {
+    const jobDetail = {
+      id: "j1",
+      title: "Backend Engineer",
+      companyName: "Acme",
+      locations: ["Milan, Italy"],
+      workMode: "remote",
+      description: "You will build APIs.",
+    };
+    const base = bridgeWith({
+      list: async () => [summary({ status: "preparing" })],
+      detail: async () => detailOf(summary({ status: "preparing" })),
+    });
+    await render({
+      ...base,
+      jobs: { ...base.jobs, detail: vi.fn(async () => jobDetail) },
+    } as unknown as JobFinderBridge);
+    await act(async () => {
+      button(container, "Details").click();
+    });
+    await act(async () => {});
+
+    const dialog = container.querySelector("[role=dialog]") as HTMLElement;
+    expect(dialog.textContent).toContain("You will build APIs.");
+    expect(dialog.textContent).toContain("Milan, Italy");
   });
 
   it("puts the close button first and the timeline last in the detail, with a link to the posting", async () => {

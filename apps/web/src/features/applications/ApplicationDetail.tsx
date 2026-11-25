@@ -8,6 +8,7 @@ import {
   isUnsent,
   type ApplicationDetail as ApplicationDetailRecord,
   type ApplicationStatus,
+  type JobDetail,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Badge } from "../../components/ui/Badge";
@@ -50,6 +51,23 @@ export function ApplicationDetail({
   const [note, setNote] = useState("");
   const [noteFailed, setNoteFailed] = useState(false);
   const [moveFailed, setMoveFailed] = useState(false);
+  // The posting's own text, for a reminder. Reading it is not essential: without it the panel shows
+  // everything else.
+  const [job, setJob] = useState<JobDetail | null>(null);
+  const jobId = state.status === "ready" ? state.application.jobId : null;
+  useEffect(() => {
+    if (jobId === null) return;
+    let active = true;
+    bridge.jobs
+      .detail({ jobId })
+      .then((found) => {
+        if (active) setJob(found);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [bridge, jobId]);
 
   useEffect(() => {
     let active = true;
@@ -163,12 +181,24 @@ export function ApplicationDetail({
 
       {state.status === "ready" ? (
         <>
-          <p className="flex flex-wrap items-center gap-2 text-app-muted">
-            <span>{state.application.companyName} ·</span>
-            <Badge tone="accent">
-              {t(`applications.group.${groupOf(state.application.status)}`)}
-            </Badge>
-          </p>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-app-muted">
+                {state.application.companyName}
+                {job !== null
+                  ? ` · ${job.locations.length > 0 ? job.locations.join(" / ") : t("jobs.results.noLocation")}`
+                  : ""}
+              </p>
+              <Badge tone="accent">
+                {t(`applications.group.${groupOf(state.application.status)}`)}
+              </Badge>
+            </div>
+            {job !== null && job.workMode !== "unknown" ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge>{t(`jobs.results.workMode.${job.workMode}`)}</Badge>
+              </div>
+            ) : null}
+          </div>
           <ApplicationDocuments applicationId={state.application.id} autoGenerate={autoGenerate} />
           <ApplicationForm
             application={state.application}
@@ -199,6 +229,16 @@ export function ApplicationDetail({
                   {t("applications.detail.moveFailed")}
                 </p>
               ) : null}
+            </Card>
+          ) : null}
+          {job !== null ? (
+            <Card as="div" className="flex flex-col gap-2">
+              <h4 className="font-sans text-sm font-semibold text-app-fg">
+                {t("jobs.detail.description")}
+              </h4>
+              <p className="text-sm leading-relaxed whitespace-pre-line text-app-fg">
+                {job.description === "" ? t("jobs.detail.noDescription") : job.description}
+              </p>
             </Card>
           ) : null}
           <Card as="div">
