@@ -713,7 +713,6 @@
       "notGenerated": "Non ancora generato.",
       "generate": "Genera",
       "generateAgain": "Genera di nuovo",
-      "generating": "Generazione in corso…",
       "generated": "Generato. Controlla il testo prima di esportarlo.",
       "aiUnavailable": "AI non disponibile: non è impostato alcun modello. Impostane uno nelle Impostazioni per generare i documenti.",
       "openSettings": "Apri le Impostazioni",

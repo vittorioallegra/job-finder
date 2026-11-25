@@ -250,6 +250,19 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
     }
   }
 
+  /** What shows while a document is being written, in place of the button that started it. */
+  function writingView(kind: DocumentKind) {
+    return (
+      <p
+        role="status"
+        className="flex items-center gap-2 rounded-2xl bg-app-accent-soft p-4 text-sm text-app-fg"
+      >
+        <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden="true" />
+        {t(`applications.documents.writing.${kind}`)}
+      </p>
+    );
+  }
+
   function noticeView(notice: Notice) {
     return (
       <div
@@ -351,16 +364,6 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
         </div>
       ) : null}
 
-      {generation.running !== null ? (
-        <p
-          role="status"
-          className="flex items-center gap-2 rounded-2xl bg-app-accent-soft p-4 text-sm text-app-fg"
-        >
-          <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden="true" />
-          {t(`applications.documents.writing.${generation.running}`)}
-        </p>
-      ) : null}
-
       <SelectInput
         label={t("applications.documents.language.label")}
         options={languageOptions}
@@ -380,16 +383,18 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
       />
 
       {records.cv === null && records["cover-letter"] === null ? (
-        <div>
-          <Button
-            disabled={busy !== null || !ai?.configured}
-            onClick={() => generate(["cv", "cover-letter"])}
-          >
-            {busy !== null
-              ? t("applications.documents.generating")
-              : t("applications.documents.generateBoth")}
-          </Button>
-        </div>
+        generation.running !== null ? (
+          writingView(generation.running)
+        ) : (
+          <div>
+            <Button
+              disabled={busy !== null || !ai?.configured}
+              onClick={() => generate(["cv", "cover-letter"])}
+            >
+              {t("applications.documents.generateBoth")}
+            </Button>
+          </div>
+        )
       ) : null}
       {records.cv === null &&
       records["cover-letter"] === null &&
@@ -485,13 +490,15 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
                 </>
               )}
               <div className="flex justify-end border-t border-app-border pt-3">
-                <Button size="sm" disabled={generateDisabled} onClick={() => generate([kind])}>
-                  {working && busy?.action === "generate"
-                    ? t("applications.documents.generating")
-                    : record === null
+                {generation.running === kind ? (
+                  writingView(kind)
+                ) : (
+                  <Button size="sm" disabled={generateDisabled} onClick={() => generate([kind])}>
+                    {record === null
                       ? t("applications.documents.generate")
                       : t("applications.documents.generateAgain")}
-                </Button>
+                  </Button>
+                )}
               </div>
               {notice ? noticeView(notice) : null}
             </Card>

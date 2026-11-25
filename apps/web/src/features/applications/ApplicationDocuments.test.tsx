@@ -278,7 +278,8 @@ describe("application documents panel", () => {
 
     // Back on the application while the letter is still being written.
     await render(bridge);
-    expect(button(container, "Generating…").disabled).toBe(true);
+    // The writing message takes the place of the button, so there is no second "Generating" button.
+    expect(() => button(container, "Generate CV and cover letter")).toThrow();
     expect(container.querySelector("[role=status]")?.textContent).toContain(
       "Writing your cover letter",
     );

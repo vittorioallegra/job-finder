@@ -713,7 +713,6 @@
       "notGenerated": "Not generated yet.",
       "generate": "Generate",
       "generateAgain": "Generate again",
-      "generating": "Generating…",
       "generated": "Generated. Review the text before you export it.",
       "aiUnavailable": "AI unavailable: no AI model is set up. Set one in Settings to generate documents.",
       "openSettings": "Open Settings",
