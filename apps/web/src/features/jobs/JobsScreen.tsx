@@ -546,6 +546,18 @@ export function JobsScreen() {
               <EmptyState
                 icon={<Briefcase aria-hidden="true" className="size-5" strokeWidth={1.8} />}
                 title={t(isDefaultFilter(applied) ? "jobs.results.empty" : "jobs.results.noMatch")}
+                body={
+                  applied.places.length > 0 && !isDefaultFilter(applied)
+                    ? t("jobs.results.noMatchPlaces", { places: applied.places.join(", ") })
+                    : undefined
+                }
+                action={
+                  applied.places.length > 0 && !isDefaultFilter(applied) ? (
+                    <Link to="/companies" className={buttonClass("secondary", "sm")}>
+                      {t("jobs.results.openSources")}
+                    </Link>
+                  ) : undefined
+                }
               />
             ) : (
               <ul

@@ -112,7 +112,8 @@ describe("ATS adapters on recorded responses", () => {
     expect(first?.url).toBe(`https://personio.jobs.personio.de/job/${first?.sourceJobId}`);
     expect(first?.applyUrl).toBe(`${first?.url}/apply`);
     expect(first?.locations[0]?.city).toBe("Berlin");
-    expect(first?.locations[0]?.countryCode).toBeUndefined();
+    // The office names only a city; Berlin is a well-known one, so the country follows.
+    expect(first?.locations[0]?.countryCode).toBe("DE");
     expect(first?.employmentType).toBe("full_time");
     expect(first?.seniority).toBe("junior");
   });

@@ -192,6 +192,7 @@ function company(
     ats,
     slug: ats ? slug : null,
     createdAt,
+    country: null,
     lastScan,
   };
 }

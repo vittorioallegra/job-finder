@@ -1,3 +1,4 @@
+import { countryOfCity, isUsStateCode } from "./cities";
 import { countryCodeFor } from "./countries";
 import type { JobLocation } from "./job";
 import { foldForMatch } from "./text";
@@ -7,12 +8,13 @@ const REMOTE_WORD = /\b(remote|remoto|remota|hybrid|hybride|ibrido|on site|onsit
 /**
  * Location from free text such as "Berlin, Germany", "Berlin - Berlin, Deutschland" or
  * "Remote - Italy". The last part that names a country gives the country code, the first other
- * part is the city and the next one the region. A location that says "remote" carries no city:
- * the remote scope is read separately.
+ * part is the city and the next one the region. When no part names a country, a well-known city
+ * ("Milano") or a US state code ("Boston, MA") gives it. A location that says "remote" carries no
+ * city: the remote scope is read separately.
  */
 export function normalizeLocation(raw: string): JobLocation {
   const parts = raw
-    .split(/\s*[,;|]\s*|\s+[-–—]\s+/)
+    .split(/\s*[,;|]\s*|\s+[-–—/]\s+/)
     .map((part) => part.trim())
     .filter((part) => part !== "");
 
@@ -25,6 +27,12 @@ export function normalizeLocation(raw: string): JobLocation {
       countryCode = code;
     }
   });
+
+  if (countryCode === undefined) {
+    // A city or a US state code stands for its country, when the text names none.
+    const fromCity = parts.map((part) => countryOfCity(part)).find((code) => code !== undefined);
+    countryCode = fromCity ?? (parts.slice(1).some(isUsStateCode) ? "US" : undefined);
+  }
 
   const location: JobLocation = { raw };
   if (countryCode !== undefined) location.countryCode = countryCode;

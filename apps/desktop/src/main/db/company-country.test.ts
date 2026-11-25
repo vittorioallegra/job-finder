@@ -1,5 +1,5 @@
-// protects=a company's country is the country where most of its open jobs are located, ties go to the lower code, closed jobs and jobs without a country are not counted, and a company with no located job has none;
-// fails_when=a closed job counts, a job without a country counts, the most common country is not chosen, a company with no located job gets a country, or a second run changes the result;
+// protects=a company's country is the country where most of its open jobs are located (ties to the lower code, closed jobs and jobs without a country not counted), else the country of its own web address, and none otherwise; stored locations that name only a city get their country from the text;
+// fails_when=a closed job counts, a job without a country counts, the most common country is not chosen, a .io address gives a country, a company with no clue gets one, a city-only location stays without a country, or a second run changes the result;
 // no_claim=how the countries of locations are first read from postings, which the normalizer tests cover;
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -7,7 +7,7 @@ import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { companies, jobs } from "@job-finder/core";
 import { openAppDatabase, type AppDatabase } from "./database";
-import { refreshCompanyCountries } from "./company-country";
+import { backfillLocationCountries, refreshCompanyCountries } from "./company-country";
 
 const repoMigrations = resolve(__dirname, "../../../drizzle");
 
@@ -85,6 +85,69 @@ describe("company country", () => {
       tie: "DE",
       none: null,
       closed: "DE",
+    });
+  });
+
+  it("reads the country of a company's own web address when its jobs name none, and ignores fashionable domains", async () => {
+    await database.db.insert(companies).values([
+      {
+        id: "tld-it",
+        name: "Azienda",
+        careersUrl: "https://azienda.it/lavora",
+        ats: null,
+        slug: null,
+        createdAt: 10,
+      },
+      {
+        id: "tld-io",
+        name: "Startup",
+        careersUrl: "https://startup.io/jobs",
+        ats: null,
+        slug: null,
+        createdAt: 11,
+      },
+      {
+        id: "tld-uk",
+        name: "Firm",
+        careersUrl: "https://firm.co.uk/careers",
+        ats: null,
+        slug: null,
+        createdAt: 12,
+      },
+    ]);
+    // The jobs of the first name no country; its web address says Italy.
+    await database.db.insert(jobs).values(job("t1", "tld-it", [{ raw: "Remote" }]));
+
+    await refreshCompanyCountries(database.db);
+
+    const rows = await database.db
+      .select({ id: companies.id, country: companies.country })
+      .from(companies);
+    const byId = Object.fromEntries(rows.map((row) => [row.id, row.country]));
+    expect(byId["tld-it"]).toBe("IT");
+    expect(byId["tld-io"]).toBeNull();
+    expect(byId["tld-uk"]).toBe("GB");
+  });
+
+  it("gives stored locations their country from the text, so a company that wrote only Milano is Italian", async () => {
+    await database.db
+      .insert(jobs)
+      .values([
+        job("m1", "it", [{ raw: "Milano" }]),
+        job("m2", "it", [{ raw: "Roma, Lazio" }]),
+        job("m3", "none", [{ raw: "Remote" }]),
+      ]);
+
+    expect(await backfillLocationCountries(database.db)).toBe(2);
+    expect(await backfillLocationCountries(database.db)).toBe(0);
+    await refreshCompanyCountries(database.db);
+
+    const rows = await database.db
+      .select({ id: companies.id, country: companies.country })
+      .from(companies);
+    expect(Object.fromEntries(rows.map((row) => [row.id, row.country]))).toMatchObject({
+      it: "IT",
+      none: null,
     });
   });
 });

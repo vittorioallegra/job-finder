@@ -58,6 +58,8 @@ export interface CompanyRecord {
   slug: string | null;
   /** Epoch milliseconds. */
   createdAt: number;
+  /** The company's home country (an ISO code), read from where its jobs are; null when not known. */
+  country: string | null;
   /** Null before the company was ever scanned. */
   lastScan: CompanyScan | null;
 }

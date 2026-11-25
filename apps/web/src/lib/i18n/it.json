@@ -481,8 +481,10 @@
       "dismissed": "Scartato",
       "open": "Apri",
       "openJob": "Apri {{title}}",
-      "noMatch": "Nessun annuncio corrisponde a questi filtri. Cambiali o reimpostali.",
-      "applicationStatus": "Candidatura: {{status}}"
+      "noMatch": "Nessun annuncio corrisponde ancora alle preferenze del tuo profilo.",
+      "applicationStatus": "Candidatura: {{status}}",
+      "noMatchPlaces": "Gli annunci sono mostrati solo per aziende con sede nei paesi e nelle aree che hai scelto ({{places}}); una città corrisponde a dove si trova l'annuncio. Controlla il paese delle tue fonti, o aggiungi aziende di quei luoghi.",
+      "openSources": "Apri le fonti"
     },
     "sort": {
       "label": "Ordine",
@@ -582,7 +584,9 @@
       "summary_one": "{{count}} azienda seguita",
       "summary_other": "{{count}} aziende seguite",
       "failedCount_one": "{{count}} non letta nell'ultima scansione",
-      "failedCount_other": "{{count}} non lette nell'ultima scansione"
+      "failedCount_other": "{{count}} non lette nell'ultima scansione",
+      "country": "Con sede in {{country}}",
+      "countryUnknown": "Paese non ancora noto: nessuna offerta lo indica"
     },
     "scan": {
       "never": "Non ancora analizzata.",

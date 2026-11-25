@@ -76,3 +76,35 @@ export function countryCodeFor(value: string): string | undefined {
   index ??= buildIndex();
   return index.get(folded);
 }
+
+/** Country-code domains that are not a country in practice: marketing and tech domains. */
+const NOT_COUNTRY_TLDS = new Set([
+  "ac",
+  "ai",
+  "cc",
+  "co",
+  "fm",
+  "gg",
+  "io",
+  "ly",
+  "me",
+  "sh",
+  "so",
+  "to",
+  "tv",
+  "vc",
+  "ws",
+]);
+
+/**
+ * The country of a company from the host of its own site: `azienda.it` is Italy, `firma.co.uk` is
+ * the United Kingdom. Domains that are only fashionable (`.io`, `.ai`, `.co`) say nothing.
+ */
+export function countryFromHost(host: string): string | undefined {
+  const labels = host.toLowerCase().split(".");
+  const tld = labels.at(-1) ?? "";
+  if (!/^[a-z]{2}$/.test(tld) || NOT_COUNTRY_TLDS.has(tld)) return undefined;
+  if (tld === "uk") return "GB";
+  const code = tld.toUpperCase();
+  return NOT_COUNTRIES.has(code) ? undefined : code;
+}

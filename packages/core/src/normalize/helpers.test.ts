@@ -30,17 +30,33 @@ describe("countryCodeFor", () => {
 });
 
 describe("normalizeLocation", () => {
-  it("does not read a US state or a state code as a country", () => {
+  it("does not read a US state or a state code as a country, but reads the country it stands for", () => {
+    // "Georgia" is not the country; the United States comes from the city and the state.
     expect(normalizeLocation("Atlanta, Georgia")).toEqual({
       raw: "Atlanta, Georgia",
       city: "Atlanta",
       region: "Georgia",
+      countryCode: "US",
     });
     expect(normalizeLocation("San Francisco, CA")).toEqual({
       raw: "San Francisco, CA",
       city: "San Francisco",
       region: "CA",
+      countryCode: "US",
     });
+    // A state code alone (a city the list does not know) still gives the United States.
+    expect(normalizeLocation("Smallville, KS").countryCode).toBe("US");
+    // "CA" after nothing is not a state code, and "Georgia" alone is not the country.
+    expect(normalizeLocation("CA").countryCode).toBeUndefined();
+    expect(normalizeLocation("Georgia").countryCode).toBeUndefined();
+  });
+
+  it("reads the country of a well-known city written alone, and from a list of cities", () => {
+    expect(normalizeLocation("Milano")).toMatchObject({ city: "Milano", countryCode: "IT" });
+    expect(normalizeLocation("Roma, Lazio").countryCode).toBe("IT");
+    expect(normalizeLocation("Remote / Boston / Salt Lake City").countryCode).toBe("US");
+    expect(normalizeLocation("Cambridge").countryCode).toBeUndefined();
+    expect(normalizeLocation("Remote").countryCode).toBeUndefined();
   });
 
   it("reads city, region and country from comma-separated text", () => {

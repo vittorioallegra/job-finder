@@ -135,6 +135,7 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
           ats: null,
           slug: null,
           createdAt: Date.now(),
+          country: null,
           lastScan: null,
         };
         companies.push(company);

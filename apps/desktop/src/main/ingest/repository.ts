@@ -135,6 +135,7 @@ export function createIngestRepository(db: AppDb): IngestRepository {
         ats: row.ats,
         slug: row.slug,
         createdAt: row.createdAt,
+        country: row.country,
         lastScan: scans.get(row.id) ?? null,
       }));
     },
@@ -172,6 +173,7 @@ export function createIngestRepository(db: AppDb): IngestRepository {
             ats: existing.ats,
             slug: existing.slug,
             createdAt: existing.createdAt,
+            country: existing.country,
             lastScan: scans.get(existing.id) ?? null,
           },
         };
@@ -185,7 +187,7 @@ export function createIngestRepository(db: AppDb): IngestRepository {
         createdAt: now,
       };
       await db.insert(companies).values(row);
-      return { ok: true, company: { ...row, lastScan: null } };
+      return { ok: true, company: { ...row, country: null, lastScan: null } };
     },
 
     async removeCompany(companyId, now = Date.now()) {

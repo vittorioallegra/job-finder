@@ -4,6 +4,7 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { companies, jobFlags, jobScores, jobSources, jobs, profile } from "@job-finder/core";
 import { JobFilterSchema, type JobFilterInput } from "@job-finder/core/filters";
@@ -238,6 +239,9 @@ describe("job filters over the fixture set", () => {
           .values({ jobId: fixture.id, dismissedAt: NOW, viewedAt: null, updatedAt: NOW });
       }
     }
+    // Where the companies are based: Acme in Italy, Beta in Germany.
+    await database.db.update(companies).set({ country: "IT" }).where(eq(companies.id, "c1"));
+    await database.db.update(companies).set({ country: "DE" }).where(eq(companies.id, "c2"));
     repository = createIngestRepository(database.db);
   });
 
@@ -309,12 +313,12 @@ describe("job filters over the fixture set", () => {
     expect(await titles({ places: ["Berlin"] })).toEqual(
       ["Frontend Developer", "Sviluppatore Backend"].sort(),
     );
-    // A remote job limited to another country is left out.
-    expect(await titles({ places: ["Stati Uniti"] })).toEqual(["Data Engineer"]);
+    // The New York job belongs to a German company, so it is not listed for the United States.
+    expect(await titles({ places: ["Stati Uniti"] })).toEqual([]);
   });
 
   it("keeps to companies based in the chosen country: Italy means Italian companies, also for remote jobs", async () => {
-    // protects=a country or an area in the places keeps jobs of companies based there (the country where most of their open jobs are) and of companies whose country is not known, even for remote jobs open to the country; fails_when=a remote job of a German company is listed for Italy, an Italian company is dropped, or a company with no known country is dropped; no_claim=how the company country is first computed from real scans;
+    // protects=a country or an area in the places keeps jobs of companies based there (the country where most of their open jobs are) but not of companies whose country is not known, even for remote jobs open to the country; fails_when=a remote job of a German company is listed for Italy, an Italian company is dropped, or a company with no known country is listed for a country; no_claim=how the company country is first computed from real scans;
     await database.db.insert(jobs).values({
       id: "j9",
       companyId: "c2",
@@ -333,8 +337,11 @@ describe("job filters over the fixture set", () => {
       firstSeenAt: NOW - DAY,
       lastSeenAt: NOW,
     });
-    // Before the countries are read, no company has one, so nothing is left out.
-    expect(await titles({ places: ["Italia"] })).toContain("Remote Support Engineer");
+    // A company whose country is not known is not listed for a country: nothing says it is there.
+    await database.db.update(companies).set({ country: null });
+    expect(await titles({ places: ["Italia"] })).toEqual([]);
+    // A city does not look at the company.
+    expect(await titles({ places: ["Milan"] })).toContain("Backend Engineer");
 
     await refreshCompanyCountries(database.db);
 

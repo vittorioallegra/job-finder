@@ -17,7 +17,7 @@ export const ATS_SEARCH_SITES: Record<AtsId, readonly string[]> = {
  * Caps the queries of one discovery run. Each query is one request to the search provider, and
  * the HTTP queue spaces them one second apart.
  */
-export const MAX_QUERIES = 12;
+export const MAX_QUERIES = 24;
 
 const MAX_TERM_LENGTH = 100;
 

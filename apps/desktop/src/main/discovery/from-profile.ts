@@ -1,3 +1,4 @@
+import { mainCity, resolvePlace } from "@job-finder/core/normalize";
 import type {
   CompanyAddRequest,
   CompanyAddResult,
@@ -29,11 +30,36 @@ export interface ProfileDiscovery {
   run(options?: { scan?: boolean }): Promise<ProfileDiscoveryResult>;
 }
 
+/**
+ * How a place is searched for. A country is also written the way English postings write it
+ * ("Italy"), and with its best-known city ("Milan"), since "Italia" alone finds only Italian-language
+ * pages. Anything else is searched as typed.
+ */
+function searchTermsFor(place: string): string[] {
+  const resolved = resolvePlace(place);
+  if (resolved.kind !== "countries" || resolved.codes.length !== 1) return [place];
+  const code = resolved.codes[0] as string;
+  const english = new Intl.DisplayNames(["en"], { type: "region" }).of(code);
+  return [place, english, mainCity(code)].filter(
+    (term): term is string => term !== undefined && term !== code,
+  );
+}
+
 /** The search terms a profile's preferences give: its roles as keywords, its places as places. */
 export function discoveryRequestFor(preferences: JobPreferences): DiscoverySearchRequest | null {
   const keywords = preferences.roles.slice(0, MAX_TERMS);
   if (keywords.length === 0) return null;
-  return { keywords, locations: preferences.locations.slice(0, MAX_TERMS) };
+  const seen = new Set<string>();
+  const locations: string[] = [];
+  for (const place of preferences.locations) {
+    for (const term of searchTermsFor(place)) {
+      const key = term.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      locations.push(term);
+    }
+  }
+  return { keywords, locations: locations.slice(0, MAX_TERMS) };
 }
 
 export function createProfileDiscovery(deps: ProfileDiscoveryDeps): ProfileDiscovery {

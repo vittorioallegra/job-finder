@@ -58,7 +58,7 @@ function SettingsLinkHint() {
  * company's last scan with a retry. Found boards are added only when the user picks them.
  */
 export function CompaniesScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const bridge = useBridge();
   const [load, setLoad] = useState<LoadState>({ status: "loading" });
   const [keywords, setKeywords] = useState("");
@@ -331,6 +331,15 @@ export function CompaniesScreen() {
                         </Badge>
                       </div>
                       <p className="text-xs break-all text-app-muted">{company.careersUrl}</p>
+                      <p className="text-sm text-app-muted">
+                        {company.country !== null
+                          ? t("companies.list.country", {
+                              country: new Intl.DisplayNames([i18n.language], {
+                                type: "region",
+                              }).of(company.country),
+                            })
+                          : t("companies.list.countryUnknown")}
+                      </p>
                       <p
                         className={`text-sm ${company.lastScan?.outcome === "failed" && company.lastScan.code !== "no-parseable-jobs" ? "text-app-danger" : "text-app-fg"}`}
                       >

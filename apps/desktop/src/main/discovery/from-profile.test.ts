@@ -1,7 +1,8 @@
-// protects=the company search from the profile uses its roles and places, adds only boards not already listed, and scans only when it added one;
+// protects=the company search from the profile uses its roles and places, adds only boards not already listed, and scans only when it added one, and a country is searched by its English name and main city too;
 // fails_when=a profile without roles searches anyway, more terms than the search takes are sent, a duplicate board counts as added, a scan starts when nothing was added, or a failed search adds companies;
 // no_claim=the search itself and the board detection run in the engine and the repository; scripted stand-ins answer here.
 import { describe, expect, it } from "vitest";
+import { discoveryRequestFor } from "./from-profile";
 import { emptyPreferences, type DiscoverySearchRequest } from "@job-finder/bridge";
 import { createProfileDiscovery } from "./from-profile";
 
@@ -103,5 +104,30 @@ describe("company search from the profile", () => {
       runStarted: false,
     });
     expect(runs).toBe(0);
+  });
+
+  it("searches a country the way English postings write it, and with its main city, and a city as typed", () => {
+    const base = {
+      roles: ["Frontend Engineer"],
+      workModes: [],
+      employmentTypes: [],
+      seniorities: [],
+    };
+    expect(discoveryRequestFor({ ...base, locations: ["Italia"] })).toEqual({
+      keywords: ["Frontend Engineer"],
+      locations: ["Italia", "Italy", "Milan"],
+    });
+    // A city, or text that is no country, is searched as typed; an area is not expanded.
+    expect(discoveryRequestFor({ ...base, locations: ["Torino", "EU"] })?.locations).toEqual([
+      "Torino",
+      "EU",
+    ]);
+    // Never more places than the search takes, and no repeats.
+    const many = discoveryRequestFor({
+      ...base,
+      locations: ["Italia", "Germania", "Francia"],
+    });
+    expect(many?.locations).toHaveLength(5);
+    expect(new Set(many?.locations.map((place) => place.toLowerCase())).size).toBe(5);
   });
 });

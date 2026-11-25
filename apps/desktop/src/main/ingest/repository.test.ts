@@ -41,6 +41,7 @@ describe("ingest repository", () => {
         ats: "greenhouse",
         slug: "acme",
         createdAt: 10,
+        country: null,
         lastScan: null,
       },
     });

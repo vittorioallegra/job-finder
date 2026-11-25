@@ -1,5 +1,5 @@
-// protects=the jobs screen lists open jobs with their affinity score and explanation (unscored jobs marked as not scored), starts a scan only when companies exist, opens with the profile's preferences as the filter, links to the sources to manage them, follows its progress in a log that scrolls to its newest line and cancels it by run id, says when a scan is already running, asks for consent before scoring with a cloud provider, shows the AI unavailable state while keeping the jobs listed, and shows an error with a retry when the lists cannot be read;
-// fails_when=an open job is not shown, a scan starts with no companies, a scored job shows no score or an unscored one shows a number, scoring starts with a cloud provider before the consent box is ticked, an AI failure hides the jobs, a second scan starts while one is running without a message, progress or the cancel is not wired to the run id, or a failed read shows a blank page;
+// protects=the jobs screen lists open jobs with scores, scans only when companies exist, opens with the profile's preferences as the filter, links to the sources, follows a scan in a log and cancels it, asks for consent before scoring with a cloud provider, explains an empty list with places by the company-country rule, and shows an error with a retry;
+// fails_when=an unscored job looks scored, a scan starts without companies, the profile's preferences are ignored, a cancel misses its run, a cloud call goes without consent, an empty list with places gives no reason or no link to the sources, or an error shows a blank page;
 // no_claim=layout, keyboard focus order, the real provider's answers and the real engine run are not checked here; the core ranking tests and the engine and ingestion tests cover the scoring and the run, and company entry is tested on the Sources screen.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -25,6 +25,7 @@ const acme: CompanyRecord = {
   ats: "greenhouse",
   slug: "acme",
   createdAt: 1,
+  country: null,
   lastScan: null,
 };
 
@@ -291,5 +292,26 @@ describe("jobs screen", () => {
     expect(list.mock.calls[0]?.[0].filter.roles).toEqual(["Backend Engineer"]);
     expect(container.textContent).not.toContain("Find new companies");
     expect(container.querySelector('a[href="/companies"]')?.textContent).toBe("Manage");
+  });
+
+  it("explains an empty list with places by the company-country rule, and links to the sources", async () => {
+    const memory = createMemoryBridge({
+      companies: [acme],
+      jobs: [],
+      profile: {
+        ...emptyProfile(),
+        preferences: { ...emptyPreferences(), roles: ["Backend Engineer"], locations: ["Italia"] },
+      },
+    });
+    await render(memory);
+
+    expect(container.textContent).toContain("No job matches your profile's preferences yet.");
+    expect(container.textContent).toContain(
+      "companies based in the countries and areas you chose (Italia)",
+    );
+    const link = [...container.querySelectorAll("a")].find(
+      (node) => node.textContent === "Open the sources",
+    );
+    expect(link?.getAttribute("href")).toBe("/companies");
   });
 });

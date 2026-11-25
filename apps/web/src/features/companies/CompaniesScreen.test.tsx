@@ -1,4 +1,4 @@
-// protects=the sources page finds companies for the profile's roles (also on ?discover=1) or points to the profile without roles; a company can be removed from the sources; the companies screen finds boards through the bridge and adds only the ones the user picks, adds a company by its link and shows why one is refused, shows each company's last scan in a list that starts closed with its count and failures, shows an error with a retry when the list cannot be read, and points to Settings for a free-tier search key when no key is saved or keyless search is blocked;
+// protects=the sources page finds companies for the profile's roles (also on ?discover=1) or points to the profile without roles; a company can be removed from the sources; the companies screen finds boards through the bridge and adds only the ones the user picks, adds a company by its link and shows why one is refused, shows each company's last scan in a list that starts closed with its count and failures, shows an error with a retry when the list cannot be read, and points to Settings for a free-tier search key when no key is saved or keyless search is blocked, and says in which country each company is based or that it is not known;
 // fails_when=a found board is added without a click, a board already in the list is offered again, a refused company is shown as added, a last scan is missing or wrong, the list starts open or hides its failures, or a failed read shows a blank page;
 // no_claim=layout, keyboard focus order and the real search provider are not checked here; the core discovery tests and the engine runtime tests cover the search.
 import { act } from "react";
@@ -23,6 +23,7 @@ const acme: CompanyRecord = {
   ats: "greenhouse",
   slug: "acme",
   createdAt: 1,
+  country: "IT",
   lastScan: { outcome: "scanned", at: 5, jobCount: 4, closedCount: 1 },
 };
 
@@ -96,6 +97,7 @@ describe("companies screen", () => {
       careersUrl: "https://example.com/careers",
       ats: null,
       slug: null,
+      country: null,
       lastScan: null,
     };
     const empty: CompanyRecord = {
@@ -118,6 +120,9 @@ describe("companies screen", () => {
     await render(createMemoryBridge({ companies: [acme, failed, empty, broken] }));
 
     expect(container.textContent).toContain("Board: greenhouse");
+    // Where each company is based, or that it is not known yet.
+    expect(container.textContent).toContain("Based in Italy");
+    expect(container.textContent).toContain("Country not known yet");
     expect(container.textContent).toContain("Last scan: 4 postings read, 1 closed.");
     expect(container.textContent).toContain("No parseable jobs in the last scan.");
     expect(container.textContent).toContain("Last scan failed: the site answered with an error.");

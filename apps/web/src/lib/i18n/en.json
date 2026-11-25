@@ -481,8 +481,10 @@
       "dismissed": "Dismissed",
       "open": "Open",
       "openJob": "Open {{title}}",
-      "noMatch": "No job matches these filters. Change them or reset the filters.",
-      "applicationStatus": "Application: {{status}}"
+      "noMatch": "No job matches your profile's preferences yet.",
+      "applicationStatus": "Application: {{status}}",
+      "noMatchPlaces": "Jobs are listed only for companies based in the countries and areas you chose ({{places}}); a city is matched by where the job is. Check the countries of your sources, or add companies from there.",
+      "openSources": "Open the sources"
     },
     "sort": {
       "label": "Order",
@@ -582,7 +584,9 @@
       "summary_one": "{{count}} company followed",
       "summary_other": "{{count}} companies followed",
       "failedCount_one": "{{count}} not read in the last scan",
-      "failedCount_other": "{{count}} not read in the last scan"
+      "failedCount_other": "{{count}} not read in the last scan",
+      "country": "Based in {{country}}",
+      "countryUnknown": "Country not known yet: no job names one"
     },
     "scan": {
       "never": "Not scanned yet.",
