@@ -12,6 +12,7 @@ import {
   type ApplicationDetailRequest,
   type ApplicationExportResult,
   type ApplicationStartRequest,
+  type ApplicationRemoveRequest,
   type ApplicationUpdateRequest,
   type AppSettingsPatch,
   type AppSettings,
@@ -169,6 +170,8 @@ export async function handleInvoke(
       return services.applications.start(payload as ApplicationStartRequest);
     case "applications:update":
       return services.applications.update(payload as ApplicationUpdateRequest);
+    case "applications:remove":
+      return services.applications.remove((payload as ApplicationRemoveRequest).applicationId);
     case "applications:export":
       return services.applicationExport.exportCsv();
     case "ingest:start":

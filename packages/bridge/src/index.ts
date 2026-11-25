@@ -10,6 +10,8 @@ import type {
   ApplicationStartResult,
   ApplicationSummary,
   ApplicationUpdateRequest,
+  ApplicationRemoveRequest,
+  ApplicationRemoveResult,
   ApplicationUpdateResult,
   DuplicateCheck,
 } from "./applications";
@@ -120,6 +122,8 @@ export interface JobFinderBridge {
     start(request: ApplicationStartRequest): Promise<ApplicationStartResult>;
     /** Moves an application to a status the status machine allows, and/or adds a note. */
     update(request: ApplicationUpdateRequest): Promise<ApplicationUpdateResult>;
+    /** Deletes an application that was not submitted yet, with its notes and documents. */
+    remove(request: ApplicationRemoveRequest): Promise<ApplicationRemoveResult>;
     /** Asks for a file with a native dialog and writes every application to it as CSV. */
     exportCsv(): Promise<ApplicationExportResult>;
   };

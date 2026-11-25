@@ -1,5 +1,5 @@
-// protects=the applications screen shows the loading, empty and error states with a retry, lists each application with only the status moves the machine allows, filters the list and the board by status and company, adds notes to the timeline, and reports the CSV export's count or its failure;
-// fails_when=a status the machine forbids is offered or sent, a failed move changes the card, the board counts or filters are wrong, a note is not shown, an error shows a blank page, or the export result is not reported;
+// protects=the applications screen shows the loading, empty and error states with a retry, lists applications with no status selector and the statuses before submitting as one "To send" group, deletes only an unsent application after one confirmation and reports a failure, offers the moves after sending in the detail only, keeps the close button first and the timeline last, filters the list and the board by group and company, adds notes to the timeline, and reports the CSV export's count or its failure;
+// fails_when=a card offers a status selector, a sent application can be deleted, a delete needs no confirmation or leaves the card after a failure, a move the machine forbids is offered, the board counts or filters are wrong, a note is not shown, an error shows a blank page, or the export result is not reported;
 // no_claim=layout, keyboard focus order and the real bridge's storage are not checked here; the desktop repository and export tests cover the rules and the file;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -102,6 +102,7 @@ describe("applications screen", () => {
         })),
         start: vi.fn(),
         update: vi.fn(),
+        remove: vi.fn(),
         exportCsv: vi.fn(async () => ({ ok: false as const, code: "cancelled" as const })),
         ...applications,
       } as JobFinderBridge["applications"],
@@ -131,23 +132,126 @@ describe("applications screen", () => {
     expect(list).toHaveBeenCalledTimes(2);
   });
 
-  it("offers only the planned moves and sends one that the user picks", async () => {
+  it("shows the statuses before submitting as one group, with no status selector on a card", async () => {
+    await render(
+      bridgeWith({
+        list: async () => [
+          summary({ id: "a1", status: "bookmarked" }),
+          summary({ id: "a2", jobId: "j2", jobTitle: "Frontend", status: "ready" }),
+          summary({ id: "a3", jobId: "j3", jobTitle: "Data", status: "applied" }),
+        ],
+      }),
+    );
+
+    expect(container.textContent?.match(/To send/g)).toHaveLength(2 + 1); // two badges and the filter option
+    expect(container.querySelectorAll("select").length).toBe(2); // only the two filters
+
+    await act(async () => {
+      button(container, "Board").click();
+    });
+    expect(container.querySelector("#board-to-send")?.textContent).toBe("To send (2)");
+    expect(container.querySelector("#board-applied")?.textContent).toBe("Applied (1)");
+    expect(container.querySelector("#board-ready")).toBeNull();
+  });
+
+  it("deletes an application that was not sent after one confirmation, and offers no delete for a sent one", async () => {
+    const remove = vi.fn(async () => ({ ok: true as const }));
+    await render(
+      bridgeWith({
+        list: async () => [
+          summary({ id: "a1", status: "preparing" }),
+          summary({ id: "a2", jobId: "j2", jobTitle: "Frontend", status: "applied" }),
+        ],
+        remove,
+      }),
+    );
+
+    expect(container.querySelectorAll('button[aria-label^="Delete "]')).toHaveLength(1);
+    await act(async () => {
+      (container.querySelector('button[aria-label^="Delete "]') as HTMLButtonElement).click();
+    });
+    expect(remove).not.toHaveBeenCalled();
+    await act(async () => {
+      button(container, "Cancel").click();
+    });
+    expect(remove).not.toHaveBeenCalled();
+
+    await act(async () => {
+      (container.querySelector('button[aria-label^="Delete "]') as HTMLButtonElement).click();
+    });
+    await act(async () => {
+      button(container, "Delete").click();
+    });
+    await act(async () => {});
+    expect(remove).toHaveBeenCalledWith({ applicationId: "a1" });
+    expect(container.textContent).not.toContain("Backend Engineer");
+    expect(container.textContent).toContain("Frontend");
+  });
+
+  it("reports a delete that failed and keeps the application", async () => {
+    const remove = vi.fn(async () => ({ ok: false as const, code: "already-sent" as const }));
+    await render(bridgeWith({ list: async () => [summary({ status: "preparing" })], remove }));
+    await act(async () => {
+      (container.querySelector('button[aria-label^="Delete "]') as HTMLButtonElement).click();
+    });
+    await act(async () => {
+      button(container, "Delete").click();
+    });
+    await act(async () => {});
+    expect(container.querySelector("[role=alert]")?.textContent).toContain("could not be deleted");
+    expect(container.textContent).toContain("Backend Engineer");
+  });
+
+  it("offers the moves after sending in the detail only, and sends the one the user picks", async () => {
     const update = vi.fn(async ({ status }: { status?: string }) => ({
       ok: true as const,
       application: detailOf(summary({ status: status as ApplicationSummary["status"] })),
     }));
-    await render(bridgeWith({ list: async () => [summary({})], update }));
-
-    const control = select(container, "Status of Backend Engineer");
-    const offered = [...control.options].map((option) => option.value);
-    expect(offered).toEqual(["applied", "interviewing", "rejected", "withdrawn"]);
+    await render(
+      bridgeWith({
+        list: async () => [summary({})],
+        detail: async () => detailOf(summary({})),
+        update,
+      }),
+    );
 
     await act(async () => {
-      type(control, "interviewing");
+      button(container, "Details").click();
+    });
+    const offered = ["I have an interview", "It was rejected", "I withdrew"];
+    for (const label of offered) expect(button(container, label)).toBeTruthy();
+
+    await act(async () => {
+      button(container, "I have an interview").click();
     });
     await act(async () => {});
     expect(update).toHaveBeenCalledWith({ applicationId: "a1", status: "interviewing" });
     expect(container.textContent).toContain("Interviewing");
+  });
+
+  it("puts the close button first and the timeline last in the detail, with a link to the posting", async () => {
+    await render(
+      bridgeWith({
+        list: async () => [summary({ status: "preparing" })],
+        detail: async () =>
+          detailOf(summary({ status: "preparing" }), [
+            { id: "e1", status: "preparing", note: null, at: 2 },
+          ]),
+      }),
+    );
+    await act(async () => {
+      button(container, "Details").click();
+    });
+
+    const dialog = container.querySelector("[role=dialog]") as HTMLElement;
+    expect(dialog.querySelector("button")?.textContent).toContain("Close");
+    expect(dialog.querySelector('a[href="https://x.test/1"]')?.textContent).toContain(
+      "Open posting",
+    );
+    const text = dialog.textContent ?? "";
+    expect(text.indexOf("Timeline")).toBeGreaterThan(text.indexOf("Add a note"));
+    expect(dialog.querySelector('button[aria-label^="Delete "]')).not.toBeNull();
+    expect(text).not.toContain("What happened next?");
   });
 
   it("filters the list by status and by company, and shows a message when nothing matches", async () => {

@@ -172,8 +172,8 @@ describe("application documents panel", () => {
 
     await act(async () => resolveGet(documentsOf()));
 
-    expect(container.textContent).toContain("Not generated yet.");
-    expect(button(container, "Generate")).toBeTruthy();
+    expect(button(container, "Generate CV and cover letter")).toBeTruthy();
+    expect(container.textContent).not.toContain("Not generated yet.");
   });
 
   it("shows an error with a retry when the documents cannot be read", async () => {
@@ -186,14 +186,14 @@ describe("application documents panel", () => {
     expect(container.textContent).toContain("The documents could not be read.");
     await act(async () => button(container, "Try again").click());
     await act(async () => {});
-    expect(container.textContent).toContain("Not generated yet.");
+    expect(button(container, "Generate CV and cover letter")).toBeTruthy();
   });
 
   it("shows AI unavailable and disables generation when no model is set up", async () => {
     await render(bridgeWith({}, { ...localSettings, ai: { ...localSettings.ai, model: "" } }));
 
     expect(container.textContent).toContain("AI unavailable");
-    expect(button(container, "Generate").disabled).toBe(true);
+    expect(button(container, "Generate CV and cover letter").disabled).toBe(true);
   });
 
   it("generates the CV and the letter at once when asked to", async () => {
@@ -241,7 +241,7 @@ describe("application documents panel", () => {
       select.value = "en";
       select.dispatchEvent(new Event("change", { bubbles: true }));
     });
-    await act(async () => button(container, "Generate").click());
+    await act(async () => button(container, "Generate CV and cover letter").click());
 
     expect(generate).toHaveBeenCalledWith(expect.objectContaining({ kind: "cv", language: "en" }));
   });
@@ -308,11 +308,12 @@ describe("application documents panel", () => {
       .mockResolvedValueOnce({ ok: false, code: "invalid-output" });
     await render(bridgeWith({ generate }));
 
-    await act(async () => button(container, "Generate").click());
+    await act(async () => button(container, "Generate CV and cover letter").click());
     expect(container.textContent).toContain("the provider rejected the API key");
     expect(container.querySelector('a[href="/settings"]')).not.toBeNull();
+    expect(generate).toHaveBeenCalledTimes(1);
 
-    await act(async () => button(container, "Generate").click());
+    await act(async () => button(container, "Generate CV and cover letter").click());
     expect(container.textContent).toContain("did not return a document that matches your profile");
     expect(container.querySelectorAll('a[href="/settings"]').length).toBe(0);
   });

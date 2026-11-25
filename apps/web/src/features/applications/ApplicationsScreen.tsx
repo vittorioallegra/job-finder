@@ -3,19 +3,22 @@ import { useTranslation } from "react-i18next";
 import { Briefcase, Download } from "lucide-react";
 import { Link, useSearchParams } from "react-router";
 import {
-  APPLICATION_STATUSES,
-  canTransition,
-  type ApplicationStatus,
+  APPLICATION_GROUPS,
+  groupOf,
+  isUnsent,
+  type ApplicationGroup,
   type ApplicationSummary,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
+import { Badge } from "../../components/ui/Badge";
 import { Button, buttonClass } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Drawer } from "../../components/ui/Drawer";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageHeader } from "../../components/ui/PageHeader";
-import { SelectInput, type SelectOption } from "../../components/ui/SelectInput";
+import { SelectInput } from "../../components/ui/SelectInput";
 import { ApplicationDetail } from "./ApplicationDetail";
+import { DeleteApplication } from "./DeleteApplication";
 
 type LoadState =
   | { status: "loading" }
@@ -31,15 +34,17 @@ interface Notice {
 }
 
 /**
- * The tracker: every application as a list or as a board (one column per status), filtered by status
- * and company. A status moves only along the planned steps. The timeline and notes open beside the list.
+ * The tracker: every application as a list or as a board (one column per group, the three statuses
+ * before submitting being one "to send" group), filtered by group and company. Statuses are not
+ * changed here: they follow what the user does in the detail. An application not sent yet can be
+ * deleted. The detail opens beside the list.
  */
 export function ApplicationsScreen() {
   const { t, i18n } = useTranslation();
   const bridge = useBridge();
   const [load, setLoad] = useState<LoadState>({ status: "loading" });
   const [view, setView] = useState<View>("list");
-  const [statusFilter, setStatusFilter] = useState<"" | ApplicationStatus>("");
+  const [statusFilter, setStatusFilter] = useState<"" | ApplicationGroup>("");
   const [companyFilter, setCompanyFilter] = useState("");
   // Preparing an application from a job opens it here (`?open=<id>&generate=1`): its documents are
   // generated at once when the AI can be used without a consent step. The link is read once.
@@ -82,7 +87,7 @@ export function ApplicationsScreen() {
     if (load.status !== "ready") return [];
     return load.applications.filter(
       (application) =>
-        (statusFilter === "" || application.status === statusFilter) &&
+        (statusFilter === "" || groupOf(application.status) === statusFilter) &&
         (companyFilter === "" || application.companyId === companyFilter),
     );
   }, [load, statusFilter, companyFilter]);
@@ -100,24 +105,25 @@ export function ApplicationsScreen() {
     );
   }
 
-  async function changeStatus(application: ApplicationSummary, status: ApplicationStatus) {
+  async function removeApplication(application: ApplicationSummary) {
     setNotice(null);
     try {
-      const result = await bridge.applications.update({
-        applicationId: application.id,
-        status,
-      });
+      const result = await bridge.applications.remove({ applicationId: application.id });
       if (!result.ok) {
-        setNotice({ tone: "error", text: t("applications.statusFailed") });
+        setNotice({ tone: "error", text: t("applications.delete.failed") });
         return;
       }
-      replace({
-        ...application,
-        status: result.application.status,
-        statusChangedAt: result.application.statusChangedAt,
-      });
+      setLoad((previous) =>
+        previous.status === "ready"
+          ? {
+              status: "ready",
+              applications: previous.applications.filter((item) => item.id !== application.id),
+            }
+          : previous,
+      );
+      setSelectedId((current) => (current === application.id ? null : current));
     } catch {
-      setNotice({ tone: "error", text: t("applications.statusFailed") });
+      setNotice({ tone: "error", text: t("applications.delete.failed") });
     }
   }
 
@@ -138,22 +144,14 @@ export function ApplicationsScreen() {
     }
   }
 
-  /** The statuses a card may move to: its own, plus the ones the status machine allows. */
-  function statusOptions(application: ApplicationSummary): SelectOption[] {
-    return APPLICATION_STATUSES.filter(
-      (status) => status === application.status || canTransition(application.status, status),
-    ).map((status) => ({ value: status, label: t(`applications.status.${status}`) }));
-  }
-
   function renderCard(application: ApplicationSummary, layout: "row" | "card") {
-    const options = statusOptions(application);
     const wrapper =
       layout === "row"
-        ? "grid items-center gap-x-4 gap-y-2 px-5 py-4 sm:grid-cols-[1fr_12rem_auto]"
+        ? "flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4"
         : "flex flex-col gap-2 rounded-xl border border-app-border bg-app-surface p-3.5 shadow-card";
     return (
       <li key={application.id} className={wrapper}>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-display text-base font-semibold text-app-fg">{application.jobTitle}</p>
           <p className="text-sm text-app-muted">
             {application.companyName} ·{" "}
@@ -162,17 +160,10 @@ export function ApplicationsScreen() {
             })}
           </p>
         </div>
-        <SelectInput
-          label={t("applications.cardStatus", { title: application.jobTitle })}
-          hideLabel
-          options={options}
-          value={application.status}
-          disabled={options.length === 1}
-          onChange={(event) =>
-            void changeStatus(application, event.target.value as ApplicationStatus)
-          }
-        />
-        <div>
+        {layout === "row" ? (
+          <Badge tone="accent">{t(`applications.group.${groupOf(application.status)}`)}</Badge>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
             size="sm"
@@ -181,6 +172,12 @@ export function ApplicationsScreen() {
           >
             {t("applications.details")}
           </Button>
+          {isUnsent(application.status) ? (
+            <DeleteApplication
+              title={application.jobTitle}
+              onDelete={() => removeApplication(application)}
+            />
+          ) : null}
         </div>
       </li>
     );
@@ -251,12 +248,12 @@ export function ApplicationsScreen() {
             <SelectInput
               label={t("applications.filters.status")}
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as "" | ApplicationStatus)}
+              onChange={(event) => setStatusFilter(event.target.value as "" | ApplicationGroup)}
               options={[
                 { value: "", label: t("applications.filters.allStatuses") },
-                ...APPLICATION_STATUSES.map((status) => ({
-                  value: status,
-                  label: t(`applications.status.${status}`),
+                ...APPLICATION_GROUPS.map((group) => ({
+                  value: group,
+                  label: t(`applications.group.${group}`),
                 })),
               ]}
             />
@@ -300,6 +297,10 @@ export function ApplicationsScreen() {
                     applyUrl: application.applyUrl,
                   })
                 }
+                onDelete={(id) => {
+                  const target = load.applications.find((item) => item.id === id);
+                  return target ? removeApplication(target) : Promise.resolve();
+                }}
                 onClose={() => setSelectedId(null)}
               />
             </Drawer>
@@ -327,22 +328,24 @@ export function ApplicationsScreen() {
             )
           ) : (
             <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2">
-              {APPLICATION_STATUSES.filter(
-                (status) => statusFilter === "" || status === statusFilter,
-              ).map((status) => {
-                const cards = visible.filter((application) => application.status === status);
+              {APPLICATION_GROUPS.filter(
+                (group) => statusFilter === "" || group === statusFilter,
+              ).map((group) => {
+                const cards = visible.filter(
+                  (application) => groupOf(application.status) === group,
+                );
                 return (
                   <section
-                    key={status}
-                    aria-labelledby={`board-${status}`}
+                    key={group}
+                    aria-labelledby={`board-${group}`}
                     className="flex w-72 shrink-0 flex-col gap-3 rounded-2xl bg-app-sunken p-3"
                   >
                     <h2
-                      id={`board-${status}`}
+                      id={`board-${group}`}
                       className="flex items-center justify-between px-1 font-sans text-sm font-semibold text-app-fg"
                     >
                       <span>
-                        {t(`applications.status.${status}`)} ({cards.length})
+                        {t(`applications.group.${group}`)} ({cards.length})
                       </span>
                     </h2>
                     <ul className="flex flex-col gap-2">

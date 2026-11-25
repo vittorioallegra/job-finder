@@ -4,6 +4,11 @@ import { APPLICATION_STATUSES, type ApplicationStatus } from "@job-finder/core/a
 export {
   APPLICATION_STATUSES,
   canTransition,
+  groupOf,
+  isUnsent,
+  APPLICATION_GROUPS,
+  UNSENT_STATUSES,
+  type ApplicationGroup,
   type ApplicationStatus,
 } from "@job-finder/core/applications";
 
@@ -43,6 +48,11 @@ export const ApplicationUpdateRequestSchema = z
   });
 
 export type ApplicationUpdateRequest = z.input<typeof ApplicationUpdateRequestSchema>;
+
+/** Deletes an application that was not submitted yet, with its notes and documents. */
+export const ApplicationRemoveRequestSchema = z.strictObject({ applicationId: identifier });
+
+export type ApplicationRemoveRequest = z.input<typeof ApplicationRemoveRequestSchema>;
 
 export const ApplicationDetailRequestSchema = z.strictObject({ applicationId: identifier });
 
@@ -105,6 +115,9 @@ export type ApplicationStartResult =
 export type ApplicationUpdateResult =
   | { ok: true; application: ApplicationDetail }
   | { ok: false; code: "not-found" | "invalid-transition" };
+
+export type ApplicationRemoveResult =
+  { ok: true } | { ok: false; code: "not-found" | "already-sent" };
 
 export type ApplicationExportResult =
   { ok: true; path: string; count: number } | { ok: false; code: "cancelled" | "write-failed" };

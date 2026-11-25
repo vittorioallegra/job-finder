@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ExternalLink, X } from "lucide-react";
-import type {
-  ApplicationStartResult,
-  ApplicationStatus,
-  DuplicateApplication,
-  DuplicateCheck,
-  JobDetail as JobDetailRecord,
+import {
+  groupOf,
+  type ApplicationStartResult,
+  type ApplicationStatus,
+  type DuplicateApplication,
+  type DuplicateCheck,
+  type JobDetail as JobDetailRecord,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Badge } from "../../components/ui/Badge";
@@ -231,7 +232,7 @@ export function JobDetail({ jobId, onChanged, onClose, onApplicationStarted }: J
               {state.job.applicationStatus !== null ? (
                 <Badge tone="accent">
                   {t("jobs.results.applicationStatus", {
-                    status: t(`applications.status.${state.job.applicationStatus}`),
+                    status: t(`applications.group.${groupOf(state.job.applicationStatus)}`),
                   })}
                 </Badge>
               ) : null}

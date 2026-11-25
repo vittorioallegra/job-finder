@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import {
   DEFAULT_JOB_FILTER,
   filterFromPreferences,
+  groupOf,
   aiConsentTarget,
   isCloudAiEndpoint,
   type CompanyRecord,
@@ -572,9 +573,9 @@ function JobCard({ job, onOpen }: { job: JobListItem; onOpen: () => void }) {
         {job.isNew ? <Badge tone="accent">{t("jobs.results.new")}</Badge> : null}
         {job.dismissed ? <Badge>{t("jobs.results.dismissed")}</Badge> : null}
         {job.applicationStatus !== null ? (
-          <Badge tone="good">
+          <Badge tone="accent">
             {t("jobs.results.applicationStatus", {
-              status: t(`applications.status.${job.applicationStatus}`),
+              status: t(`applications.group.${groupOf(job.applicationStatus)}`),
             })}
           </Badge>
         ) : null}

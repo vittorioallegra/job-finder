@@ -2,6 +2,7 @@ import {
   type AppStatus,
   applySettingsPatch,
   canTransition,
+  isUnsent,
   type ApplicationDetail,
   type ApplicationStatus,
   type ApplicationSummary,
@@ -198,6 +199,16 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
           applicationList.splice(at, 1);
         }
         return true;
+      },
+      remove: async ({ applicationId }) => {
+        const at = applicationList.findIndex((item) => item.id === applicationId);
+        if (at < 0) return { ok: false as const, code: "not-found" as const };
+        const found = applicationList[at];
+        if (found && !isUnsent(found.status)) {
+          return { ok: false as const, code: "already-sent" as const };
+        }
+        applicationList.splice(at, 1);
+        return { ok: true as const };
       },
       check: async () => ({ sameJob: [], sameCompany: [], requiredConfirmations: 0 as const }),
       start: async ({ jobId }) => {

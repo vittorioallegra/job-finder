@@ -41,6 +41,7 @@ import { ScoreStartRequestSchema } from "./scoring";
 import type {
   ApplicationDetail,
   ApplicationExportResult,
+  ApplicationRemoveResult,
   ApplicationStartResult,
   ApplicationSummary,
   ApplicationUpdateResult,
@@ -50,6 +51,7 @@ import {
   ApplicationBookmarkRequestSchema,
   ApplicationCheckRequestSchema,
   ApplicationDetailRequestSchema,
+  ApplicationRemoveRequestSchema,
   ApplicationStartRequestSchema,
   ApplicationUpdateRequestSchema,
 } from "./applications";
@@ -91,6 +93,7 @@ export const IPC_REQUEST_SCHEMAS = {
   "applications:check": ApplicationCheckRequestSchema,
   "applications:start": ApplicationStartRequestSchema,
   "applications:update": ApplicationUpdateRequestSchema,
+  "applications:remove": ApplicationRemoveRequestSchema,
   "applications:export": z.undefined(),
   "ingest:start": IngestStartRequestSchema,
   "ingest:cancel": IngestCancelRequestSchema,
@@ -137,6 +140,7 @@ export interface IpcResponses {
   "applications:check": DuplicateCheck;
   "applications:start": ApplicationStartResult;
   "applications:update": ApplicationUpdateResult;
+  "applications:remove": ApplicationRemoveResult;
   "applications:export": ApplicationExportResult;
   "ingest:start": IngestStartResult;
   "ingest:cancel": void;

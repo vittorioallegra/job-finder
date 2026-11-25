@@ -1,13 +1,22 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import type { ApplicationDetail as ApplicationDetailRecord } from "@job-finder/bridge";
+import { ExternalLink, X } from "lucide-react";
+import {
+  APPLICATION_STATUSES,
+  canTransition,
+  groupOf,
+  isUnsent,
+  type ApplicationDetail as ApplicationDetailRecord,
+  type ApplicationStatus,
+} from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Badge } from "../../components/ui/Badge";
-import { Button } from "../../components/ui/Button";
+import { Button, buttonClass } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { TextArea } from "../../components/ui/TextArea";
 import { ApplicationDocuments } from "./ApplicationDocuments";
 import { ApplicationForm } from "./ApplicationForm";
+import { DeleteApplication } from "./DeleteApplication";
 
 type DetailState =
   | { status: "loading" }
@@ -21,6 +30,8 @@ interface ApplicationDetailProps {
   autoGenerate?: boolean;
   /** Called after a note is added, so the list shows the application as it is now. */
   onChanged: (application: ApplicationDetailRecord) => void;
+  /** Deletes an application not sent yet; the list drops it and closes the panel. */
+  onDelete: (applicationId: string) => Promise<void>;
   onClose: () => void;
 }
 
@@ -29,6 +40,7 @@ export function ApplicationDetail({
   applicationId,
   autoGenerate = false,
   onChanged,
+  onDelete,
   onClose,
 }: ApplicationDetailProps) {
   const { t, i18n } = useTranslation();
@@ -37,6 +49,7 @@ export function ApplicationDetail({
   const [attempt, setAttempt] = useState(0);
   const [note, setNote] = useState("");
   const [noteFailed, setNoteFailed] = useState(false);
+  const [moveFailed, setMoveFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -73,8 +86,37 @@ export function ApplicationDetail({
     }
   }
 
+  /** After the application is sent, the user records what came back; before that it moves by itself. */
+  const nextStatuses: ApplicationStatus[] =
+    state.status === "ready" && !isUnsent(state.application.status)
+      ? APPLICATION_STATUSES.filter(
+          (status) => status !== "applied" && canTransition(state.application.status, status),
+        )
+      : [];
+
+  async function moveTo(status: ApplicationStatus) {
+    setMoveFailed(false);
+    try {
+      const result = await bridge.applications.update({ applicationId, status });
+      if (!result.ok) {
+        setMoveFailed(true);
+        return;
+      }
+      setState({ status: "ready", application: result.application });
+      onChanged(result.application);
+    } catch {
+      setMoveFailed(true);
+    }
+  }
+
   return (
     <section aria-labelledby="application-detail-title" className="flex flex-col gap-5">
+      <div>
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          <X aria-hidden="true" className="size-4" />
+          {t("applications.detail.close")}
+        </Button>
+      </div>
       <div className="flex items-start justify-between gap-3">
         <h3
           id="application-detail-title"
@@ -82,9 +124,17 @@ export function ApplicationDetail({
         >
           {state.status === "ready" ? state.application.jobTitle : t("applications.detail.heading")}
         </h3>
-        <Button variant="secondary" size="sm" onClick={onClose}>
-          {t("applications.detail.close")}
-        </Button>
+        {state.status === "ready" ? (
+          <a
+            href={state.application.jobUrl}
+            target="_blank"
+            rel="noreferrer"
+            className={`${buttonClass("secondary", "sm")} shrink-0`}
+          >
+            {t("applications.detail.postingLink")}
+            <ExternalLink aria-hidden="true" className="size-4" />
+          </a>
+        ) : null}
       </div>
 
       {state.status === "loading" ? (
@@ -115,8 +165,70 @@ export function ApplicationDetail({
         <>
           <p className="flex flex-wrap items-center gap-2 text-app-muted">
             <span>{state.application.companyName} ·</span>
-            <Badge tone="accent">{t(`applications.status.${state.application.status}`)}</Badge>
+            <Badge tone="accent">
+              {t(`applications.group.${groupOf(state.application.status)}`)}
+            </Badge>
           </p>
+          <ApplicationDocuments applicationId={state.application.id} autoGenerate={autoGenerate} />
+          <ApplicationForm
+            application={state.application}
+            onChanged={(application) => {
+              setState({ status: "ready", application });
+              onChanged(application);
+            }}
+          />
+          {nextStatuses.length > 0 ? (
+            <Card as="div" className="flex flex-col gap-3">
+              <h4 className="font-sans text-sm font-semibold text-app-fg">
+                {t("applications.detail.moveHeading")}
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {nextStatuses.map((status) => (
+                  <Button
+                    key={status}
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => void moveTo(status)}
+                  >
+                    {t(`applications.detail.move.${status}`)}
+                  </Button>
+                ))}
+              </div>
+              {moveFailed ? (
+                <p role="alert" className="text-sm text-app-danger">
+                  {t("applications.detail.moveFailed")}
+                </p>
+              ) : null}
+            </Card>
+          ) : null}
+          <Card as="div">
+            <form onSubmit={(event) => void addNote(event)} className="flex flex-col gap-3">
+              <TextArea
+                label={t("applications.detail.noteLabel")}
+                value={note}
+                maxLength={2000}
+                onChange={(event) => setNote(event.target.value)}
+              />
+              <div className="flex justify-end">
+                <Button type="submit" variant="secondary" size="sm" disabled={note.trim() === ""}>
+                  {t("applications.detail.addNote")}
+                </Button>
+              </div>
+            </form>
+          </Card>
+          {noteFailed ? (
+            <p role="alert" className="text-sm text-app-danger">
+              {t("applications.detail.noteFailed")}
+            </p>
+          ) : null}
+          {isUnsent(state.application.status) ? (
+            <div>
+              <DeleteApplication
+                title={state.application.jobTitle}
+                onDelete={() => onDelete(state.application.id)}
+              />
+            </div>
+          ) : null}
           <Card as="div" className="flex flex-col gap-3">
             <h4 className="font-sans text-sm font-semibold text-app-fg">
               {t("applications.detail.heading")}
@@ -151,34 +263,6 @@ export function ApplicationDetail({
               </ol>
             )}
           </Card>
-          <ApplicationDocuments applicationId={state.application.id} autoGenerate={autoGenerate} />
-          <ApplicationForm
-            application={state.application}
-            onChanged={(application) => {
-              setState({ status: "ready", application });
-              onChanged(application);
-            }}
-          />
-          <Card as="div">
-            <form onSubmit={(event) => void addNote(event)} className="flex flex-col gap-3">
-              <TextArea
-                label={t("applications.detail.noteLabel")}
-                value={note}
-                maxLength={2000}
-                onChange={(event) => setNote(event.target.value)}
-              />
-              <div className="flex justify-end">
-                <Button type="submit" variant="secondary" size="sm" disabled={note.trim() === ""}>
-                  {t("applications.detail.addNote")}
-                </Button>
-              </div>
-            </form>
-          </Card>
-          {noteFailed ? (
-            <p role="alert" className="text-sm text-app-danger">
-              {t("applications.detail.noteFailed")}
-            </p>
-          ) : null}
         </>
       ) : null}
     </section>

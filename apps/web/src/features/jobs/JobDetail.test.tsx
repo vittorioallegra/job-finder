@@ -121,7 +121,7 @@ describe("job detail: bookmark and preparation", () => {
       button(container, "Bookmark").click();
     });
     expect(bridge.applications.bookmark).toHaveBeenCalledWith({ jobId: "job-1", bookmarked: true });
-    expect(container.textContent).toContain("Application: Bookmarked");
+    expect(container.textContent).toContain("Application: To send");
 
     await act(async () => {
       button(container, "Remove bookmark").click();
@@ -130,7 +130,7 @@ describe("job detail: bookmark and preparation", () => {
       jobId: "job-1",
       bookmarked: false,
     });
-    expect(container.textContent).not.toContain("Application: Bookmarked");
+    expect(container.textContent).not.toContain("Application: To send");
   });
 
   it("starts preparing at once when no earlier application exists", async () => {

@@ -5,7 +5,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { companies, jobs } from "@job-finder/core";
+import { applicationDocuments, companies, jobs } from "@job-finder/core";
 import { JobFilterSchema } from "@job-finder/core/filters";
 import { openAppDatabase, type AppDatabase } from "../db/database";
 import { createIngestRepository, type IngestRepository } from "../ingest/repository";
@@ -266,5 +266,39 @@ describe("application repository", () => {
     const details = await repository.listDetails();
     expect(details.map((item) => item.companyName)).toEqual(["Beta"]);
     expect(details[0]?.events).toHaveLength(2);
+  });
+
+  it("deletes an unsent application with its notes and documents, and refuses a sent one", async () => {
+    // protects=an application that was not submitted is deleted with its events and documents and the cleanup hook runs, while a submitted one and an unknown id are refused and kept; fails_when=a sent application is deleted, documents or events stay behind, or the cleanup does not run; no_claim=the PDF files themselves, which the hook removes in main;
+    const newId = ids("a");
+    const removed: string[] = [];
+    repository = createApplicationRepository(database.db, async (id) => {
+      removed.push(id);
+    });
+    const open = await repository.start({ jobId: "j1", confirmations: 0 }, NOW, newId);
+    const sent = await repository.start({ jobId: "j4", confirmations: 0 }, NOW, newId);
+    if (!open.ok || !sent.ok) throw new Error("expected starts");
+    await database.db.insert(applicationDocuments).values({
+      applicationId: open.application.id,
+      kind: "cv",
+      content: "{}",
+      language: "en",
+      updatedAt: NOW,
+      exportedAt: null,
+    });
+    await repository.update({ applicationId: sent.application.id, status: "ready" }, NOW, newId);
+    await repository.update({ applicationId: sent.application.id, status: "applied" }, NOW, newId);
+
+    expect(await repository.remove(open.application.id)).toEqual({ ok: true });
+    expect(removed).toEqual([open.application.id]);
+    expect(await repository.detail(open.application.id)).toBeNull();
+    expect(await database.db.select().from(applicationDocuments)).toEqual([]);
+
+    expect(await repository.remove(sent.application.id)).toEqual({
+      ok: false,
+      code: "already-sent",
+    });
+    expect(await repository.detail(sent.application.id)).not.toBeNull();
+    expect(await repository.remove("missing")).toEqual({ ok: false, code: "not-found" });
   });
 });

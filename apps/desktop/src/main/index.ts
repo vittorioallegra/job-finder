@@ -14,7 +14,7 @@ import {
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { openAppDatabase, resolveMigrationsFolder, type AppDatabase } from "./db/database";
 import { executeDbCalls, reconcileInterruptedRuns } from "./db/operations";
 import { scoringCandidateIds } from "./db/scoring-operations";
@@ -305,7 +305,10 @@ if (gotSingleInstanceLock) {
         scoringCandidateIds(database.db, filter, preferredIds, limit),
       systemLocale: () => app.getLocale(),
     });
-    const applicationRepository = createApplicationRepository(database.db);
+    const documentsRoot = join(userData, "applications");
+    const applicationRepository = createApplicationRepository(database.db, (applicationId) =>
+      rm(join(documentsRoot, applicationId), { recursive: true, force: true }),
+    );
     const applicationExport = createApplicationExport({
       repository: applicationRepository,
       chooseFile: async (defaultName) => {
@@ -318,7 +321,6 @@ if (gotSingleInstanceLock) {
       },
       writeFile: (path, content) => writeFile(path, content, "utf8"),
     });
-    const documentsRoot = join(userData, "applications");
     const documentRepository = createDocumentRepository(database.db);
     const documents = createDocumentService({
       repository: documentRepository,

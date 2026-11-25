@@ -215,7 +215,8 @@ export function ApplicationDocuments({
     };
   }
 
-  async function generate(kind: DocumentKind) {
+  /** Resolves true when the document was generated. */
+  async function generate(kind: DocumentKind): Promise<boolean> {
     setBusy({ kind, action: "generate" });
     setNotice(kind, null);
     try {
@@ -227,19 +228,39 @@ export function ApplicationDocuments({
       if (result.ok) {
         applyRecord(result.document);
         setNotice(kind, { tone: "ok", text: t("applications.documents.generated") });
-      } else {
-        setNotice(kind, failureNotice(result.code));
+        return true;
       }
+      setNotice(kind, failureNotice(result.code));
+      return false;
     } catch {
       setNotice(kind, failureNotice("unknown"));
+      return false;
     } finally {
       setBusy(null);
     }
   }
 
+  /** The CV, then the letter; a failure stops the run, since the next call would fail the same way. */
   async function generateBoth() {
-    await generate("cv");
-    await generate("cover-letter");
+    if (await generate("cv")) await generate("cover-letter");
+  }
+
+  function noticeView(notice: Notice) {
+    return (
+      <div
+        role={notice.tone === "error" ? "alert" : "status"}
+        className="flex flex-col items-start gap-2"
+      >
+        <p className={`text-sm ${notice.tone === "error" ? "text-app-danger" : "text-app-good"}`}>
+          {notice.text}
+        </p>
+        {notice.aiUnavailable ? (
+          <Link to="/settings" className={buttonClass("secondary", "sm")}>
+            {t("applications.documents.openSettings")}
+          </Link>
+        ) : null}
+      </div>
+    );
   }
 
   async function save(kind: DocumentKind, record: DocumentRecord) {
@@ -354,8 +375,16 @@ export function ApplicationDocuments({
           </Button>
         </div>
       ) : null}
+      {records.cv === null &&
+      records["cover-letter"] === null &&
+      (notices.cv ?? notices["cover-letter"])
+        ? noticeView((notices.cv ?? notices["cover-letter"]) as Notice)
+        : null}
 
-      {(["cv", "cover-letter"] as const).map((kind) => {
+      {(records.cv === null && records["cover-letter"] === null
+        ? []
+        : (["cv", "cover-letter"] as const)
+      ).map((kind) => {
         const record = records[kind];
         const draft = drafts[kind];
         const working = busy?.kind === kind;
@@ -439,23 +468,7 @@ export function ApplicationDocuments({
                     : t("applications.documents.generateAgain")}
               </Button>
             </div>
-            {notice ? (
-              <div
-                role={notice.tone === "error" ? "alert" : "status"}
-                className="flex flex-col items-start gap-2"
-              >
-                <p
-                  className={`text-sm ${notice.tone === "error" ? "text-app-danger" : "text-app-good"}`}
-                >
-                  {notice.text}
-                </p>
-                {notice.aiUnavailable ? (
-                  <Link to="/settings" className={buttonClass("secondary", "sm")}>
-                    {t("applications.documents.openSettings")}
-                  </Link>
-                ) : null}
-              </div>
-            ) : null}
+            {notice ? noticeView(notice) : null}
           </Card>
         );
       })}

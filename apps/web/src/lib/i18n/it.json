@@ -673,10 +673,8 @@
     "empty": "Nessuna candidatura. Salva un annuncio o avvia la preparazione dalla schermata annunci.",
     "noMatch": "Nessuna candidatura corrisponde a questi filtri.",
     "changed": "Modificata il {{date}}",
-    "cardStatus": "Stato di {{title}}",
     "openDetail": "Dettagli di {{title}}",
     "details": "Dettagli",
-    "statusFailed": "Non è stato possibile cambiare lo stato.",
     "export": {
       "button": "Esporta CSV",
       "dialogTitle": "Esporta candidature",
@@ -692,8 +690,15 @@
       "noteLabel": "Aggiungi una nota",
       "addNote": "Aggiungi nota",
       "noteFailed": "Non è stato possibile salvare la nota.",
-      "postingLink": "Apri l'annuncio",
-      "applyLink": "Apri la pagina di candidatura"
+      "postingLink": "Apri annuncio",
+      "moveHeading": "Com'è andata?",
+      "moveFailed": "Non è stato possibile cambiare lo stato.",
+      "move": {
+        "interviewing": "Ho un colloquio",
+        "offer": "Ho ricevuto un'offerta",
+        "rejected": "È stata rifiutata",
+        "withdrawn": "Mi sono ritirato"
+      }
     },
     "documents": {
       "heading": "Documenti",
@@ -833,6 +838,22 @@
           "unknown": "la chiamata all'AI non è riuscita"
         }
       }
+    },
+    "group": {
+      "to-send": "Da inviare",
+      "applied": "Inviata",
+      "interviewing": "Colloquio",
+      "offer": "Offerta",
+      "rejected": "Rifiutata",
+      "withdrawn": "Ritirata"
+    },
+    "delete": {
+      "button": "Elimina {{title}}",
+      "label": "Elimina",
+      "confirm": "Eliminare questa candidatura? Anche note e documenti vengono eliminati.",
+      "yes": "Elimina",
+      "cancel": "Annulla",
+      "failed": "Non è stato possibile eliminare la candidatura."
     }
   }
 }

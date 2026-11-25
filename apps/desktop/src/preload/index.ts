@@ -100,6 +100,7 @@ const api: JobFinderBridge = {
     check: (request) => invoke("applications:check", request),
     start: (request) => invoke("applications:start", request),
     update: (request) => invoke("applications:update", request),
+    remove: (request) => invoke("applications:remove", request),
     exportCsv: () => invoke("applications:export"),
   },
   ingest: {

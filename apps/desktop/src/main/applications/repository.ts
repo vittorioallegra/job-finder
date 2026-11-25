@@ -1,8 +1,15 @@
 import { and, asc, desc, eq, inArray, or } from "drizzle-orm";
-import { applicationEvents, applications, companies, jobs } from "@job-finder/core";
+import {
+  applicationDocuments,
+  applicationEvents,
+  applications,
+  companies,
+  jobs,
+} from "@job-finder/core";
 import {
   canTransition,
   GUARD_STATUSES,
+  isUnsent,
   requiredConfirmations,
   withinDuplicateWindow,
   type ApplicationStatus,
@@ -11,6 +18,7 @@ import type {
   ApplicationBookmarkRequest,
   ApplicationDetail,
   ApplicationEvent,
+  ApplicationRemoveResult,
   ApplicationStartRequest,
   ApplicationStartResult,
   ApplicationSummary,
@@ -42,6 +50,8 @@ export interface ApplicationRepository {
     now?: number,
     newId?: () => string,
   ): Promise<ApplicationStartResult>;
+  /** Deletes an application that was not submitted yet, with its notes and documents. */
+  remove(applicationId: string): Promise<ApplicationRemoveResult>;
   /** A status change (only the planned ones), a note, or both. */
   update(
     request: ApplicationUpdateRequest,
@@ -199,7 +209,14 @@ async function findDuplicates(
   };
 }
 
-export function createApplicationRepository(db: AppDb): ApplicationRepository {
+/**
+ * `onRemoved` runs after an application is deleted, to clean up what lives outside the database
+ * (the exported PDF files).
+ */
+export function createApplicationRepository(
+  db: AppDb,
+  onRemoved: (applicationId: string) => Promise<void> = async () => {},
+): ApplicationRepository {
   async function detailOf(applicationId: string): Promise<ApplicationDetail | null> {
     const [row] = await selectSummaries(db).where(eq(applications.id, applicationId)).limit(1);
     if (!row) return null;
@@ -344,6 +361,23 @@ export function createApplicationRepository(db: AppDb): ApplicationRepository {
       const run = startQueue.then(() => startOnce(request, now, newId));
       startQueue = run.catch(() => undefined);
       return run;
+    },
+
+    async remove(applicationId) {
+      const [current] = await db
+        .select({ status: applications.status })
+        .from(applications)
+        .where(eq(applications.id, applicationId))
+        .limit(1);
+      if (!current) return { ok: false, code: "not-found" };
+      if (!isUnsent(current.status)) return { ok: false, code: "already-sent" };
+      await db
+        .delete(applicationDocuments)
+        .where(eq(applicationDocuments.applicationId, applicationId));
+      await db.delete(applicationEvents).where(eq(applicationEvents.applicationId, applicationId));
+      await db.delete(applications).where(eq(applications.id, applicationId));
+      await onRemoved(applicationId).catch(() => undefined);
+      return { ok: true };
     },
 
     async update(request, now = Date.now(), newId = newIdDefault) {

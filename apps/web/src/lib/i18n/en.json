@@ -673,10 +673,8 @@
     "empty": "No applications yet. Bookmark a job or start preparing it on the jobs screen.",
     "noMatch": "No application matches these filters.",
     "changed": "Changed {{date}}",
-    "cardStatus": "Status of {{title}}",
     "openDetail": "Details of {{title}}",
     "details": "Details",
-    "statusFailed": "The status could not be changed.",
     "export": {
       "button": "Export CSV",
       "dialogTitle": "Export applications",
@@ -692,8 +690,15 @@
       "noteLabel": "Add a note",
       "addNote": "Add note",
       "noteFailed": "The note could not be saved.",
-      "postingLink": "Open the posting",
-      "applyLink": "Open the apply page"
+      "postingLink": "Open posting",
+      "moveHeading": "What happened next?",
+      "moveFailed": "The status could not be changed.",
+      "move": {
+        "interviewing": "I have an interview",
+        "offer": "I got an offer",
+        "rejected": "It was rejected",
+        "withdrawn": "I withdrew"
+      }
     },
     "documents": {
       "heading": "Documents",
@@ -833,6 +838,22 @@
           "unknown": "the AI call failed"
         }
       }
+    },
+    "group": {
+      "to-send": "To send",
+      "applied": "Applied",
+      "interviewing": "Interviewing",
+      "offer": "Offer",
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn"
+    },
+    "delete": {
+      "button": "Delete {{title}}",
+      "label": "Delete",
+      "confirm": "Delete this application? Its notes and documents go too.",
+      "yes": "Delete",
+      "cancel": "Cancel",
+      "failed": "The application could not be deleted."
     }
   }
 }
