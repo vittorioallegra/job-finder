@@ -197,14 +197,15 @@ describe("application documents panel", () => {
   });
 
   it("generates the CV and the letter at once when asked to and no consent step is needed", async () => {
-    const generate = vi.fn(async () => ({ ok: true as const, document: coverLetter("Hi.") }));
+    const kinds: string[] = [];
+    const generate = vi.fn(async (request: { kind: string }) => {
+      kinds.push(request.kind);
+      return { ok: true as const, document: coverLetter("Hi.") };
+    });
     await render(bridgeWith({ generate }), true);
     await act(async () => {});
 
-    expect(generate.mock.calls.map(([request]) => (request as { kind: string }).kind)).toEqual([
-      "cv",
-      "cover-letter",
-    ]);
+    expect(kinds).toEqual(["cv", "cover-letter"]);
   });
 
   it("waits for the consent of a cloud provider before generating both, with one button", async () => {
