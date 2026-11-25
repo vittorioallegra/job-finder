@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, notLike, or, sql } from "drizzle-orm";
 import {
   applications,
   companies,
@@ -125,7 +125,7 @@ export function createIngestRepository(db: AppDb): IngestRepository {
       const rows = await db
         .select()
         .from(companies)
-        .where(isNull(companies.excludedAt))
+        .where(and(isNull(companies.excludedAt), notLike(companies.careersUrl, "directory:%")))
         .orderBy(asc(companies.createdAt));
       const scans = await latestScans(db);
       return rows.map((row) => ({

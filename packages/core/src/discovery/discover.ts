@@ -6,10 +6,12 @@ import { duckDuckGoSource } from "./duckduckgo";
 import { createKeyedSource } from "./keyed";
 import { discoverFromFeeds, KEYLESS_FEEDS, type JobFeed } from "./feeds";
 import { discoverFromRegistry } from "./registry";
+import { directoryJobs } from "./directory-jobs";
 import { discoverWorkableDirectory } from "./workable-directory";
 import { buildQueries, MAX_QUERIES } from "./query";
 import type { BoardSource, SearchSource } from "./source";
 import type {
+  DirectoryJob,
   DiscoveryCandidate,
   DiscoveryCriteria,
   DiscoveryOutcome,
@@ -154,8 +156,20 @@ export async function discoverCompanies(
     }
   }
 
+  // The directory's own postings, ready to store: the largest source of jobs here.
+  let jobs: DirectoryJob[] = [];
+  if (options.directories !== false && !options.signal?.aborted) {
+    jobs = await directoryJobs(criteria, { http: options.http, signal: options.signal });
+    if (jobs.length > 0) succeeded += 1;
+  }
+
   if (succeeded > 0) {
-    return blocked ? { ok: true, candidates, searchBlocked: true } : { ok: true, candidates };
+    return {
+      ok: true,
+      candidates,
+      ...(blocked ? { searchBlocked: true as const } : {}),
+      ...(jobs.length > 0 ? { jobs } : {}),
+    };
   }
   return { ok: false, code: blocked ? "search-blocked" : "search-failed" };
 }

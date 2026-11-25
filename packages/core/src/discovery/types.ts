@@ -8,6 +8,9 @@ export interface DiscoveryCriteria {
   known?: string[];
 }
 
+/** A posting a job directory gave, in the normalized shape the job store takes. */
+export type DirectoryJob = import("../normalize").NormalizedJob;
+
 /** A board found in search results, with the URL the scan will use. */
 export interface DiscoveryCandidate {
   /** ATS id, e.g. "greenhouse"; null for a company's own careers page that names no ATS. */
@@ -31,7 +34,13 @@ export type DiscoveryFailureCode = "search-blocked" | "search-failed";
  * boards, so the screen can say that keyless search is not working.
  */
 export type DiscoveryOutcome =
-  | { ok: true; candidates: DiscoveryCandidate[]; searchBlocked?: true }
+  | {
+      ok: true;
+      candidates: DiscoveryCandidate[];
+      searchBlocked?: true;
+      /** Open postings read straight from job directories, stored by main without a board scan. */
+      jobs?: DirectoryJob[];
+    }
   | { ok: false; code: DiscoveryFailureCode };
 
 /** Keyed search providers. A provider runs only with its toggle on and a key saved. */

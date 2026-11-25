@@ -4,6 +4,7 @@ import type {
   KeyedSearchConfig,
   SearchSourceConfig,
 } from "@job-finder/core/discovery/types";
+import type { NormalizedJob } from "@job-finder/core/normalize";
 import type { DiscoverySearchRequest, DiscoverySearchResult, SecretName } from "@job-finder/bridge";
 import { EngineUnavailableError } from "../engine/supervisor";
 import type { SecretStore } from "../secrets/store";
@@ -28,6 +29,8 @@ export interface DiscoveryServiceOptions {
   secrets: Pick<SecretStore, "read">;
   /** Hosts of the companies already followed, so a search does not look them up again. */
   knownHosts?: () => Promise<string[]>;
+  /** Stores the postings a job directory gave; they are never sent to the renderer. */
+  storeJobs?: (jobs: NormalizedJob[]) => Promise<unknown>;
 }
 
 /** Each keyed provider reads its own secret; the name is fixed here, never taken from the renderer. */
@@ -64,6 +67,10 @@ export function createDiscoveryService(options: DiscoveryServiceOptions): Discov
           { duckduckgo: search.duckduckgo && keyed.length === 0, keyed },
         );
         if (!outcome.ok) return { ok: false, code: outcome.code };
+        if (outcome.jobs && outcome.jobs.length > 0 && options.storeJobs) {
+          // Postings stored here are not a reason to fail the search.
+          await options.storeJobs(outcome.jobs).catch(() => undefined);
+        }
         // The note about a blocked keyless search suggests adding a key: it is left out once a key
         // is in use, since the results then come from the keyed provider.
         return outcome.searchBlocked && keyed.length === 0

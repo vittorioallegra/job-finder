@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, notLike, sql } from "drizzle-orm";
 import { companies, jobSources, jobs, runEvents } from "@job-finder/core";
 import type { BatchPlan, ExistingState, LookupRequest } from "@job-finder/core/ingest";
 import type { IngestEvent } from "@job-finder/core/ingest/events";
@@ -18,7 +18,7 @@ export async function listCompanyRows(db: AppDb) {
       })
       .from(companies)
       // A company removed from the sources is not scanned.
-      .where(isNull(companies.excludedAt))
+      .where(and(isNull(companies.excludedAt), notLike(companies.careersUrl, "directory:%")))
       .orderBy(asc(companies.createdAt))
   );
 }

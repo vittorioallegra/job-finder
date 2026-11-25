@@ -25,6 +25,7 @@ import { createCvImportService } from "./profile/cv-import";
 import { createIngestRepository } from "./ingest/repository";
 import { createIngestionService } from "./ingest/service";
 import { createDiscoveryService } from "./discovery/service";
+import { createDirectoryJobStore } from "./ingest/directory-jobs";
 import { createProfileDiscovery } from "./discovery/from-profile";
 import { createProfileRepository } from "./profile/repository";
 import { createScoringService } from "./scoring/service";
@@ -376,10 +377,15 @@ if (gotSingleInstanceLock) {
         },
       }),
     });
+    const directoryJobStore = createDirectoryJobStore(database.db);
     const discovery = createDiscoveryService({
       engine: () => supervisor,
       settings: settingsRepository,
       secrets: secretStore,
+      storeJobs: async (postings) => {
+        await directoryJobStore.store(postings);
+        await refreshCompanyCountries(database.db);
+      },
       knownHosts: async () =>
         (await ingestRepository.listCompanies()).flatMap((company) => {
           try {
