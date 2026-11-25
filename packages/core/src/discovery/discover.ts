@@ -4,6 +4,7 @@ import { canonicalBoardUrl } from "./boards";
 import { commonCrawlSource } from "./commoncrawl";
 import { duckDuckGoSource } from "./duckduckgo";
 import { createKeyedSource } from "./keyed";
+import { discoverWorkableDirectory } from "./workable-directory";
 import { buildQueries, MAX_QUERIES } from "./query";
 import type { BoardSource, SearchSource } from "./source";
 import type {
@@ -22,6 +23,8 @@ export interface DiscoverOptions {
   config?: SearchSourceConfig;
   /** Query-independent board lists, read once per run. Defaults to Common Crawl. */
   boardSources?: readonly BoardSource[];
+  /** Whether Workable's job directory is asked which companies hire in the places. Defaults to yes. */
+  directories?: boolean;
   maxQueries?: number;
   signal?: AbortSignal;
 }
@@ -86,6 +89,29 @@ export async function discoverCompanies(
     if (result.ok) {
       succeeded += 1;
       addUrls(result.urls);
+    }
+  }
+
+  // Companies hiring in the criteria's places, from Workable's public directory: it knows the place,
+  // which a web search for the same words does not.
+  if (options.directories !== false && !options.signal?.aborted) {
+    const directory = await discoverWorkableDirectory(criteria, {
+      http: options.http,
+      signal: options.signal,
+    });
+    if (directory.ok) {
+      if (directory.answered > 0) succeeded += 1;
+      for (const candidate of directory.candidates) {
+        const key = `${candidate.ats}/${candidate.slug}`;
+        if (seen.has(key)) {
+          // Found by search too: keep its proper name instead of the board token.
+          const existing = candidates.find((item) => `${item.ats}/${item.slug}` === key);
+          if (existing) existing.name = candidate.name;
+          continue;
+        }
+        seen.add(key);
+        candidates.push(candidate);
+      }
     }
   }
 

@@ -6,3 +6,4 @@ export * from "./duckduckgo";
 export * from "./keyed";
 export * from "./query";
 export * from "./source";
+export * from "./workable-directory";
