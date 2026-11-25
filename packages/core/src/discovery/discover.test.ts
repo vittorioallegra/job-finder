@@ -1,4 +1,4 @@
-// protects=discovery turns result URLs into one candidate per ATS board, stops asking a source that answers with a challenge while the other sources keep running, adds the query-independent board list once per run, reports why no query succeeded, and runs only the sources its configuration enables;
+// protects=discovery turns result URLs into one candidate per ATS board, stops asking a source that answers with a challenge while the other sources keep running, adds the query-independent board list once per run, reports why no query succeeded, runs only the sources its configuration enables, and takes the boards job feeds name without listing one twice;
 // fails_when=the same board is listed twice, a challenge lets that source send more queries or stops the other sources, a failed search is reported as success, a challenged result is not flagged as searchBlocked, the board list is read per query, or a disabled source runs;
 // no_claim=search ranking and live provider behaviour, and the HTTP queue timing, which the HTTP client's own tests cover.
 import { describe, expect, it } from "vitest";
@@ -190,5 +190,51 @@ describe("company discovery", () => {
         ],
       }),
     ).toEqual(["keyed-serper", "keyed-brave"]);
+  });
+
+  it("adds the boards that job feeds name, once, and keeps a feed's own name for them", async () => {
+    const feed: import("./feeds").JobFeed = {
+      id: "scripted-feed",
+      entries: async () => ({ ok: true, entries: [{ name: "Globex Corp" }] }),
+    };
+    const fetchFake = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname === "/robots.txt") return new Response("", { status: 404 });
+      return url.hostname === "boards-api.greenhouse.io" && url.pathname.endsWith("/globex")
+        ? new Response(JSON.stringify({ name: "Globex" }), { status: 200 })
+        : new Response("{}", { status: 404 });
+    }) as typeof fetch;
+    const { createHttpClient } = await import("../net");
+    const liveHttp = createHttpClient({
+      fetch: fetchFake,
+      intervalMs: 0,
+      sleep: async () => {},
+      maxAttempts: 1,
+    });
+    const { source } = scriptedSource(() => ({
+      ok: true,
+      urls: ["https://boards.greenhouse.io/globex/jobs/1"],
+    }));
+
+    const outcome = await discoverCompanies(criteria, {
+      http: liveHttp,
+      sources: [source],
+      boardSources: [],
+      feeds: [feed],
+      directories: false,
+      maxQueries: 1,
+    });
+
+    expect(outcome).toEqual({
+      ok: true,
+      candidates: [
+        {
+          ats: "greenhouse",
+          slug: "globex",
+          careersUrl: "https://boards.greenhouse.io/globex",
+          name: "globex",
+        },
+      ],
+    });
   });
 });

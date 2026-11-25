@@ -85,6 +85,18 @@ export async function serveJourneyFixtures(): Promise<JourneyFixtures> {
         send(response, 404, "text/plain", "not found");
         return;
       }
+      // The job directories and feeds the company search also reads: the fixture has none, which
+      // each answers as an empty result (404), so no company comes from them.
+      if (
+        method === "GET" &&
+        (pathname === "/api/v1/jobs" ||
+          pathname === "/jobs/api/search" ||
+          pathname === "/api/remote-jobs" ||
+          pathname === "/api/job-board-api")
+      ) {
+        send(response, 404, "text/plain", "not found");
+        return;
+      }
       // The daily update check: the repository has no published release yet, which GitHub answers with 404.
       if (method === "GET" && /^\/repos\/[^/]+\/[^/]+\/releases\/latest$/.test(pathname)) {
         send(response, 404, "application/json", JSON.stringify({ message: "Not Found" }));

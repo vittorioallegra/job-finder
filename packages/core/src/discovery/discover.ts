@@ -4,6 +4,7 @@ import { canonicalBoardUrl } from "./boards";
 import { commonCrawlSource } from "./commoncrawl";
 import { duckDuckGoSource } from "./duckduckgo";
 import { createKeyedSource } from "./keyed";
+import { discoverFromFeeds, KEYLESS_FEEDS, type JobFeed } from "./feeds";
 import { discoverWorkableDirectory } from "./workable-directory";
 import { buildQueries, MAX_QUERIES } from "./query";
 import type { BoardSource, SearchSource } from "./source";
@@ -25,6 +26,8 @@ export interface DiscoverOptions {
   boardSources?: readonly BoardSource[];
   /** Whether Workable's job directory is asked which companies hire in the places. Defaults to yes. */
   directories?: boolean;
+  /** Job feeds that name hiring companies. Defaults to the keyless ones. */
+  feeds?: readonly JobFeed[];
   maxQueries?: number;
   signal?: AbortSignal;
 }
@@ -112,6 +115,23 @@ export async function discoverCompanies(
         seen.add(key);
         candidates.push(candidate);
       }
+    }
+  }
+
+  // Companies named by public job APIs that need no key: each name is
+  // turned into a board and checked to be that company's.
+  if (!options.signal?.aborted) {
+    const feeds = options.feeds ?? KEYLESS_FEEDS;
+    const fromFeeds = await discoverFromFeeds(criteria, feeds, {
+      http: options.http,
+      signal: options.signal,
+    });
+    if (fromFeeds.answered > 0) succeeded += 1;
+    for (const candidate of fromFeeds.candidates) {
+      const key = `${candidate.ats}/${candidate.slug}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      candidates.push(candidate);
     }
   }
 

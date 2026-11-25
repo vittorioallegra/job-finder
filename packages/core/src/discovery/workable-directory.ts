@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { resolvePlace } from "../normalize/geo";
 import { canonicalBoardUrl } from "./boards";
+import { sameCompany } from "./company-name";
 import type { SearchOptions } from "./source";
 import type { DiscoveryCandidate, DiscoveryCriteria } from "./types";
 
@@ -97,14 +98,6 @@ export function slugVariants(title: string, website: string | null): string[] {
 
 /** Slugs already resolved in this session, so a second run does not ask again. */
 const resolved = new Map<string, string | null>();
-
-/** True when the board's account name is the company's: "webranking" for "Webranking". */
-function sameCompany(accountName: string, title: string): boolean {
-  const fold = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "");
-  const a = fold(accountName);
-  const t = fold(title);
-  return a !== "" && t !== "" && (a.startsWith(t) || t.startsWith(a));
-}
 
 async function boardOf(company: DirectoryCompany, options: SearchOptions): Promise<string | null> {
   const cached = resolved.get(company.id);
