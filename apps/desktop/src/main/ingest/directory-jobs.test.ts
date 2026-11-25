@@ -1,4 +1,4 @@
-// protects=postings a job directory gives are stored under one company per name that no screen lists or scans, stored again without duplicates, kept out for a company the user removed, and closed once the directory has not listed them for two weeks;
+// protects=postings a job directory gives are stored under one company per name that no screen lists or scans, stored again without duplicates, kept out for a company the user removed, and closed once the directory has not listed them for a month;
 // fails_when=a posting is stored twice, a directory company shows in the company list or the scan list, a removed company gets jobs back, or a stale posting stays open;
 // no_claim=the directory's real answers and the search that produced the postings: they are hand-made here;
 import { mkdtempSync } from "node:fs";
@@ -65,11 +65,11 @@ describe("directory job store", () => {
     close();
   });
 
-  it("closes a posting the directory has not listed for two weeks", async () => {
+  it("closes a posting the directory has not listed for a month", async () => {
     const { db, close } = await database();
     const day = 24 * 60 * 60 * 1000;
     await createDirectoryJobStore(db, () => 1_000).store([posting("Acme", "1")]);
-    await createDirectoryJobStore(db, () => 1_000 + 20 * day).store([posting("Acme", "2")]);
+    await createDirectoryJobStore(db, () => 1_000 + 40 * day).store([posting("Acme", "2")]);
 
     const rows = await db.select().from(jobs).where(eq(jobs.title, "Engineer 1"));
     expect(rows[0]?.closedAt).not.toBeNull();

@@ -7,6 +7,7 @@ import { createKeyedSource } from "./keyed";
 import { discoverFromFeeds, KEYLESS_FEEDS, type JobFeed } from "./feeds";
 import { discoverFromRegistry } from "./registry";
 import { directoryJobs } from "./directory-jobs";
+import { arbeitnowJobs, himalayasJobs } from "./feed-jobs";
 import { wideScan } from "./wide-scan";
 import { discoverWorkableDirectory } from "./workable-directory";
 import { buildQueries, MAX_QUERIES } from "./query";
@@ -170,7 +171,12 @@ export async function discoverCompanies(
   // The directory's own postings, ready to store: the largest source of jobs here.
   let jobs: DirectoryJob[] = [];
   if (options.directories !== false && !options.signal?.aborted) {
-    jobs = await directoryJobs(criteria, { http: options.http, signal: options.signal });
+    const read = { http: options.http, signal: options.signal };
+    jobs = [
+      ...(await directoryJobs(criteria, read)),
+      ...(await himalayasJobs(criteria, read)),
+      ...(await arbeitnowJobs(criteria, read)),
+    ];
     if (jobs.length > 0) succeeded += 1;
   }
 

@@ -15,3 +15,5 @@ export * from "./workable-directory";
 export * from "./directory-jobs";
 export * from "./place-match";
 export * from "./wide-scan";
+export * from "./feed-jobs";
+export * from "./workday";

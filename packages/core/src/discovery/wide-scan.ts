@@ -2,6 +2,7 @@ import { getAdapter } from "../ats";
 import type { AtsId } from "../ats/types";
 import type { NormalizedJob } from "../normalize";
 import { jobMatchesPlaces } from "./place-match";
+import { workdayJobs } from "./workday";
 import type { SearchOptions } from "./source";
 import type { DiscoveryCriteria } from "./types";
 
@@ -11,18 +12,19 @@ import type { DiscoveryCriteria } from "./types";
  * CC BY-NC 4.0, for non-commercial use). A name may be stale or wrong: the board read says so.
  */
 const LIST_BASE = "https://raw.githubusercontent.com/Feashliaa/job-board-aggregator/main/data";
-export const WIDE_LISTS: readonly { ats: AtsId; file: string }[] = [
+export const WIDE_LISTS: readonly { ats: AtsId | "workday"; file: string }[] = [
   { ats: "greenhouse", file: "greenhouse_companies.json" },
   { ats: "lever", file: "lever_companies.json" },
   { ats: "ashby", file: "ashby_companies.json" },
+  { ats: "workday", file: "workday_companies.json" },
 ];
 
 /** Boards read in one wide scan. */
-export const WIDE_SLICE = 1200;
+export const WIDE_SLICE = 2000;
 const AT_ONCE = 8;
 
 export interface WideBoard {
-  ats: AtsId;
+  ats: AtsId | "workday";
   slug: string;
 }
 
@@ -42,7 +44,7 @@ export async function wideBoards(options: SearchOptions): Promise<WideBoard[] | 
       if (!Array.isArray(slugs)) continue;
       read += 1;
       for (const slug of slugs) {
-        if (typeof slug === "string" && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(slug)) {
+        if (typeof slug === "string" && /^[A-Za-z0-9][A-Za-z0-9._|-]*$/.test(slug)) {
           boards.push({ ats: list.ats, slug });
         }
       }
@@ -81,21 +83,25 @@ export async function wideScan(
     if (options.signal?.aborted) break;
     const batch = slice.slice(from, from + AT_ONCE);
     const results = await Promise.all(
-      batch.map((board) =>
-        getAdapter(board.ats)
-          .fetchJobs({ ats: board.ats, slug: board.slug }, options.http, { signal: options.signal })
-          .catch(() => undefined),
-      ),
+      batch.map(async (board): Promise<NormalizedJob[]> => {
+        try {
+          if (board.ats === "workday") return await workdayJobs(board.slug, criteria, options);
+          const result = await getAdapter(board.ats).fetchJobs(
+            { ats: board.ats, slug: board.slug },
+            options.http,
+            { signal: options.signal },
+          );
+          return result.ok
+            ? result.jobs.filter((job) =>
+                jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: false }),
+              )
+            : [];
+        } catch {
+          return [];
+        }
+      }),
     );
-    for (const result of results) {
-      if (result?.ok) {
-        jobs.push(
-          ...result.jobs.filter((job) =>
-            jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: false }),
-          ),
-        );
-      }
-    }
+    for (const found of results) jobs.push(...found);
   }
   return { jobs, next: (start + count) % all.length, boards: slice.length };
 }

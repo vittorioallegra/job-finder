@@ -13,7 +13,7 @@ export const DIRECTORY_RUN_KIND = "directory";
 export const DIRECTORY_URL_PREFIX = "directory:";
 
 /** A directory posting not seen for this long is closed: the directory no longer lists it. */
-const STALE_AFTER_MS = 14 * 24 * 60 * 60 * 1000;
+const STALE_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 const BATCH_SIZE = 50;
 const CURSOR_KEY = "directory.wide-scan.cursor";
 
@@ -103,7 +103,7 @@ export function createDirectoryJobStore(
         }
       }
 
-      // Postings of these companies that no directory or wide scan listed for two weeks are closed.
+      // Postings of these companies that no directory or wide scan listed for a month are closed.
       const cutoff = startedAt - STALE_AFTER_MS;
       const stale = and(
         sql`${jobSources.companyId} in (select ${companies.id} from ${companies} where ${companies.careersUrl} like ${`${DIRECTORY_URL_PREFIX}%`})`,
