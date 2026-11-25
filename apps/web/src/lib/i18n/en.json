@@ -846,7 +846,8 @@
       "to-send": "To send",
       "applied": "Applied",
       "rejected": "Rejected",
-      "accepted": "Accepted"
+      "accepted": "Accepted",
+      "preparing": "In preparation"
     },
     "delete": {
       "button": "Delete {{title}}",

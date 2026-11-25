@@ -4,7 +4,6 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import {
   DEFAULT_JOB_FILTER,
   filterFromPreferences,
-  groupOf,
   aiConsentTarget,
   isCloudAiEndpoint,
   type CompanyRecord,
@@ -17,6 +16,7 @@ import {
   type ScoreStartResult,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
+import { useApplicationGroup } from "../../lib/useApplicationGroup";
 import { Briefcase, Building2, RefreshCw, Sparkles } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button, buttonClass } from "../../components/ui/Button";
@@ -544,6 +544,7 @@ export function JobsScreen() {
 
 function JobCard({ job, onOpen }: { job: JobListItem; onOpen: () => void }) {
   const { t } = useTranslation();
+  const application = useApplicationGroup(job.applicationStatus ?? "bookmarked", job.applicationId);
   return (
     <Card as="li" className={`flex flex-col gap-3 ${job.dismissed ? "opacity-60" : ""}`}>
       <div className="flex items-start gap-3.5">
@@ -575,7 +576,7 @@ function JobCard({ job, onOpen }: { job: JobListItem; onOpen: () => void }) {
         {job.applicationStatus !== null ? (
           <Badge tone="accent">
             {t("jobs.results.applicationStatus", {
-              status: t(`applications.group.${groupOf(job.applicationStatus)}`),
+              status: application.label,
             })}
           </Badge>
         ) : null}

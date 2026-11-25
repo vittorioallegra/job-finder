@@ -97,6 +97,8 @@ export interface JobListItem {
   isNew: boolean;
   /** The status of the job's latest application, or null when it has none (a bookmark is "bookmarked"). */
   applicationStatus: ApplicationStatus | null;
+  /** The id of that application, or null when the job has none. */
+  applicationId: string | null;
 }
 
 export interface RunSummary {

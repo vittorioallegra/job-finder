@@ -67,6 +67,7 @@ export function demoDataset(now: number = Date.now()): DemoDataset {
         "Six years of React and TypeScript against the five asked for; design system work is listed as a plus.",
       isNew: true,
       applicationStatus: "preparing",
+      applicationId: "a1",
     }),
     job("j2", "Product Engineer, React", "Orbita Labs", ["Remote (EU)"], "remote", 88, now - day, {
       explanation:
@@ -84,6 +85,7 @@ export function demoDataset(now: number = Date.now()): DemoDataset {
       {
         explanation: "A lead role on the design system; asks for fluent English, which you have.",
         applicationStatus: "applied",
+        applicationId: "a2",
       },
     ),
     job("j4", "Full-stack Developer", "Pagoda", ["Turin"], "onsite", 74, now - 3 * hour, {
@@ -94,6 +96,7 @@ export function demoDataset(now: number = Date.now()): DemoDataset {
     job("j5", "Frontend Lead", "Kairos", ["Bologna"], "hybrid", 71, now - 6 * day, {
       explanation: "Leads a team of four; you have mentored engineers but not managed a team yet.",
       applicationStatus: "bookmarked",
+      applicationId: "a3",
     }),
     job("j6", "TypeScript Engineer", "Nordlicht", ["Remote"], "remote", 66, now - 7 * day, {
       explanation: "Compatible stack, but the posting is in German and asks for German at B2.",
@@ -218,6 +221,7 @@ function job(
     dismissed: false,
     isNew: false,
     applicationStatus: null,
+    applicationId: null,
     ...extra,
   };
 }

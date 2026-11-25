@@ -67,6 +67,11 @@ export interface IngestRepository {
 /** The status of a job's latest application (by its last status change), or null when it has none. */
 const LATEST_APPLICATION_STATUS = sql<ApplicationStatus | null>`(select ${applications.status} from ${applications} where ${applications.jobId} = ${jobs.id} order by ${applications.statusChangedAt} desc limit 1)`;
 
+/** The id of that same latest application. */
+const LATEST_APPLICATION_ID = sql<
+  string | null
+>`(select ${applications.id} from ${applications} where ${applications.jobId} = ${jobs.id} order by ${applications.statusChangedAt} desc limit 1)`;
+
 /** The newest first key of a job: its posting date, or when the job was first seen. */
 const NEWEST = sql`coalesce(${jobs.postedAt}, ${jobs.firstSeenAt})`;
 
@@ -212,6 +217,7 @@ export function createIngestRepository(db: AppDb): IngestRepository {
           dismissedAt: jobFlags.dismissedAt,
           viewedAt: jobFlags.viewedAt,
           applicationStatus: LATEST_APPLICATION_STATUS,
+          applicationId: LATEST_APPLICATION_ID,
         })
         .from(jobs)
         .innerJoin(companies, eq(jobs.companyId, companies.id))
@@ -242,6 +248,7 @@ export function createIngestRepository(db: AppDb): IngestRepository {
         dismissed: row.dismissedAt !== null,
         isNew: row.viewedAt === null,
         applicationStatus: row.applicationStatus,
+        applicationId: row.applicationId,
       }));
     },
 
@@ -271,6 +278,7 @@ export function createIngestRepository(db: AppDb): IngestRepository {
           dismissedAt: jobFlags.dismissedAt,
           viewedAt: jobFlags.viewedAt,
           applicationStatus: LATEST_APPLICATION_STATUS,
+          applicationId: LATEST_APPLICATION_ID,
         })
         .from(jobs)
         .innerJoin(companies, eq(jobs.companyId, companies.id))
@@ -303,6 +311,7 @@ export function createIngestRepository(db: AppDb): IngestRepository {
         dismissed: row.dismissedAt !== null,
         isNew: row.viewedAt === null,
         applicationStatus: row.applicationStatus,
+        applicationId: row.applicationId,
         description: row.description,
         employmentType: row.employmentType,
         seniority: row.seniority,

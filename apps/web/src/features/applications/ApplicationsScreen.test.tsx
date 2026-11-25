@@ -1,5 +1,5 @@
-// protects=the applications screen shows the loading, empty and error states with a retry, lists applications with no status selector and the statuses before submitting as one "To send" group, deletes only an unsent application after one confirmation and reports a failure, offers the moves after sending in the detail only, keeps the close button first and the timeline last, filters the one list (no board) by group and company, shows the job's description in a closed accordion at the top of the detail, with the delete button in the top row, adds notes to the timeline, and reports the CSV export's count or its failure;
-// fails_when=a card offers a status selector, a sent application can be deleted, a delete needs no confirmation or leaves the card after a failure, a move the machine forbids is offered, the filters are wrong or a board view returns, a note is not shown, an error shows a blank page, or the export result is not reported;
+// protects=the applications screen shows loading, empty and error states, lists applications with no status selector and the statuses before submitting as one "To send" group ("In preparation" while documents are written), deletes only an unsent application after one confirmation, offers moves after sending in the detail only, keeps close first and the timeline last, shows the job's description in a closed accordion, filters the one list, adds notes, and reports the CSV export;
+// fails_when=a card offers a status selector, a sent application can be deleted, a delete needs no confirmation, a forbidden move is offered, the in-preparation chip sticks after writing, a board returns, a note is not shown, an error shows a blank page, or the export result is not reported;
 // no_claim=layout, keyboard focus order and the real bridge's storage are not checked here; the desktop repository and export tests cover the rules and the file;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -9,6 +9,7 @@ import type { ApplicationDetail, ApplicationSummary, JobFinderBridge } from "@jo
 import { BridgeProvider } from "../../lib/bridge/BridgeContext";
 import { createMemoryBridge } from "../../lib/bridge/memory";
 import { i18n } from "../../lib/i18n";
+import { startGeneration } from "../../lib/document-generation";
 import { ApplicationsScreen } from "./ApplicationsScreen";
 
 function summary(overrides: Partial<ApplicationSummary>): ApplicationSummary {
@@ -159,6 +160,31 @@ describe("applications screen", () => {
     // One list, no board: there is no view switch.
     expect(() => button(container, "Board")).toThrow();
     expect(() => button(container, "List")).toThrow();
+  });
+
+  it('reads "In preparation" on an unsent application while its documents are written, and "To send" afterwards', async () => {
+    let finish: () => void = () => {};
+    const base = bridgeWith({ list: async () => [summary({ status: "ready" })] });
+    const bridge = {
+      ...base,
+      documents: {
+        ...base.documents,
+        generate: vi.fn(
+          () =>
+            new Promise((resolve) => {
+              finish = () => resolve({ ok: false, code: "unknown" });
+            }),
+        ),
+      },
+    } as unknown as JobFinderBridge;
+    void startGeneration(bridge, "a1", ["cv"]);
+    await render(bridge);
+    expect(container.textContent).toContain("In preparation");
+
+    await act(async () => finish());
+    await act(async () => {});
+    expect(container.textContent).not.toContain("In preparation");
+    expect(container.textContent).toContain("To send");
   });
 
   it("deletes an application that was not sent after one confirmation, and offers no delete for a sent one", async () => {

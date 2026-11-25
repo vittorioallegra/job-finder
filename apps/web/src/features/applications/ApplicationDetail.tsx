@@ -4,7 +4,6 @@ import { ChevronDown, ExternalLink, X } from "lucide-react";
 import {
   APPLICATION_STATUSES,
   canTransition,
-  groupOf,
   isUnsent,
   type ApplicationDetail as ApplicationDetailRecord,
   type ApplicationStatus,
@@ -17,6 +16,7 @@ import { Card } from "../../components/ui/Card";
 import { TextArea } from "../../components/ui/TextArea";
 import { ApplicationDocuments } from "./ApplicationDocuments";
 import { ApplicationForm } from "./ApplicationForm";
+import { ApplicationStatusBadge } from "./ApplicationStatusBadge";
 import { DeleteApplication } from "./DeleteApplication";
 
 type DetailState =
@@ -192,9 +192,10 @@ export function ApplicationDetail({
                 : ""}
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge tone="accent">
-                {t(`applications.group.${groupOf(state.application.status)}`)}
-              </Badge>
+              <ApplicationStatusBadge
+                status={state.application.status}
+                applicationId={state.application.id}
+              />
               {job !== null && job.workMode !== "unknown" ? (
                 <Badge>{t(`jobs.results.workMode.${job.workMode}`)}</Badge>
               ) : null}

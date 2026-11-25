@@ -10,7 +10,6 @@ import {
   type ApplicationSummary,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
-import { Badge } from "../../components/ui/Badge";
 import { Button, buttonClass } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Drawer } from "../../components/ui/Drawer";
@@ -18,6 +17,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { SelectInput } from "../../components/ui/SelectInput";
 import { ApplicationDetail } from "./ApplicationDetail";
+import { ApplicationStatusBadge } from "./ApplicationStatusBadge";
 import { DeleteApplication } from "./DeleteApplication";
 
 type LoadState =
@@ -153,7 +153,7 @@ export function ApplicationsScreen() {
             })}
           </p>
           <div>
-            <Badge tone="accent">{t(`applications.group.${groupOf(application.status)}`)}</Badge>
+            <ApplicationStatusBadge status={application.status} applicationId={application.id} />
           </div>
         </div>
         <div className="flex items-center justify-end gap-2">

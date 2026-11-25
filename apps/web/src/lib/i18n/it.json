@@ -846,7 +846,8 @@
       "to-send": "Da inviare",
       "applied": "Inviata",
       "rejected": "Rifiutata",
-      "accepted": "Accettata"
+      "accepted": "Accettata",
+      "preparing": "In preparazione"
     },
     "delete": {
       "button": "Elimina {{title}}",

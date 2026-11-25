@@ -1,5 +1,5 @@
-// protects=the job detail bookmarks a job and removes the bookmark, prepares in the background without a warning when no earlier application exists (starting it, writing both documents and staying on the page) and then hides the prepare, dismiss and bookmark buttons, offers only the bookmark of a saved job, asks one confirmation for an earlier application at the same company, asks two for the same job or fingerprint, and shows the failure when the start is refused;
-// fails_when=a bookmark is not sent or its state is wrong, a warning starts the application without a confirmation, the same job starts after one confirmation, a refused start shows no message, or a duplicate's details are missing;
+// protects=the job detail bookmarks a job, prepares in the background (start, both documents, no redirect) and then hides the prepare, dismiss and bookmark buttons, offers only the bookmark of a saved job, asks one or two confirmations for duplicates, shows a refused start, and shows "In preparation" with the writing message while documents are written;
+// fails_when=a bookmark is not sent, a warning starts without confirmation, the same job starts after one, a refused start shows no message, a duplicate's details are missing, or the in-preparation chip or writing message is missing or stays after writing;
 // no_claim=the layout, keyboard order and the engine's duplicate rules are not covered here; the desktop repository tests cover the guard counts and the core tests cover the confirmation rule;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -8,6 +8,7 @@ import type { DuplicateCheck, JobFinderBridge, JobListItem } from "@job-finder/b
 import { BridgeProvider } from "../../lib/bridge/BridgeContext";
 import { createMemoryBridge } from "../../lib/bridge/memory";
 import { i18n } from "../../lib/i18n";
+import { startGeneration } from "../../lib/document-generation";
 import { JobDetail } from "./JobDetail";
 
 const posting: JobListItem = {
@@ -25,6 +26,7 @@ const posting: JobListItem = {
   dismissed: false,
   isNew: false,
   applicationStatus: null,
+  applicationId: null,
 };
 
 const earlier = {
@@ -183,6 +185,35 @@ describe("job detail: bookmark and preparation", () => {
     await act(async () => {});
     expect(generate).toHaveBeenCalledTimes(1);
     expect(container.querySelector("[role=alert]")?.textContent).toContain("could not be written");
+  });
+
+  it("shows the application as in preparation, with the writing message, while its documents are being written", async () => {
+    let finish: () => void = () => {};
+    const base = createMemoryBridge({
+      jobs: [{ ...posting, applicationStatus: "preparing", applicationId: "a1" }],
+    });
+    const bridge = {
+      ...base,
+      documents: {
+        ...base.documents,
+        generate: vi.fn(
+          () =>
+            new Promise((resolve) => {
+              finish = () => resolve({ ok: false, code: "unknown" });
+            }),
+        ),
+      },
+    } as unknown as JobFinderBridge;
+
+    void startGeneration(bridge, "a1", ["cv"]);
+    await render(bridge);
+    expect(container.textContent).toContain("Application: In preparation");
+    expect(container.textContent).toContain("Writing your CV");
+
+    await act(async () => finish());
+    await act(async () => {});
+    expect(container.textContent).toContain("Application: To send");
+    expect(container.textContent).not.toContain("Writing your CV");
   });
 
   it("asks one confirmation for an earlier application at the same company", async () => {

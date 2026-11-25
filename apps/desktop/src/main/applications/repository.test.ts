@@ -76,6 +76,7 @@ describe("application repository", () => {
 
     const listed = await listing.listJobs({ filter: {}, sort: "affinity" }, NOW);
     expect(listed.find((job) => job.id === "j1")?.applicationStatus).toBe("bookmarked");
+    expect(listed.find((job) => job.id === "j1")?.applicationId).toBe("a-1");
 
     expect(await repository.bookmark({ jobId: "j1", bookmarked: false }, NOW, newId)).toBe(true);
     expect(await repository.list()).toEqual([]);

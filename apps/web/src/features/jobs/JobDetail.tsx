@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ExternalLink, X } from "lucide-react";
+import { ExternalLink, Loader2, X } from "lucide-react";
 import {
-  groupOf,
   type ApplicationStartResult,
   type DuplicateApplication,
+  type DocumentKind,
   type DuplicateCheck,
   type JobDetail as JobDetailRecord,
 } from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { startGeneration } from "../../lib/document-generation";
+import { useApplicationGroup } from "../../lib/useApplicationGroup";
 import { Badge } from "../../components/ui/Badge";
 import { Button, buttonClass } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -105,7 +106,10 @@ export function JobDetail({ jobId, onChanged, onClose, onOpenApplication }: JobD
     }
     if (result.ok) {
       const applicationStatus = result.application.status;
-      setState({ status: "ready", job: { ...state.job, applicationStatus } });
+      setState({
+        status: "ready",
+        job: { ...state.job, applicationStatus, applicationId: result.application.id },
+      });
       onChanged();
       await generateDocuments(result.application.id);
     } else if (result.code === "duplicate-confirmation-required") {
@@ -136,7 +140,14 @@ export function JobDetail({ jobId, onChanged, onClose, onOpenApplication }: JobD
     try {
       await bridge.applications.bookmark({ jobId, bookmarked });
       const applicationStatus = bookmarked ? "bookmarked" : null;
-      setState({ status: "ready", job: { ...state.job, applicationStatus } });
+      setState({
+        status: "ready",
+        job: {
+          ...state.job,
+          applicationStatus,
+          applicationId: bookmarked ? state.job.applicationId : null,
+        },
+      });
       onChanged();
     } catch {
       setState({ status: "error" });
@@ -166,6 +177,10 @@ export function JobDetail({ jobId, onChanged, onClose, onOpenApplication }: JobD
   }
 
   const postingUrl = state.status === "ready" ? (state.job.sources[0]?.url ?? null) : null;
+  const application = useApplicationGroup(
+    state.status === "ready" ? (state.job.applicationStatus ?? "bookmarked") : "bookmarked",
+    state.status === "ready" ? state.job.applicationId : null,
+  );
   const formatDate = (epochMs: number) => new Date(epochMs).toLocaleDateString(i18n.language);
   const notStated = t("jobs.detail.notStated");
   const salary = state.status === "ready" ? state.job.salary : null;
@@ -248,7 +263,7 @@ export function JobDetail({ jobId, onChanged, onClose, onOpenApplication }: JobD
               {state.job.applicationStatus !== null ? (
                 <Badge tone="accent">
                   {t("jobs.results.applicationStatus", {
-                    status: t(`applications.group.${groupOf(state.job.applicationStatus)}`),
+                    status: application.label,
                   })}
                 </Badge>
               ) : null}
@@ -279,6 +294,7 @@ export function JobDetail({ jobId, onChanged, onClose, onOpenApplication }: JobD
             onCancel={() => setPrepare({ status: "idle" })}
             formatDate={formatDate}
             onOpenApplication={onOpenApplication}
+            writing={application.running}
             actions={
               state.job.applicationStatus === null ||
               state.job.applicationStatus === "bookmarked" ? (
@@ -359,6 +375,8 @@ interface PreparePanelProps {
   /** The job has no application yet, so it can be prepared. */
   canPrepare: boolean;
   onOpenApplication?: (applicationId: string) => void;
+  /** The document being written for this job's application now, or null. */
+  writing: DocumentKind | null;
 }
 
 /**
@@ -374,6 +392,7 @@ function PreparePanel({
   actions,
   canPrepare,
   onOpenApplication,
+  writing,
 }: PreparePanelProps) {
   const { t } = useTranslation();
   if (prepare.status === "warning") {
@@ -430,9 +449,10 @@ function PreparePanel({
           {actions}
         </div>
       ) : null}
-      {prepare.status === "generating" ? (
-        <p role="status" className="text-sm text-app-muted">
-          {t("jobs.detail.generating")}
+      {writing !== null ? (
+        <p role="status" className="flex items-center gap-2 text-sm text-app-muted">
+          <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden="true" />
+          {t(`applications.documents.writing.${writing}`)}
         </p>
       ) : null}
       {prepare.status === "done" ? (
