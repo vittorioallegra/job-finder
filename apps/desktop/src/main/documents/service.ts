@@ -36,7 +36,10 @@ export interface DocumentService {
   get(applicationId: string): Promise<ApplicationDocuments>;
   /** Generates a document with the AI and stores it, replacing the draft of that kind. */
   generate(request: DocumentGenerateRequest): Promise<DocumentGenerateResult>;
-  /** Saves the language the user chose for the application's documents. False when it does not exist. */
+  /**
+   * Saves the language the user chose for the application's documents, and removes the documents
+   * written in another language. False when the application does not exist.
+   */
   setLanguage(request: DocumentSetLanguageRequest): Promise<boolean>;
   /** Stores the user's edits after the profile checks. */
   save(request: DocumentSaveRequest): Promise<DocumentSaveResult>;
@@ -141,7 +144,10 @@ export function createDocumentService(options: DocumentServiceOptions): Document
 
   return {
     async setLanguage(request) {
-      return repository.setChosenLanguage(request.applicationId, request.language);
+      const saved = await repository.setChosenLanguage(request.applicationId, request.language);
+      // Documents written in another language no longer fit: they are removed, to be written again.
+      if (saved) await repository.deleteNotIn(request.applicationId, request.language);
+      return saved;
     },
 
     async get(applicationId) {

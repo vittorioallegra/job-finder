@@ -728,8 +728,6 @@
       "export": "Salva PDF…",
       "exporting": "Esportazione…",
       "exported": "PDF salvato.",
-      "exportedAt": "Ultima esportazione PDF: {{date}}.",
-      "stale": "Hai modificato il documento dopo l'ultima esportazione. Esportalo di nuovo per aggiornare il PDF.",
       "failures": {
         "not-found": "La candidatura o il suo documento non sono stati trovati.",
         "no-profile": "Salva prima il tuo profilo: i documenti si scrivono a partire da lui.",
@@ -753,7 +751,7 @@
         "numbers-not-in-profile": "un numero non è nel tuo profilo"
       },
       "language": {
-        "label": "Lingua del documento",
+        "label": "Lingua",
         "options": {
           "en": "English",
           "it": "Italiano"
@@ -764,7 +762,6 @@
           "default": "Predefinita: inglese. La lingua dell'annuncio non è nota o non è supportata."
         }
       },
-      "writtenIn": "Scritto in {{language}}.",
       "writing": {
         "cv": "Sto scrivendo il CV… può volerci un minuto. Puoi uscire da questa pagina: continua da solo.",
         "cover-letter": "Sto scrivendo la lettera di presentazione… può volerci un minuto. Puoi uscire da questa pagina: continua da solo."

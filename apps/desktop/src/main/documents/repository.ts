@@ -16,6 +16,11 @@ export interface DocumentRepository {
   chosenLanguage(applicationId: string): Promise<DocumentLanguage | null>;
   /** Saves the user's language choice. Resolves false when the application does not exist. */
   setChosenLanguage(applicationId: string, language: DocumentLanguage): Promise<boolean>;
+  /**
+   * Deletes the application's documents that are not written in `language` (or whose language is
+   * unknown). Returns how many were deleted.
+   */
+  deleteNotIn(applicationId: string, language: DocumentLanguage): Promise<number>;
   /** One stored document, or null when none was generated for the application yet. */
   find(applicationId: string, kind: DocumentKind): Promise<DocumentRecord | null>;
   /**
@@ -71,6 +76,25 @@ export function createDocumentRepository(db: AppDb): DocumentRepository {
 
   return {
     find,
+
+    async deleteNotIn(applicationId, language) {
+      const rows = await db
+        .select({ kind: applicationDocuments.kind, language: applicationDocuments.language })
+        .from(applicationDocuments)
+        .where(eq(applicationDocuments.applicationId, applicationId));
+      const stale = rows.filter((row) => row.language !== language);
+      for (const row of stale) {
+        await db
+          .delete(applicationDocuments)
+          .where(
+            and(
+              eq(applicationDocuments.applicationId, applicationId),
+              eq(applicationDocuments.kind, row.kind),
+            ),
+          );
+      }
+      return stale.length;
+    },
 
     async chosenLanguage(applicationId) {
       const [row] = await db

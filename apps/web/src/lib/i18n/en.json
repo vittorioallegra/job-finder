@@ -728,8 +728,6 @@
       "export": "Save PDF…",
       "exporting": "Exporting…",
       "exported": "PDF saved.",
-      "exportedAt": "Last PDF export: {{date}}.",
-      "stale": "You changed this document after the last export. Export again to update the PDF.",
       "failures": {
         "not-found": "The application or its document was not found.",
         "no-profile": "Save your profile first: the documents are written from it.",
@@ -753,7 +751,7 @@
         "numbers-not-in-profile": "a number is not in your profile"
       },
       "language": {
-        "label": "Document language",
+        "label": "Language",
         "options": {
           "en": "English",
           "it": "Italiano"
@@ -764,7 +762,6 @@
           "default": "Default: English. The posting's language is unknown or not supported."
         }
       },
-      "writtenIn": "Written in {{language}}.",
       "writing": {
         "cv": "Writing your CV… this can take a minute. You can leave this page: it keeps going.",
         "cover-letter": "Writing your cover letter… this can take a minute. You can leave this page: it keeps going."

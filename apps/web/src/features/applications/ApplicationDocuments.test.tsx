@@ -1,5 +1,5 @@
-// protects=the documents panel shows loading, error and AI-unavailable states, generates both documents with one button without consent, keeps writing after the panel closes, shows the language, shows a generated document as a card with Preview, Edit and Export buttons instead of fields, edits in a dialog that saves or drops its changes, previews the printed document in a sandboxed frame, reports a save that breaks the profile, saves a PDF through the system dialog (silent on cancel) and names every AI failure;
-// fails_when=a generate call needs a consent, a run stops when the panel closes, the card shows loose fields, cancelling the editor keeps the changes, the preview can run scripts, a refused save is reported as saved or hidden, a cancelled save dialog is reported as an error, or an AI failure lacks the settings link;
+// protects=the documents panel shows loading, error and AI-unavailable states, generates both documents with one button, keeps writing after the panel closes, writes the history (in preparation, then ready), empties the documents when the language changes, shows cards with Preview, Edit and Save PDF (a brief "PDF saved"), edits in a dialog, previews in a sandboxed frame, and names every AI failure;
+// fails_when=a run stops when the panel closes, the history misses a step, a language change keeps old documents, "PDF saved" stays for ever, the card shows loose fields or a tag, cancelling the editor keeps changes, the preview can run scripts, a refused save is hidden, or an AI failure lacks the settings link;
 // no_claim=the layout, the real bridge and the PDF itself are not checked here; the desktop service and PDF tests cover the rules and the file;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -93,7 +93,7 @@ function button(container: HTMLElement, text: string): HTMLButtonElement {
 
 function languageSelect(container: HTMLElement): HTMLSelectElement {
   const label = [...container.querySelectorAll("label")].find(
-    (node) => node.textContent === "Document language",
+    (node) => node.textContent === "Language",
   );
   const control = label?.htmlFor ? document.getElementById(label.htmlFor) : null;
   if (!(control instanceof HTMLSelectElement)) throw new Error("no language select");
@@ -326,16 +326,44 @@ describe("application documents panel", () => {
     expect(generate).toHaveBeenCalledWith(expect.objectContaining({ kind: "cv", language: "en" }));
   });
 
-  it("says which language a stored document is written in", async () => {
+  it("shows no tag under a document, and no export date", async () => {
     await render(
       bridgeWith({
         get: vi.fn(async () =>
-          documentsOf({ coverLetter: coverLetter("Ciao.", { language: "it" }) }),
+          documentsOf({
+            coverLetter: coverLetter("Ciao.", { language: "it", exportedAt: 30, updatedAt: 50 }),
+          }),
         ),
       }),
     );
 
-    expect(container.textContent).toContain("Written in Italiano.");
+    expect(container.textContent).not.toContain("Written in");
+    expect(container.textContent).not.toContain("Last PDF export");
+    expect(container.textContent).not.toContain("older than");
+  });
+
+  it("empties the documents when the language changes, and offers to write them again", async () => {
+    const setLanguage = vi.fn(async () => true);
+    await render(
+      bridgeWith({
+        get: vi.fn(async () =>
+          documentsOf({ cv: cvRecord(), coverLetter: coverLetter("Hi there.") }),
+        ),
+        setLanguage,
+      }),
+    );
+    expect(button(container, "Preview")).toBeTruthy();
+
+    await act(async () => {
+      const select = languageSelect(container);
+      select.value = "it";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await act(async () => {});
+
+    expect(setLanguage).toHaveBeenCalledWith({ applicationId: "a1", language: "it" });
+    expect(() => button(container, "Preview")).toThrow();
+    expect(button(container, "Generate CV and cover letter")).toBeTruthy();
   });
 
   it("shows a generated letter as editable text and reports the saved change", async () => {
@@ -467,6 +495,49 @@ describe("application documents panel", () => {
     await act(async () => button(container, "Save PDF…").click());
     expect(container.querySelector("[role=alert]")).toBeNull();
     expect(container.textContent).not.toContain("could not be exported");
+  });
+
+  it("says the PDF was saved next to the button for a moment only", async () => {
+    vi.useFakeTimers();
+    try {
+      await render(
+        bridgeWith({
+          get: vi.fn(async () => documentsOf({ coverLetter: coverLetter("Hi.") })),
+          exportPdf: vi.fn(async () => ({
+            ok: true as const,
+            document: coverLetter("Hi.", { exportedAt: 30 }),
+          })),
+        }),
+      );
+      await act(async () => button(container, "Save PDF…").click());
+      expect(container.textContent).toContain("PDF saved.");
+
+      await act(async () => {
+        vi.advanceTimersByTime(3500);
+      });
+      expect(container.textContent).not.toContain("PDF saved.");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("records the work in the history: in preparation when writing starts, ready when it is done", async () => {
+    const update = vi.fn(async (_request: { applicationId: string; status: string }) => ({
+      ok: true as const,
+    }));
+    const base = bridgeWith({
+      generate: vi.fn(async () => ({ ok: true as const, document: coverLetter("Hi.") })),
+    });
+    const bridge = {
+      ...base,
+      applications: { ...base.applications, update },
+    } as unknown as JobFinderBridge;
+    await render(bridge);
+
+    await act(async () => button(container, "Generate CV and cover letter").click());
+    await act(async () => {});
+
+    expect(update.mock.calls.map(([request]) => request.status)).toEqual(["preparing", "ready"]);
   });
 
   it("reports a failed export", async () => {

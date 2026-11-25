@@ -280,17 +280,22 @@ export function createApplicationRepository(
         : { ok: true, application };
     }
 
+    // The history starts with the job being saved, then the preparation, so it reads the same
+    // whether or not the user bookmarked the job first.
     const id = newId();
     await db.insert(applications).values({
       id,
       jobId: request.jobId,
       status: "preparing",
       createdAt: now,
-      statusChangedAt: now,
+      statusChangedAt: now + 1,
     });
     await db
       .insert(applicationEvents)
-      .values({ id: newId(), applicationId: id, status: "preparing", note: null, at: now });
+      .values({ id: newId(), applicationId: id, status: "bookmarked", note: null, at: now });
+    await db
+      .insert(applicationEvents)
+      .values({ id: newId(), applicationId: id, status: "preparing", note: null, at: now + 1 });
     const application = await detailOf(id);
     return application === null ? { ok: false, code: "job-not-found" } : { ok: true, application };
   }

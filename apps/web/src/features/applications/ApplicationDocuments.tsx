@@ -19,7 +19,6 @@ import {
   useGeneration,
   type GenerationState,
 } from "../../lib/document-generation";
-import { Badge } from "../../components/ui/Badge";
 import { Button, buttonClass } from "../../components/ui/Button";
 import { Card, CardTitle } from "../../components/ui/Card";
 import { Modal } from "../../components/ui/Modal";
@@ -96,6 +95,9 @@ function contentOf(record: DocumentRecord, draft: Draft): DocumentContent {
   return record.content;
 }
 
+/** How long "PDF saved" stays next to the button. */
+const SAVED_FLASH_MS = 3000;
+
 interface ApplicationDocumentsProps {
   applicationId: string;
 }
@@ -118,6 +120,14 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
   const seenVersion = useRef(generation.version);
   const scrollTarget = useRef<DocumentKind | null>(null);
   const [previewing, setPreviewing] = useState<DocumentKind | null>(null);
+  const [savedFlash, setSavedFlash] = useState<DocumentKind | null>(null);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (flashTimer.current) clearTimeout(flashTimer.current);
+    },
+    [],
+  );
   const [editing, setEditing] = useState<DocumentKind | null>(null);
   const busy =
     generation.running !== null
@@ -332,7 +342,10 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
       const result = await bridge.documents.exportPdf({ applicationId, kind });
       if (result.ok) {
         applyRecord(result.document);
-        setNotice(kind, { tone: "ok", text: t("applications.documents.exported") });
+        // Said next to the button for a moment only, then it goes away.
+        setSavedFlash(kind);
+        if (flashTimer.current) clearTimeout(flashTimer.current);
+        flashTimer.current = setTimeout(() => setSavedFlash(null), SAVED_FLASH_MS);
       } else if (result.code !== "cancelled") {
         // Closing the save dialog is not a failure: nothing is said.
         setNotice(kind, failureNotice(result.code));
@@ -380,9 +393,34 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
         })}
         onChange={(event) => {
           const picked = event.target.value as DocumentLanguage;
+          if (picked === language) return;
           setLanguage(picked);
-          // Saved at once, so it is still there when the user comes back. A failure only loses that.
-          void bridge.documents.setLanguage({ applicationId, language: picked }).catch(() => {});
+          // Saved at once, so it is still there when the user comes back. Documents written in
+          // another language no longer fit, so they are removed (the service does it) and the
+          // panel returns to "not generated".
+          void bridge.documents
+            .setLanguage({ applicationId, language: picked })
+            .then((saved) => {
+              if (!saved) return;
+              setPreviewing(null);
+              setEditing(null);
+              setNotices({});
+              setDrafts({});
+              setLoad((current) =>
+                current.status === "ready"
+                  ? {
+                      status: "ready",
+                      documents: {
+                        ...current.documents,
+                        cv: null,
+                        coverLetter: null,
+                        defaultLanguage: { language: picked, source: "chosen" },
+                      },
+                    }
+                  : current,
+              );
+            })
+            .catch(() => {});
         }}
       />
 
@@ -415,8 +453,6 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
         const working = busy?.kind === kind;
         const notice = notices[kind];
         const generateDisabled = busy !== null || !ai?.configured;
-        const stale =
-          record !== null && record.exportedAt !== null && record.updatedAt > record.exportedAt;
         return (
           <div
             key={kind}
@@ -440,23 +476,6 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
                 <p className="text-sm text-app-muted">{t("applications.documents.notGenerated")}</p>
               ) : (
                 <>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {record.language !== null ? (
-                      <Badge>
-                        {t("applications.documents.writtenIn", {
-                          language: t(`applications.documents.language.options.${record.language}`),
-                        })}
-                      </Badge>
-                    ) : null}
-                    {record.exportedAt !== null ? (
-                      <Badge tone="good">
-                        {t("applications.documents.exportedAt", {
-                          date: new Date(record.exportedAt).toLocaleString(),
-                        })}
-                      </Badge>
-                    ) : null}
-                    {stale ? <Badge tone="fair">{t("applications.documents.stale")}</Badge> : null}
-                  </div>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" onClick={() => setPreviewing(kind)}>
                       <Eye className="size-4" strokeWidth={1.8} aria-hidden="true" />
@@ -484,6 +503,11 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
                         ? t("applications.documents.exporting")
                         : t("applications.documents.export")}
                     </Button>
+                    {savedFlash === kind ? (
+                      <span role="status" className="self-center text-sm text-app-good">
+                        {t("applications.documents.exported")}
+                      </span>
+                    ) : null}
                   </div>
                 </>
               )}

@@ -46,6 +46,18 @@ function publish(bridge: JobFinderBridge, applicationId: string, state: Generati
   for (const listener of listeners) listener();
 }
 
+async function setStatus(
+  bridge: JobFinderBridge,
+  applicationId: string,
+  status: "preparing" | "ready",
+): Promise<void> {
+  try {
+    await bridge.applications.update({ applicationId, status });
+  } catch {
+    // The history is a record, not a requirement.
+  }
+}
+
 /**
  * Writes the documents one after the other. A failure stops the run, since the next call would fail
  * the same way. Resolves with the result, or null when a run for this application is already going.
@@ -60,6 +72,9 @@ export async function startGeneration(
   if ((store.get(applicationId) ?? IDLE).running !== null) return null;
 
   const result: GenerationResult = { records: [], failure: null };
+  // The history shows the work: "in preparation" now, "ready" when it is done. Refused moves (an
+  // application already sent) are fine: the documents are still written.
+  await setStatus(bridge, applicationId, "preparing");
   for (const kind of kinds) {
     publish(bridge, applicationId, { ...(store.get(applicationId) ?? IDLE), running: kind });
     try {
@@ -78,6 +93,7 @@ export async function startGeneration(
     }
     if (result.failure) break;
   }
+  if (result.records.length > 0) await setStatus(bridge, applicationId, "ready");
   const previous = store.get(applicationId) ?? IDLE;
   publish(bridge, applicationId, { running: null, version: previous.version + 1, last: result });
   return result;

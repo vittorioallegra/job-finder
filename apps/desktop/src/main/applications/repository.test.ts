@@ -93,7 +93,11 @@ describe("application repository", () => {
     if (!first.ok || !second.ok) return;
     expect(second.application.id).toBe(first.application.id);
     expect(first.application).toMatchObject({ status: "preparing", jobTitle: "Backend Engineer" });
-    expect(first.application.events.map((event) => event.status)).toEqual(["preparing"]);
+    // The history starts with the job being saved, whether or not it was bookmarked first.
+    expect(first.application.events.map((event) => event.status)).toEqual([
+      "bookmarked",
+      "preparing",
+    ]);
     expect(await repository.list()).toHaveLength(1);
   });
 
@@ -217,14 +221,15 @@ describe("application repository", () => {
 
     const moved = await repository.update(
       { applicationId: id, status: "ready", note: "CV sent to recruiter" },
-      NOW + 1,
+      NOW + 10,
       newId,
     );
     expect(moved.ok).toBe(true);
-    const noted = await repository.update({ applicationId: id, note: "Waiting" }, NOW + 2, newId);
+    const noted = await repository.update({ applicationId: id, note: "Waiting" }, NOW + 20, newId);
     expect(noted.ok && noted.application.status).toBe("ready");
     expect(noted.ok && noted.application.events.map((event) => [event.status, event.note])).toEqual(
       [
+        ["bookmarked", null],
         ["preparing", null],
         ["ready", "CV sent to recruiter"],
         ["ready", "Waiting"],
@@ -262,11 +267,11 @@ describe("application repository", () => {
       newId,
     );
     const detail = await repository.detail(started.application.id);
-    expect(detail?.events.map((event) => event.at)).toEqual([NOW, NOW + DAY]);
+    expect(detail?.events.map((event) => event.at)).toEqual([NOW, NOW + 1, NOW + DAY]);
     expect(await repository.detail("missing")).toBeNull();
     const details = await repository.listDetails();
     expect(details.map((item) => item.companyName)).toEqual(["Beta"]);
-    expect(details[0]?.events).toHaveLength(2);
+    expect(details[0]?.events).toHaveLength(3);
   });
 
   it("deletes an unsent application with its notes and documents, and refuses a sent one", async () => {

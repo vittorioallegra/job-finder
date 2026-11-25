@@ -345,6 +345,18 @@ describe("document service", () => {
     expect(await build().setLanguage({ applicationId: "missing", language: "it" })).toBe(false);
   });
 
+  it("removes the documents written in another language when the language changes, and keeps the others", async () => {
+    // protects=choosing another language deletes the documents written in a different one and keeps the ones in the chosen language; fails_when=a document in the old language survives, or one already in the new language is deleted; no_claim=the screen;
+    await build().generate({ applicationId: "a1", kind: "cv", language: "en" });
+    await build().generate({ applicationId: "a1", kind: "cover-letter", language: "it" });
+
+    expect(await build().setLanguage({ applicationId: "a1", language: "it" })).toBe(true);
+
+    const stored = await build().get("a1");
+    expect(stored.cv).toBeNull();
+    expect(stored.coverLetter?.language).toBe("it");
+  });
+
   it("keeps the document's language on a saved edit, and renders the PDF in that language", async () => {
     await database.db.update(jobs).set({ language: "it" }).where(eq(jobs.id, "j1"));
     await build({ settings: settingsFor(false, "en") }).generate({
