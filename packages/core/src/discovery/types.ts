@@ -13,6 +13,8 @@ export interface DiscoveryCriteria {
    * places. `offset` and `count` pick the slice; the outcome's `wideNext` is where the next starts.
    */
   wide?: { offset: number; count: number };
+  /** Boards a wide scan skips: gone, or with nothing in the places lately, as "<ats>/<slug>". */
+  skipBoards?: string[];
   /** Run only the postings sources (Workable's directory, Himalayas, Arbeitnow): the outcome's `jobs`. */
   postings?: true;
 }
@@ -51,6 +53,8 @@ export type DiscoveryOutcome =
       jobs?: DirectoryJob[];
       /** Where the next wide scan slice starts. */
       wideNext?: number;
+      /** Boards the wide scan found gone or empty for the places, so the next one can skip them. */
+      wideChecked?: { board: string; kind: "dead" | "idle" }[];
     }
   | { ok: false; code: DiscoveryFailureCode };
 

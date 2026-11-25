@@ -16,12 +16,21 @@ export const DIRECTORY_URL_PREFIX = "directory:";
 const STALE_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 const BATCH_SIZE = 50;
 const CURSOR_KEY = "directory.wide-scan.cursor";
+const CHECKED_KEY = "directory.wide-scan.checked";
+const DEAD_FOR_MS = 60 * 24 * 60 * 60 * 1000;
+const IDLE_FOR_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface DirectoryJobStore {
   /** Stores the postings under their companies, and closes the directory's postings that went unseen. Returns how many were read. */
   store(postings: readonly NormalizedJob[]): Promise<number>;
   /** Where the next wide scan slice starts. */
   wideCursor: { get(): Promise<number>; set(value: number): Promise<void> };
+  /** Boards the wide scan found gone or empty lately, so it can skip them. */
+  wideChecked: {
+    /** The boards to skip now: a gone board for 60 days, an empty one for 7. */
+    skip(): Promise<string[]>;
+    record(entries: { board: string; kind: "dead" | "idle" }[]): Promise<void>;
+  };
 }
 
 export function createDirectoryJobStore(
@@ -29,6 +38,18 @@ export function createDirectoryJobStore(
   now: () => number = () => Date.now(),
   newId: () => string = () => crypto.randomUUID(),
 ): DirectoryJobStore {
+  async function readChecked(): Promise<Record<string, { kind: "dead" | "idle"; at: number }>> {
+    const [row] = await db.select().from(settings).where(eq(settings.key, CHECKED_KEY)).limit(1);
+    try {
+      const parsed: unknown = row ? JSON.parse(row.value) : {};
+      return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+        ? (parsed as Record<string, { kind: "dead" | "idle"; at: number }>)
+        : {};
+    } catch {
+      return {};
+    }
+  }
+
   return {
     wideCursor: {
       async get() {
@@ -43,6 +64,33 @@ export function createDirectoryJobStore(
           .onConflictDoUpdate({
             target: settings.key,
             set: { value: String(value), updatedAt: now() },
+          });
+      },
+    },
+    wideChecked: {
+      async skip() {
+        const checked = await readChecked();
+        return Object.entries(checked)
+          .filter(
+            ([, entry]) => now() - entry.at < (entry.kind === "dead" ? DEAD_FOR_MS : IDLE_FOR_MS),
+          )
+          .map(([board]) => board);
+      },
+      async record(entries) {
+        if (entries.length === 0) return;
+        const checked = await readChecked();
+        const at = now();
+        for (const entry of entries) checked[entry.board] = { kind: entry.kind, at };
+        // An entry past its time is dropped, so the row does not grow without end.
+        for (const [board, entry] of Object.entries(checked)) {
+          if (at - entry.at >= DEAD_FOR_MS) delete checked[board];
+        }
+        await db
+          .insert(settings)
+          .values({ key: CHECKED_KEY, value: JSON.stringify(checked), updatedAt: at })
+          .onConflictDoUpdate({
+            target: settings.key,
+            set: { value: JSON.stringify(checked), updatedAt: at },
           });
       },
     },

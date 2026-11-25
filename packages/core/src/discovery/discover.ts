@@ -73,6 +73,7 @@ export async function discoverCompanies(
       ok: true,
       candidates: [],
       wideNext: wide.next,
+      wideChecked: wide.checked,
       ...(wide.jobs.length > 0 ? { jobs: wide.jobs } : {}),
     };
   }

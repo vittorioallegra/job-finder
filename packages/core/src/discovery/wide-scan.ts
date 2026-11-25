@@ -2,7 +2,7 @@ import { getAdapter } from "../ats";
 import type { AtsId } from "../ats/types";
 import type { NormalizedJob } from "../normalize";
 import { jobMatchesPlaces } from "./place-match";
-import { workdayJobs } from "./workday";
+import { workdayBoard } from "./workday";
 import type { SearchOptions } from "./source";
 import type { DiscoveryCriteria } from "./types";
 
@@ -21,7 +21,6 @@ export const WIDE_LISTS: readonly { ats: AtsId | "workday"; file: string }[] = [
 
 /** Boards read in one wide scan. */
 export const WIDE_SLICE = 2000;
-const AT_ONCE = 8;
 
 export interface WideBoard {
   ats: AtsId | "workday";
@@ -55,53 +54,91 @@ export async function wideBoards(options: SearchOptions): Promise<WideBoard[] | 
   return read === 0 ? undefined : boards;
 }
 
+/** Boards read at once per list: the public APIs are limited per host, Workday has a host per site. */
+const AT_ONCE_BY_LIST: Record<string, number> = { workday: 32 };
+const AT_ONCE_DEFAULT = 10;
+
+export interface WideResult {
+  jobs: NormalizedJob[];
+  /** Where the next slice starts. */
+  next: number;
+  boards: number;
+  /** Boards found gone ("dead") or with nothing in the places ("idle"). */
+  checked: { board: string; kind: "dead" | "idle" }[];
+}
+
 /**
  * Reads a slice of the community board lists and keeps the postings that are in the criteria's
- * places. The slice wraps around the end of the lists, so repeated calls walk all of them.
- * Boards already followed are left to their own scan. A board that fails or is gone gives nothing.
+ * places. The slice wraps around the end of the lists, so repeated calls walk all of them, and it
+ * holds `count` boards that are not followed and not in `skipBoards`. The lists are read at the
+ * same time (each at its own pace), so one slow host does not hold the others back. A board that
+ * fails for a passing reason gives nothing and is tried again next time.
  */
 export async function wideScan(
   criteria: DiscoveryCriteria,
   options: SearchOptions,
-): Promise<{ jobs: NormalizedJob[]; next: number; boards: number } | undefined> {
+): Promise<WideResult | undefined> {
   const wide = criteria.wide;
   if (!wide) return undefined;
   const all = await wideBoards(options);
   if (all === undefined || all.length === 0) return undefined;
-  const known = new Set(criteria.knownBoards ?? []);
+  const skip = new Set([...(criteria.knownBoards ?? []), ...(criteria.skipBoards ?? [])]);
   const start = ((wide.offset % all.length) + all.length) % all.length;
-  const count = Math.min(wide.count, all.length);
-  const slice = Array.from(
-    { length: count },
-    (_, index) => all[(start + index) % all.length],
-  ).filter(
-    (board): board is WideBoard => board !== undefined && !known.has(`${board.ats}/${board.slug}`),
-  );
+  const slice: WideBoard[] = [];
+  let steps = 0;
+  while (steps < all.length && slice.length < wide.count) {
+    const board = all[(start + steps) % all.length];
+    steps += 1;
+    if (board !== undefined && !skip.has(`${board.ats}/${board.slug}`)) slice.push(board);
+  }
 
   const jobs: NormalizedJob[] = [];
-  for (let from = 0; from < slice.length; from += AT_ONCE) {
-    if (options.signal?.aborted) break;
-    const batch = slice.slice(from, from + AT_ONCE);
-    const results = await Promise.all(
-      batch.map(async (board): Promise<NormalizedJob[]> => {
-        try {
-          if (board.ats === "workday") return await workdayJobs(board.slug, criteria, options);
-          const result = await getAdapter(board.ats).fetchJobs(
-            { ats: board.ats, slug: board.slug },
-            options.http,
-            { signal: options.signal },
-          );
-          return result.ok
-            ? result.jobs.filter((job) =>
-                jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: false }),
-              )
-            : [];
-        } catch {
-          return [];
+  const checked: WideResult["checked"] = [];
+  const pools = new Map<string, WideBoard[]>();
+  for (const board of slice) pools.set(board.ats, [...(pools.get(board.ats) ?? []), board]);
+
+  const readBoard = async (board: WideBoard): Promise<void> => {
+    const id = `${board.ats}/${board.slug}`;
+    try {
+      if (board.ats === "workday") {
+        const found = await workdayBoard(board.slug, criteria, options);
+        jobs.push(...found.jobs);
+        if (found.dead) checked.push({ board: id, kind: "dead" });
+        else if (found.jobs.length === 0 && !options.signal?.aborted) {
+          checked.push({ board: id, kind: "idle" });
         }
-      }),
-    );
-    for (const found of results) jobs.push(...found);
-  }
-  return { jobs, next: (start + count) % all.length, boards: slice.length };
+        return;
+      }
+      const result = await getAdapter(board.ats).fetchJobs(
+        { ats: board.ats, slug: board.slug },
+        options.http,
+        { signal: options.signal },
+      );
+      if (!result.ok) {
+        const gone =
+          result.code === "board-not-found" ||
+          (result.code === "http-status" && result.status === 404);
+        if (gone) checked.push({ board: id, kind: "dead" });
+        return;
+      }
+      const kept = result.jobs.filter((job) =>
+        jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: false }),
+      );
+      jobs.push(...kept);
+      if (kept.length === 0) checked.push({ board: id, kind: "idle" });
+    } catch {
+      // A board that throws is tried again next time.
+    }
+  };
+
+  await Promise.all(
+    [...pools.entries()].map(async ([ats, boards]) => {
+      const atOnce = AT_ONCE_BY_LIST[ats] ?? AT_ONCE_DEFAULT;
+      for (let from = 0; from < boards.length; from += atOnce) {
+        if (options.signal?.aborted) return;
+        await Promise.all(boards.slice(from, from + atOnce).map(readBoard));
+      }
+    }),
+  );
+  return { jobs, next: (start + steps) % all.length, boards: slice.length, checked };
 }

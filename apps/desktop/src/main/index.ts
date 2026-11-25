@@ -387,6 +387,7 @@ if (gotSingleInstanceLock) {
           company.ats !== null && company.slug !== null ? [`${company.ats}/${company.slug}`] : [],
         ),
       wideCursor: directoryJobStore.wideCursor,
+      wideChecked: directoryJobStore.wideChecked,
       storeJobs: async (postings) => {
         await directoryJobStore.store(postings);
         await refreshCompanyCountries(database.db);

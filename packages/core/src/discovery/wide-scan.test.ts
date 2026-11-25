@@ -82,16 +82,51 @@ describe("wide scan", () => {
       { http },
     );
 
-    expect(first?.jobs.map((job) => job.title)).toEqual(["Engineer"]);
-    expect(first?.next).toBe(2);
+    // The slice holds two boards that are not followed: alpha and gamma, so it ends past beta.
+    expect(first?.jobs.map((job) => job.title).sort()).toEqual(["Designer", "Engineer"]);
+    expect(first?.next).toBe(0);
     expect(requests.some((url) => url.includes("/beta/"))).toBe(false);
 
     const wrapped = await wideScan(
-      { keywords: [], locations: ["Italia"], wide: { offset: 2, count: 2 } },
+      { keywords: [], locations: ["Italia"], wide: { offset: 2, count: 1 } },
       { http },
     );
-    expect(wrapped?.jobs.map((job) => job.title)).toContain("Designer");
-    expect(wrapped?.next).toBe(1);
+    expect(wrapped?.jobs.map((job) => job.title)).toEqual(["Designer"]);
+    expect(wrapped?.next).toBe(0);
+  });
+
+  it("skips boards it was told to skip, and reports boards that are gone or empty for the places", async () => {
+    const { http, requests } = web(
+      {
+        "greenhouse_companies.json": ["alpha", "gone", "empty", "skipped"],
+        "lever_companies.json": [],
+        "ashby_companies.json": [],
+      },
+      {
+        "/v1/boards/alpha/jobs": greenhouseBoard([["Engineer", "Milan, Italy"]]),
+        "/v1/boards/empty/jobs": greenhouseBoard([["Engineer US", "Austin, TX, United States"]]),
+      },
+    );
+
+    const result = await wideScan(
+      {
+        keywords: [],
+        locations: ["Italia"],
+        wide: { offset: 0, count: 10 },
+        skipBoards: ["greenhouse/skipped"],
+      },
+      { http },
+    );
+
+    expect(result?.jobs.map((job) => job.title)).toEqual(["Engineer"]);
+    expect(result?.checked).toEqual(
+      expect.arrayContaining([
+        { board: "greenhouse/gone", kind: "dead" },
+        { board: "greenhouse/empty", kind: "idle" },
+      ]),
+    );
+    expect(result?.checked).toHaveLength(2);
+    expect(requests.some((url) => url.includes("/skipped/"))).toBe(false);
   });
 
   it("does nothing without a slice", async () => {

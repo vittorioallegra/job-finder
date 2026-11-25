@@ -41,6 +41,11 @@ export interface DiscoveryServiceOptions {
   knownBoards?: () => Promise<string[]>;
   /** Where the next wide scan slice starts, kept between runs. */
   wideCursor?: { get(): Promise<number>; set(value: number): Promise<void> };
+  /** Boards found gone or empty lately: skipped, and filled in after each wide scan. */
+  wideChecked?: {
+    skip(): Promise<string[]>;
+    record(entries: { board: string; kind: "dead" | "idle" }[]): Promise<void>;
+  };
 }
 
 /** Each keyed provider reads its own secret; the name is fixed here, never taken from the renderer. */
@@ -78,11 +83,13 @@ export function createDiscoveryService(options: DiscoveryServiceOptions): Discov
             locations: request.locations,
             wide: { offset, count: WIDE_SLICE },
             knownBoards,
+            skipBoards: options.wideChecked ? await options.wideChecked.skip() : [],
           },
           { duckduckgo: false, keyed: [] },
         );
         if (!outcome.ok) return;
         if (outcome.jobs && outcome.jobs.length > 0) await options.storeJobs(outcome.jobs);
+        if (outcome.wideChecked) await options.wideChecked?.record(outcome.wideChecked);
         if (outcome.wideNext !== undefined) await options.wideCursor.set(outcome.wideNext);
       } catch {
         // A failed wide scan only means no new postings this time.

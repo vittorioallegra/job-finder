@@ -82,17 +82,27 @@ export async function workdayJobs(
   criteria: DiscoveryCriteria,
   options: SearchOptions,
 ): Promise<NormalizedJob[]> {
+  return (await workdayBoard(entry, criteria, options)).jobs;
+}
+
+/** The postings of one site in the places, and whether the site is gone (a name that answers 404 or 422). */
+export async function workdayBoard(
+  entry: string,
+  criteria: DiscoveryCriteria,
+  options: SearchOptions,
+): Promise<{ jobs: NormalizedJob[]; dead: boolean }> {
+  const none = { jobs: [] as NormalizedJob[], dead: false };
   const board = parseWorkdayBoard(entry);
-  if (!board) return [];
+  if (!board) return { ...none, dead: true };
   const base = `https://${board.tenant}.${board.wd}.myworkdayjobs.com/wday/cxs/${board.tenant}/${board.site}`;
   const terms = placeTerms(criteria.locations);
-  if (terms.length === 0) return [];
+  if (terms.length === 0) return none;
 
   // Postings that name a place, or several ("3 Locations") that the posting page then settles.
   const found = new Map<string, string | null | undefined>();
   for (const term of terms) {
     for (let page = 0; page < MAX_PAGES; page += 1) {
-      if (options.signal?.aborted) return [];
+      if (options.signal?.aborted) return none;
       const answer = await options.http.post(`${base}/jobs`, {
         body: JSON.stringify({
           appliedFacets: {},
@@ -103,12 +113,16 @@ export async function workdayJobs(
         headers: { "content-type": "application/json" },
         signal: options.signal,
       });
-      if (!answer.ok) return [];
+      if (!answer.ok) {
+        const gone =
+          answer.code === "http-status" && (answer.status === 404 || answer.status === 422);
+        return { jobs: [], dead: gone };
+      }
       let listing: z.output<typeof Listing>;
       try {
         listing = Listing.parse(JSON.parse(answer.body));
       } catch {
-        return [];
+        return none;
       }
       for (const posting of listing.jobPostings) {
         if (!posting.externalPath) continue;
@@ -152,5 +166,5 @@ export async function workdayJobs(
     });
     if (jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: false })) jobs.push(job);
   }
-  return jobs;
+  return { jobs, dead: false };
 }

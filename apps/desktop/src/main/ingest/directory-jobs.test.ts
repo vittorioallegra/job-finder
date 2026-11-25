@@ -77,4 +77,25 @@ describe("directory job store", () => {
     expect(open[0]?.closedAt).toBeNull();
     close();
   });
+
+  it("remembers boards found gone for two months and empty for a week, and forgets them after", async () => {
+    const { db, close } = await database();
+    const day = 24 * 60 * 60 * 1000;
+    let clock = 1_000;
+    const store = createDirectoryJobStore(db, () => clock);
+    await store.wideChecked.record([
+      { board: "greenhouse/gone", kind: "dead" },
+      { board: "greenhouse/empty", kind: "idle" },
+    ]);
+
+    expect((await store.wideChecked.skip()).sort()).toEqual([
+      "greenhouse/empty",
+      "greenhouse/gone",
+    ]);
+    clock += 8 * day;
+    expect(await store.wideChecked.skip()).toEqual(["greenhouse/gone"]);
+    clock += 60 * day;
+    expect(await store.wideChecked.skip()).toEqual([]);
+    close();
+  });
 });
