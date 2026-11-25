@@ -82,7 +82,7 @@ if (parentPort) {
             http: net,
             config,
             signal: AbortSignal.timeout(
-              criteria.wide ? WIDE_SCAN_TIMEOUT_MS : DISCOVERY_TIMEOUT_MS,
+              criteria.wide || criteria.postings ? WIDE_SCAN_TIMEOUT_MS : DISCOVERY_TIMEOUT_MS,
             ),
           }),
         generateDocument: (request) =>

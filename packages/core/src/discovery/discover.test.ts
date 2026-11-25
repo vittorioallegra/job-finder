@@ -2,6 +2,7 @@
 // fails_when=the same board is listed twice, a challenge lets that source send more queries or stops the other sources, a failed search is reported as success, a challenged result is not flagged as searchBlocked, the board list is read per query, or a disabled source runs;
 // no_claim=search ranking and live provider behaviour, and the HTTP queue timing, which the HTTP client's own tests cover.
 import { describe, expect, it } from "vitest";
+import { createHttpClient } from "../net";
 import { discoverCompanies, searchSourcesFor } from "./discover";
 import type { SearchResult, SearchSource } from "./source";
 
@@ -236,5 +237,51 @@ describe("company discovery", () => {
         },
       ],
     });
+  });
+
+  it("reads the job directories' postings only in a run of its own, never during the company search", async () => {
+    const requests: string[] = [];
+    const posting = {
+      id: "p1",
+      title: "Engineer",
+      description: "<p>Build.</p>",
+      url: "https://jobs.workable.com/view/p1",
+      locations: ["Milan, Italy"],
+      location: { city: "Milan", countryName: "Italy" },
+      company: { title: "Acme Srl" },
+    };
+    const fetchFake = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname === "/robots.txt") return new Response("", { status: 404 });
+      requests.push(url.hostname);
+      return new Response(
+        JSON.stringify(
+          url.hostname === "jobs.workable.com" ? { jobs: [posting] } : { jobs: [], data: [] },
+        ),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+    const client = createHttpClient({
+      fetch: fetchFake,
+      intervalMs: 0,
+      sleep: async () => {},
+      maxAttempts: 1,
+    });
+    const places = { keywords: ["engineer"], locations: ["Italia"] };
+
+    const postings = await discoverCompanies({ ...places, postings: true }, { http: client });
+    expect(postings).toMatchObject({ ok: true, candidates: [] });
+    expect(postings.ok && postings.jobs?.map((job) => job.title)).toEqual(["Engineer"]);
+
+    requests.length = 0;
+    const search = await discoverCompanies(places, {
+      http: client,
+      boardSources: [],
+      registry: false,
+      feeds: [],
+      sources: [],
+    });
+    expect(search.ok && search.jobs).toBeFalsy();
+    expect(requests).not.toContain("himalayas.app");
   });
 });

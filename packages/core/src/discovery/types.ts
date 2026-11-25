@@ -13,6 +13,8 @@ export interface DiscoveryCriteria {
    * places. `offset` and `count` pick the slice; the outcome's `wideNext` is where the next starts.
    */
   wide?: { offset: number; count: number };
+  /** Run only the postings sources (Workable's directory, Himalayas, Arbeitnow): the outcome's `jobs`. */
+  postings?: true;
 }
 
 /** A posting a job directory gave, in the normalized shape the job store takes. */

@@ -56,6 +56,16 @@ export async function discoverCompanies(
   criteria: DiscoveryCriteria,
   options: DiscoverOptions,
 ): Promise<DiscoveryOutcome> {
+  if (criteria.postings) {
+    // The postings of the job directories, ready to store. A run of its own: it reads many pages.
+    const read = { http: options.http, signal: options.signal };
+    const jobs: DirectoryJob[] = [
+      ...(await directoryJobs(criteria, read)),
+      ...(await himalayasJobs(criteria, read)),
+      ...(await arbeitnowJobs(criteria, read)),
+    ];
+    return { ok: true, candidates: [], ...(jobs.length > 0 ? { jobs } : {}) };
+  }
   if (criteria.wide) {
     const wide = await wideScan(criteria, { http: options.http, signal: options.signal });
     if (wide === undefined) return { ok: false, code: "search-failed" };
@@ -168,25 +178,8 @@ export async function discoverCompanies(
     }
   }
 
-  // The directory's own postings, ready to store: the largest source of jobs here.
-  let jobs: DirectoryJob[] = [];
-  if (options.directories !== false && !options.signal?.aborted) {
-    const read = { http: options.http, signal: options.signal };
-    jobs = [
-      ...(await directoryJobs(criteria, read)),
-      ...(await himalayasJobs(criteria, read)),
-      ...(await arbeitnowJobs(criteria, read)),
-    ];
-    if (jobs.length > 0) succeeded += 1;
-  }
-
   if (succeeded > 0) {
-    return {
-      ok: true,
-      candidates,
-      ...(blocked ? { searchBlocked: true as const } : {}),
-      ...(jobs.length > 0 ? { jobs } : {}),
-    };
+    return blocked ? { ok: true, candidates, searchBlocked: true } : { ok: true, candidates };
   }
   return { ok: false, code: blocked ? "search-blocked" : "search-failed" };
 }

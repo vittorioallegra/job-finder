@@ -62,6 +62,14 @@ export function createDiscoveryService(options: DiscoveryServiceOptions): Discov
       if (!current || widening || !options.storeJobs || !options.wideCursor) return;
       widening = true;
       try {
+        // The postings of the job directories first, then the next slice of the board lists.
+        const postings = await current.discoverCompanies(
+          { keywords: request.keywords, locations: request.locations, postings: true },
+          { duckduckgo: false, keyed: [] },
+        );
+        if (postings.ok && postings.jobs && postings.jobs.length > 0) {
+          await options.storeJobs(postings.jobs);
+        }
         const offset = await options.wideCursor.get();
         const knownBoards = options.knownBoards ? await options.knownBoards() : [];
         const outcome = await current.discoverCompanies(
@@ -103,10 +111,6 @@ export function createDiscoveryService(options: DiscoveryServiceOptions): Discov
           { duckduckgo: search.duckduckgo && keyed.length === 0, keyed },
         );
         if (!outcome.ok) return { ok: false, code: outcome.code };
-        if (outcome.jobs && outcome.jobs.length > 0 && options.storeJobs) {
-          // Postings stored here are not a reason to fail the search.
-          await options.storeJobs(outcome.jobs).catch(() => undefined);
-        }
         // The note about a blocked keyless search suggests adding a key: it is left out once a key
         // is in use, since the results then come from the keyed provider.
         return outcome.searchBlocked && keyed.length === 0
