@@ -132,6 +132,7 @@ function spyServices() {
       calls.push("discovery.search");
       return { ok: false as const, code: "engine-unavailable" as const };
     },
+    widen: async () => {},
   };
   const services: IpcServices = {
     settings,

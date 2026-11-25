@@ -19,6 +19,8 @@ export interface ProfileDiscoveryDeps {
   addCompany(input: CompanyAddRequest): Promise<CompanyAddResult>;
   /** Scans every company; called only when this search added one. */
   startRun(): Promise<IngestStartResult>;
+  /** Starts the wide scan of the community board lists in the background; not awaited. */
+  widen?(request: DiscoverySearchRequest): Promise<void>;
 }
 
 export interface ProfileDiscovery {
@@ -68,6 +70,7 @@ export function createProfileDiscovery(deps: ProfileDiscoveryDeps): ProfileDisco
       const preferences = await deps.preferences();
       const request = preferences === null ? null : discoveryRequestFor(preferences);
       if (request === null) return { ok: false, code: "no-roles" };
+      void deps.widen?.(request);
       const result = await deps.search(request);
       if (!result.ok) return { ok: false, code: result.code };
       let added = 0;

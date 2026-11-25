@@ -382,6 +382,11 @@ if (gotSingleInstanceLock) {
       engine: () => supervisor,
       settings: settingsRepository,
       secrets: secretStore,
+      knownBoards: async () =>
+        (await ingestRepository.listCompanies()).flatMap((company) =>
+          company.ats !== null && company.slug !== null ? [`${company.ats}/${company.slug}`] : [],
+        ),
+      wideCursor: directoryJobStore.wideCursor,
       storeJobs: async (postings) => {
         await directoryJobStore.store(postings);
         await refreshCompanyCountries(database.db);
@@ -398,6 +403,7 @@ if (gotSingleInstanceLock) {
     const profileDiscovery = createProfileDiscovery({
       preferences: async () => (await profileRepository.get())?.profile.preferences ?? null,
       search: (request) => discovery.search(request),
+      widen: (request) => discovery.widen(request),
       addCompany: (input) => ingestRepository.addCompany(input),
       startRun: () => ingestion.start(),
     });

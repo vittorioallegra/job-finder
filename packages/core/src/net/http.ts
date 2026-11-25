@@ -75,6 +75,8 @@ export interface HttpClientOptions {
   fixtureBaseUrl?: string;
   /** Minimum time between two requests to the same host. The plan requires 1 request per second. */
   intervalMs?: number;
+  /** A shorter interval for named hosts: public job APIs made to be read by many boards. */
+  hostIntervalMs?: Readonly<Record<string, number>>;
   timeoutMs?: number;
   /** Attempts per request, retries included. Only 429, 5xx and network errors are retried. */
   maxAttempts?: number;
@@ -208,7 +210,11 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
   function queueFor(host: string): PQueue {
     let queue = queues.get(host);
     if (!queue) {
-      queue = new PQueue({ concurrency: 1, interval: intervalMs, intervalCap: 1 });
+      queue = new PQueue({
+        concurrency: 1,
+        interval: options.hostIntervalMs?.[host] ?? intervalMs,
+        intervalCap: 1,
+      });
       queues.set(host, queue);
     }
     return queue;

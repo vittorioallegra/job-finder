@@ -7,6 +7,7 @@ import { createKeyedSource } from "./keyed";
 import { discoverFromFeeds, KEYLESS_FEEDS, type JobFeed } from "./feeds";
 import { discoverFromRegistry } from "./registry";
 import { directoryJobs } from "./directory-jobs";
+import { wideScan } from "./wide-scan";
 import { discoverWorkableDirectory } from "./workable-directory";
 import { buildQueries, MAX_QUERIES } from "./query";
 import type { BoardSource, SearchSource } from "./source";
@@ -54,6 +55,16 @@ export async function discoverCompanies(
   criteria: DiscoveryCriteria,
   options: DiscoverOptions,
 ): Promise<DiscoveryOutcome> {
+  if (criteria.wide) {
+    const wide = await wideScan(criteria, { http: options.http, signal: options.signal });
+    if (wide === undefined) return { ok: false, code: "search-failed" };
+    return {
+      ok: true,
+      candidates: [],
+      wideNext: wide.next,
+      ...(wide.jobs.length > 0 ? { jobs: wide.jobs } : {}),
+    };
+  }
   const sources = options.sources ?? searchSourcesFor(options.config ?? DEFAULT_CONFIG);
   const boardSources = options.boardSources ?? [commonCrawlSource];
   const queries = buildQueries(criteria, options.maxQueries ?? MAX_QUERIES);

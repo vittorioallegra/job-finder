@@ -5,6 +5,7 @@ import type {
   SearchSourceConfig,
 } from "@job-finder/core/discovery/types";
 import type { NormalizedJob } from "@job-finder/core/normalize";
+import { WIDE_SLICE } from "@job-finder/core/discovery";
 import type { DiscoverySearchRequest, DiscoverySearchResult, SecretName } from "@job-finder/bridge";
 import { EngineUnavailableError } from "../engine/supervisor";
 import type { SecretStore } from "../secrets/store";
@@ -21,6 +22,11 @@ export interface DiscoveryEngine {
 export interface DiscoveryService {
   /** Searches the web for ATS boards. Found boards are only returned; the renderer adds the ones the user picks. */
   search(request: DiscoverySearchRequest): Promise<DiscoverySearchResult>;
+  /**
+   * Reads the next slice of the community board lists and stores the postings in the request's
+   * places. One at a time; a call while one runs does nothing. Never throws.
+   */
+  widen(request: DiscoverySearchRequest): Promise<void>;
 }
 
 export interface DiscoveryServiceOptions {
@@ -31,6 +37,10 @@ export interface DiscoveryServiceOptions {
   knownHosts?: () => Promise<string[]>;
   /** Stores the postings a job directory gave; they are never sent to the renderer. */
   storeJobs?: (jobs: NormalizedJob[]) => Promise<unknown>;
+  /** Boards already followed, as "<ats>/<slug>". */
+  knownBoards?: () => Promise<string[]>;
+  /** Where the next wide scan slice starts, kept between runs. */
+  wideCursor?: { get(): Promise<number>; set(value: number): Promise<void> };
 }
 
 /** Each keyed provider reads its own secret; the name is fixed here, never taken from the renderer. */
@@ -45,7 +55,33 @@ const KEYED_SECRETS: Record<KeyedSearchConfig["provider"], SecretName> = {
  * when its toggle is on and its key is saved. Keys are read here and handed only to the engine.
  */
 export function createDiscoveryService(options: DiscoveryServiceOptions): DiscoveryService {
+  let widening = false;
   return {
+    async widen(request) {
+      const current = options.engine();
+      if (!current || widening || !options.storeJobs || !options.wideCursor) return;
+      widening = true;
+      try {
+        const offset = await options.wideCursor.get();
+        const knownBoards = options.knownBoards ? await options.knownBoards() : [];
+        const outcome = await current.discoverCompanies(
+          {
+            keywords: request.keywords,
+            locations: request.locations,
+            wide: { offset, count: WIDE_SLICE },
+            knownBoards,
+          },
+          { duckduckgo: false, keyed: [] },
+        );
+        if (!outcome.ok) return;
+        if (outcome.jobs && outcome.jobs.length > 0) await options.storeJobs(outcome.jobs);
+        if (outcome.wideNext !== undefined) await options.wideCursor.set(outcome.wideNext);
+      } catch {
+        // A failed wide scan only means no new postings this time.
+      } finally {
+        widening = false;
+      }
+    },
     async search(request) {
       const current = options.engine();
       if (!current) {

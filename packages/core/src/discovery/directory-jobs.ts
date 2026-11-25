@@ -10,10 +10,10 @@ export const WORKABLE_DIRECTORY_SOURCE = "workable-directory";
 
 const DIRECTORY = "https://jobs.workable.com/api/v1/jobs";
 
-/** Pages (20 postings each) read per place and keyword. */
-const PAGES = 15;
+/** Pages (20 postings each) read per place; a country has about two thousand postings. */
+const PAGES = 120;
 /** Postings kept in one run. */
-export const MAX_DIRECTORY_JOBS = 800;
+export const MAX_DIRECTORY_JOBS = 3000;
 const MAX_DESCRIPTION_CHARS = 8_000;
 
 const Posting = z.object({
@@ -80,7 +80,9 @@ export async function directoryJobs(
 ): Promise<NormalizedJob[]> {
   const places = directoryPlaces(criteria.locations);
   if (places.length === 0) return [];
-  const keywords = criteria.keywords.length > 0 ? criteria.keywords : [""];
+  // Every posting of the place, not only the ones that match a keyword: the lists rank them by
+  // affinity, and a posting the keyword misses may still fit.
+  const keywords = [""];
   const jobs = new Map<string, NormalizedJob>();
 
   for (const place of places) {

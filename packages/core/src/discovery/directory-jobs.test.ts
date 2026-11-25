@@ -53,7 +53,8 @@ describe("Workable directory postings", () => {
 
     expect(jobs.map((job) => job.sourceJobId)).toEqual(["a", "b"]);
     expect(urls[0]).toContain("location=Italy");
-    expect(urls[0]).toContain("query=engineer");
+    // Every posting of the place is read, not only the ones that match a role.
+    expect(urls[0]).not.toContain("query=");
     expect(urls[1]).toContain("pageToken=next");
     expect(jobs[0]).toMatchObject({
       companyName: "Acme Srl",

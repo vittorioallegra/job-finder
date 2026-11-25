@@ -6,6 +6,13 @@ export interface DiscoveryCriteria {
   locations: string[];
   /** Hosts of the companies already followed: sources that look companies up skip them. */
   known?: string[];
+  /** Boards already followed, as "<ats>/<slug>": a wide scan leaves them to their own scan. */
+  knownBoards?: string[];
+  /**
+   * Run only the wide scan: read a slice of the community board lists and keep the postings in the
+   * places. `offset` and `count` pick the slice; the outcome's `wideNext` is where the next starts.
+   */
+  wide?: { offset: number; count: number };
 }
 
 /** A posting a job directory gave, in the normalized shape the job store takes. */
@@ -40,6 +47,8 @@ export type DiscoveryOutcome =
       searchBlocked?: true;
       /** Open postings read straight from job directories, stored by main without a board scan. */
       jobs?: DirectoryJob[];
+      /** Where the next wide scan slice starts. */
+      wideNext?: number;
     }
   | { ok: false; code: DiscoveryFailureCode };
 

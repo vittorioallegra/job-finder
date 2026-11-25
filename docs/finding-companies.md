@@ -34,3 +34,7 @@ The web search finds boards named in results; it cannot know a company's country
 ## Postings straight from a directory
 
 Workable's job directory also lists the postings, with description, place and company. A company search stores them directly (up to 800 per run) under one company per name, so no board has to be found first. Those companies are not listed on the Sources page and are never scanned; a posting the directory stops listing for 14 days is closed.
+
+## Wide scan of the community board lists
+
+The Feashliaa/job-board-aggregator project publishes, rebuilt daily from Common Crawl, the board names of tens of thousands of companies on Greenhouse, Lever and Ashby (its data is CC BY-NC 4.0: non-commercial use). After each profile search the app reads the next 1200 boards of those lists, keeps only the postings located in the profile's places (or remote with a scope that reaches them), and stores them under hidden companies, as for the Workable directory. The place in the lists is kept in the setting `directory.wide-scan.cursor`, so repeated searches walk all the lists. Postings no scan lists for 14 days are closed. A name in the lists may be stale: a board that does not answer gives nothing.

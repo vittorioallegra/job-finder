@@ -47,6 +47,8 @@ const MODEL_LIST_TIMEOUT_MS = 8_000;
 
 /** A discovery run makes one request per query, one second apart; it returns what it found by the deadline. */
 const DISCOVERY_TIMEOUT_MS = 120_000;
+/** A wide scan reads about a thousand boards. */
+const WIDE_SCAN_TIMEOUT_MS = 900_000;
 
 // Utility process entry. Main sends the engine end of a MessageChannel as the first message.
 // The bundler keeps shared helpers in this entry, so main may load this file without being the
@@ -58,7 +60,15 @@ if (parentPort) {
     if (port) {
       // Main sets the override only when it is allowed (not packaged, or under E2E) and points at loopback.
       const fixtureBaseUrl = process.env["JOB_FINDER_FIXTURE_BASE_URL"];
-      const net = createHttpClient({ fixtureBaseUrl });
+      const net = createHttpClient({
+        fixtureBaseUrl,
+        // Public job APIs that many boards read: a few requests a second, not one.
+        hostIntervalMs: {
+          "boards-api.greenhouse.io": 200,
+          "api.lever.co": 200,
+          "api.ashbyhq.com": 200,
+        },
+      });
       createEngineRuntime(fromElectronPort(port), {
         net,
         createIngest: (api) => createIngestController({ ...api, http: net }),
@@ -71,7 +81,9 @@ if (parentPort) {
           discoverCompanies(criteria, {
             http: net,
             config,
-            signal: AbortSignal.timeout(DISCOVERY_TIMEOUT_MS),
+            signal: AbortSignal.timeout(
+              criteria.wide ? WIDE_SCAN_TIMEOUT_MS : DISCOVERY_TIMEOUT_MS,
+            ),
           }),
         generateDocument: (request) =>
           generateDocument(

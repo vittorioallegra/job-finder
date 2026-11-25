@@ -1,5 +1,5 @@
 import { and, eq, isNull, lt, sql } from "drizzle-orm";
-import { companies, jobSources, jobs, runs } from "@job-finder/core";
+import { companies, jobSources, jobs, runs, settings } from "@job-finder/core";
 import { normalizeCompanyName } from "@job-finder/core/discovery";
 import { lookupRequest, planBatch } from "@job-finder/core/ingest";
 import type { NormalizedJob } from "@job-finder/core/normalize";
@@ -15,10 +15,13 @@ export const DIRECTORY_URL_PREFIX = "directory:";
 /** A directory posting not seen for this long is closed: the directory no longer lists it. */
 const STALE_AFTER_MS = 14 * 24 * 60 * 60 * 1000;
 const BATCH_SIZE = 50;
+const CURSOR_KEY = "directory.wide-scan.cursor";
 
 export interface DirectoryJobStore {
   /** Stores the postings under their companies, and closes the directory's postings that went unseen. Returns how many were read. */
   store(postings: readonly NormalizedJob[]): Promise<number>;
+  /** Where the next wide scan slice starts. */
+  wideCursor: { get(): Promise<number>; set(value: number): Promise<void> };
 }
 
 export function createDirectoryJobStore(
@@ -27,6 +30,22 @@ export function createDirectoryJobStore(
   newId: () => string = () => crypto.randomUUID(),
 ): DirectoryJobStore {
   return {
+    wideCursor: {
+      async get() {
+        const [row] = await db.select().from(settings).where(eq(settings.key, CURSOR_KEY)).limit(1);
+        const value = Number(row?.value);
+        return Number.isFinite(value) && value >= 0 ? value : 0;
+      },
+      async set(value) {
+        await db
+          .insert(settings)
+          .values({ key: CURSOR_KEY, value: String(value), updatedAt: now() })
+          .onConflictDoUpdate({
+            target: settings.key,
+            set: { value: String(value), updatedAt: now() },
+          });
+      },
+    },
     async store(postings) {
       if (postings.length === 0) return 0;
       const runId = newId();
@@ -84,10 +103,10 @@ export function createDirectoryJobStore(
         }
       }
 
-      // Postings the directory stopped listing for two weeks are closed.
+      // Postings of these companies that no directory or wide scan listed for two weeks are closed.
       const cutoff = startedAt - STALE_AFTER_MS;
       const stale = and(
-        eq(jobSources.source, "workable-directory"),
+        sql`${jobSources.companyId} in (select ${companies.id} from ${companies} where ${companies.careersUrl} like ${`${DIRECTORY_URL_PREFIX}%`})`,
         lt(jobSources.lastSeenAt, cutoff),
         isNull(jobSources.closedAt),
       );

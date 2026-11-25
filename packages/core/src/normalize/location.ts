@@ -30,8 +30,12 @@ export function normalizeLocation(raw: string): JobLocation {
 
   if (countryCode === undefined) {
     // A city or a US state code stands for its country, when the text names none.
+    // A US state code after the city wins over a city name that exists elsewhere ("Florence, TX").
+    const stateAfterCity = parts
+      .slice(1)
+      .some((part) => isUsStateCode(part.replace(/\s*\(.*\)\s*$/, "")));
     const fromCity = parts.map((part) => countryOfCity(part)).find((code) => code !== undefined);
-    countryCode = fromCity ?? (parts.slice(1).some(isUsStateCode) ? "US" : undefined);
+    countryCode = stateAfterCity ? "US" : fromCity;
   }
 
   const location: JobLocation = { raw };
