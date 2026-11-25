@@ -571,7 +571,7 @@
   },
   "companies": {
     "title": "Fonti",
-    "intro": "Le aziende di cui l'app legge le bacheche di lavoro. Le aggiunge da sola in base a cosa cerchi; qui puoi aggiungere un'azienda precisa o toglierne una che non ti interessa.",
+    "intro": "Le aziende di cui l'app legge le pagine di lavoro. Le trova e le aggiunge da sola in base a ruoli e luoghi del profilo; qui puoi toglierne una che non ti interessa.",
     "offersFrom_one": "Le offerte arrivano da {{count}} azienda in tutto, quelle che segui e quelle trovate dalle directory pubbliche.",
     "offersFrom_other": "Le offerte arrivano da {{count}} aziende in tutto, quelle che segui e quelle trovate dalle directory pubbliche.",
     "backJobs": "Torna alle offerte",
@@ -595,40 +595,6 @@
       "noJobs": "Nessun annuncio leggibile nell'ultima analisi.",
       "scanned": "Ultima analisi: {{postings}} annunci letti, {{closed}} chiusi.",
       "failed": "Ultima analisi non riuscita: {{reason}}."
-    },
-    "discover": {
-      "heading": "Trova aziende",
-      "intro": "Cerca sul web le bacheche di lavoro che corrispondono alle tue parole chiave. Non si aggiunge nulla finché non lo scegli tu.",
-      "keywords": "Parole chiave",
-      "keywordsHint": "Separate da virgola, fino a cinque. Per esempio: backend, data engineer.",
-      "locations": "Luogo (facoltativo)",
-      "locationsHint": "Separati da virgola, fino a cinque. Per esempio: Milano, Berlino.",
-      "submit": "Cerca bacheche",
-      "searching": "Ricerca delle bacheche in corso…",
-      "boardsFound": "Bacheche trovate: {{count}}.",
-      "none": "Nessuna bacheca trovata per questi termini.",
-      "alreadyAdded": "Già aggiunta",
-      "add": "Aggiungi {{name}}",
-      "failure": {
-        "search-blocked": "Il servizio di ricerca ha bloccato la richiesta, quindi non è stato possibile cercare. Aggiungi le aziende con il link alla pagina di lavoro qui sotto.",
-        "search-failed": "La ricerca non è riuscita. Riprova più tardi.",
-        "engine-unavailable": "Il motore in background non è disponibile. Riprova tra poco."
-      },
-      "keyHint": "La ricerca senza chiave non è sempre disponibile e può essere bloccata. Per risultati affidabili, aggiungi nelle Impostazioni una chiave di ricerca del piano gratuito.",
-      "blockedHint": "Il fornitore di ricerca ha bloccato la ricerca senza chiave. Aggiungi nelle Impostazioni una chiave di ricerca del piano gratuito e cerca di nuovo.",
-      "openSettings": "Apri le impostazioni"
-    },
-    "add": {
-      "heading": "Aggiungi con un link",
-      "name": "Nome dell'azienda",
-      "careersUrl": "Link alla pagina di lavoro",
-      "careersUrlHint": "Per esempio https://boards.greenhouse.io/<azienda>. Le bacheche supportate (Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Personio, Recruitee e Teamtailor) vengono lette direttamente. Ogni altra pagina di lavoro viene letta con il provider AI impostato nelle Impostazioni.",
-      "submit": "Aggiungi azienda",
-      "added": "Azienda aggiunta.",
-      "failure": {
-        "duplicate-company": "Questa bacheca è già nell'elenco.",
-        "unknown": "Non è stato possibile aggiungere l'azienda."
-      }
     },
     "remove": {
       "action": "Rimuovi",

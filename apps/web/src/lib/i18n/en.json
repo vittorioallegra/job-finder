@@ -571,7 +571,7 @@
   },
   "companies": {
     "title": "Sources",
-    "intro": "The companies whose job boards the app reads. It adds them by itself from what you are looking for; here you can add a specific company, or remove one you don't want.",
+    "intro": "The companies whose job pages the app reads. It finds and adds them by itself from the roles and places in your profile; here you can drop one you don't want.",
     "offersFrom_one": "The jobs come from {{count}} company in all, the ones you follow and those found through public directories.",
     "offersFrom_other": "The jobs come from {{count}} companies in all, the ones you follow and those found through public directories.",
     "backJobs": "Back to jobs",
@@ -595,40 +595,6 @@
       "noJobs": "No parseable jobs in the last scan.",
       "scanned": "Last scan: {{postings}} postings read, {{closed}} closed.",
       "failed": "Last scan failed: {{reason}}."
-    },
-    "discover": {
-      "heading": "Find companies",
-      "intro": "Searches the web for job boards that match your keywords. Nothing is added until you choose it.",
-      "keywords": "Keywords",
-      "keywordsHint": "Comma separated, up to five. For example: backend, data engineer.",
-      "locations": "Location (optional)",
-      "locationsHint": "Comma separated, up to five. For example: Milan, Berlin.",
-      "submit": "Search job boards",
-      "searching": "Searching job boards…",
-      "boardsFound": "Boards found: {{count}}.",
-      "none": "No job boards found for these terms.",
-      "alreadyAdded": "Already added",
-      "add": "Add {{name}}",
-      "failure": {
-        "search-blocked": "The search provider blocked the request, so no boards were searched. Add companies by their careers link below.",
-        "search-failed": "The search failed. Try again later.",
-        "engine-unavailable": "The background engine is not available. Try again in a moment."
-      },
-      "keyHint": "Keyless search is best-effort and can be blocked. For reliable results, add a free-tier search key in Settings.",
-      "blockedHint": "The search provider blocked keyless search. Add a free-tier search key in Settings and search again.",
-      "openSettings": "Open settings"
-    },
-    "add": {
-      "heading": "Add by link",
-      "name": "Company name",
-      "careersUrl": "Careers page link",
-      "careersUrlHint": "For example https://boards.greenhouse.io/<company>. Supported boards are read directly: Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Personio, Recruitee and Teamtailor. Any other careers page is read with the AI provider set in Settings.",
-      "submit": "Add company",
-      "added": "Company added.",
-      "failure": {
-        "duplicate-company": "This job board is already in the list.",
-        "unknown": "The company could not be added."
-      }
     },
     "remove": {
       "action": "Remove",

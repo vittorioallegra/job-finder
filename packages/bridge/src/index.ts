@@ -31,17 +31,10 @@ import type { AppStatus, OpenNewJobsRequest } from "./app";
 import type { AppSettings, AppSettingsPatch } from "./settings";
 import type { SecretName, SecretsStatus } from "./secrets";
 import type { CvImportRequest, CvImportResult, Profile, ProfileRecord } from "./profile";
-import type {
-  DiscoverySearchRequest,
-  DiscoverySearchResult,
-  BackgroundReadStatus,
-  ProfileDiscoveryResult,
-} from "./discovery";
+import type { BackgroundReadStatus, ProfileDiscoveryResult } from "./discovery";
 import type { ScoreStartRequest, ScoreStartResult } from "./scoring";
 import type { JobDetail, JobDetailRequest, JobFlagRequest, JobsListRequest } from "./jobs";
 import type {
-  CompanyAddRequest,
-  CompanyAddResult,
   CompanyRecord,
   IngestEvent,
   IngestStartResult,
@@ -100,11 +93,9 @@ export interface JobFinderBridge {
     summary(): Promise<{ withOffers: number }>;
     /**
      * Removes a company from the sources: no more scans, its jobs leave the lists, and the company
-     * search does not add it again. Adding it by hand brings it back. Resolves false when unknown.
+     * search does not add it again. Resolves false when unknown.
      */
     remove(companyId: string): Promise<boolean>;
-    /** Adds a company from its careers URL. The ATS and its board are detected from the URL. */
-    add(input: CompanyAddRequest): Promise<CompanyAddResult>;
   };
   readonly jobs: {
     /** Open jobs matching the filter, in the requested order. */
@@ -161,8 +152,6 @@ export interface JobFinderBridge {
     start(input: ScoreStartRequest): Promise<ScoreStartResult>;
   };
   readonly discovery: {
-    /** Searches the web for ATS boards matching the criteria. Found boards are not added until the user adds them. */
-    search(input: DiscoverySearchRequest): Promise<DiscoverySearchResult>;
     /** Finds and adds the companies the profile's roles and places point to, then scans them. */
     fromProfile(): Promise<ProfileDiscoveryResult>;
     /** What the background reading that follows a profile search is doing. */

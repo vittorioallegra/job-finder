@@ -15,7 +15,6 @@ import {
   type AppSettingsPatch,
   type CompanyRecord,
   type CvImportResult,
-  type DiscoverySearchResult,
   type IngestEvent,
   type IngestStartResult,
   type JobFinderBridge,
@@ -55,7 +54,6 @@ export interface MemoryBridgeOptions {
   /** Outcome of a scoring run. Defaults to engine unavailable, since there is no engine here. */
   scoring?: ScoreStartResult;
   /** Answer to a discovery search. Defaults to engine unavailable, since there is no engine here. */
-  discovery?: DiscoverySearchResult;
 }
 
 /**
@@ -127,21 +125,6 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
     companies: {
       summary: async () => ({ withOffers: 0 }),
       list: async () => structuredClone(companies),
-      // No ATS detection here: the company is stored without a board, so it cannot be scanned.
-      add: async (input) => {
-        const company: CompanyRecord = {
-          id: `memory-${companies.length + 1}`,
-          name: input.name,
-          careersUrl: input.careersUrl,
-          ats: null,
-          slug: null,
-          createdAt: Date.now(),
-          country: null,
-          lastScan: null,
-        };
-        companies.push(company);
-        return { ok: true, company: structuredClone(company) };
-      },
       remove: async (companyId) => {
         const index = companies.findIndex((company) => company.id === companyId);
         if (index < 0) return false;
@@ -264,8 +247,6 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
         structuredClone(options.scoring ?? { ok: false, code: "engine-unavailable" }),
     },
     discovery: {
-      search: async () =>
-        structuredClone(options.discovery ?? { ok: false, code: "engine-unavailable" }),
       backgroundStatus: async () => ({ running: false, phase: null, stored: 0 }),
       fromProfile: async () =>
         structuredClone(options.profileDiscovery ?? { ok: false, code: "engine-unavailable" }),

@@ -6,25 +6,13 @@ import type { SecretsStatus } from "./secrets";
 import { SecretClearRequestSchema, SecretSetRequestSchema } from "./secrets";
 import type { CvImportResult, ProfileRecord } from "./profile";
 import { CvImportRequestSchema, ProfileSchema } from "./profile";
-import type {
-  CompanyAddResult,
-  CompanyRecord,
-  IngestStartResult,
-  JobListItem,
-  LatestRun,
-} from "./ingest";
+import type { CompanyRecord, IngestStartResult, JobListItem, LatestRun } from "./ingest";
 import {
-  CompanyAddRequestSchema,
   CompanyRemoveRequestSchema,
   IngestCancelRequestSchema,
   IngestStartRequestSchema,
 } from "./ingest";
-import type {
-  BackgroundReadStatus,
-  DiscoverySearchResult,
-  ProfileDiscoveryResult,
-} from "./discovery";
-import { DiscoverySearchRequestSchema } from "./discovery";
+import type { BackgroundReadStatus, ProfileDiscoveryResult } from "./discovery";
 import type {
   ApplicationDocuments,
   DocumentExportResult,
@@ -89,7 +77,6 @@ export const IPC_REQUEST_SCHEMAS = {
   "profile:cancel-import": z.undefined(),
   "companies:list": z.undefined(),
   "companies:summary": z.undefined(),
-  "companies:add": CompanyAddRequestSchema,
   "companies:remove": CompanyRemoveRequestSchema,
   "jobs:list": JobsListRequestSchema,
   "jobs:detail": JobDetailRequestSchema,
@@ -105,7 +92,6 @@ export const IPC_REQUEST_SCHEMAS = {
   "ingest:start": IngestStartRequestSchema,
   "ingest:cancel": IngestCancelRequestSchema,
   "ingest:latest": z.undefined(),
-  "discovery:search": DiscoverySearchRequestSchema,
   "discovery:from-profile": z.undefined(),
   "discovery:background-status": z.undefined(),
   "scores:start": ScoreStartRequestSchema,
@@ -139,7 +125,6 @@ export interface IpcResponses {
   "profile:cancel-import": void;
   "companies:list": CompanyRecord[];
   "companies:summary": { withOffers: number };
-  "companies:add": CompanyAddResult;
   "companies:remove": boolean;
   "jobs:list": JobListItem[];
   "jobs:detail": JobDetail | null;
@@ -155,7 +140,6 @@ export interface IpcResponses {
   "ingest:start": IngestStartResult;
   "ingest:cancel": void;
   "ingest:latest": LatestRun | null;
-  "discovery:search": DiscoverySearchResult;
   "discovery:from-profile": ProfileDiscoveryResult;
   "discovery:background-status": BackgroundReadStatus;
   "scores:start": ScoreStartResult;

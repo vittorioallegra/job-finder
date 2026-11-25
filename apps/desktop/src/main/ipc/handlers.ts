@@ -17,9 +17,7 @@ import {
   type ApplicationUpdateRequest,
   type AppSettingsPatch,
   type AppSettings,
-  type CompanyAddRequest,
   type CvImportRequest,
-  type DiscoverySearchRequest,
   type IngestStartRequest,
   type IpcChannel,
   type IpcRequest,
@@ -152,9 +150,6 @@ export async function handleInvoke(
       return services.repository.listCompanies();
     case "companies:summary":
       return services.companySummary();
-    case "companies:add":
-      // Added by hand: a company removed earlier comes back.
-      return services.repository.addCompany({ ...(payload as CompanyAddRequest), restore: true });
     case "companies:remove":
       return services.repository.removeCompany((payload as { companyId: string }).companyId);
     case "jobs:list":
@@ -181,8 +176,6 @@ export async function handleInvoke(
       return services.applicationExport.exportCsv();
     case "ingest:start":
       return services.ingestion.start((payload as IngestStartRequest | undefined)?.companyId);
-    case "discovery:search":
-      return services.discovery.search(payload as DiscoverySearchRequest);
     case "discovery:background-status":
       return services.discovery.status();
     case "discovery:from-profile":

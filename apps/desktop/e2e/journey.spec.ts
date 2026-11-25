@@ -127,24 +127,27 @@ test("the journey runs from onboarding to a blocked second application", async (
     });
     expect(await call(window, "ai", "testConnection")).toMatchObject({ ok: true });
 
-    // Search: keyless DuckDuckGo results name an Acme board; the company is added and scanned.
-    const search = await call<{ ok: boolean; candidates?: { careersUrl: string }[] }>(
+    // Search from the profile's roles: keyless DuckDuckGo results name an Acme board, which is
+    // added by the search itself and scanned.
+    await call(window, "profile", "save", {
+      ...PROFILE,
+      preferences: {
+        roles: ["software engineer"],
+        locations: [],
+        workModes: [],
+        employmentTypes: [],
+        seniorities: [],
+      },
+    });
+    const search = await call<{ ok: boolean; added?: number; runStarted?: boolean }>(
       window,
       "discovery",
-      "search",
-      { keywords: ["software engineer"], locations: [] },
+      "fromProfile",
     );
-    expect(search.ok).toBe(true);
-    const board = search.candidates?.find((candidate) => candidate.careersUrl.includes("acme"));
-    expect(board).toBeDefined();
-    const added = await call<{ ok: boolean; company?: { id: string } }>(
-      window,
-      "companies",
-      "add",
-      { name: "Acme", careersUrl: board?.careersUrl },
-    );
-    expect(added.ok).toBe(true);
-    expect(await call(window, "ingest", "start")).toMatchObject({ ok: true });
+    expect(search).toMatchObject({ ok: true, runStarted: true });
+    expect(search.added).toBeGreaterThanOrEqual(1);
+    // The documents below are replayed from recorded answers made with this profile as it was.
+    await call(window, "profile", "save", PROFILE);
     await waitForScan(window);
 
     const listed = await call<{ id: string; title: string }[]>(window, "jobs", "list", {

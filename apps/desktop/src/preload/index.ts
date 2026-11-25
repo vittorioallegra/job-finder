@@ -81,14 +81,12 @@ const api: JobFinderBridge = {
     start: (input) => invoke("scores:start", input),
   },
   discovery: {
-    search: (input) => invoke("discovery:search", input),
     fromProfile: () => invoke("discovery:from-profile"),
     backgroundStatus: () => invoke("discovery:background-status"),
   },
   companies: {
     list: () => invoke("companies:list"),
     summary: () => invoke("companies:summary"),
-    add: (input) => invoke("companies:add", input),
     remove: (companyId: string) => invoke("companies:remove", { companyId }),
   },
   jobs: {

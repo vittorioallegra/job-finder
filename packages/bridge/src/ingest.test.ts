@@ -38,7 +38,6 @@ describe("ingestion payload contract", () => {
     expect(Object.keys(IPC_REQUEST_SCHEMAS)).toEqual(
       expect.arrayContaining([
         "companies:list",
-        "companies:add",
         "jobs:list",
         "ingest:start",
         "ingest:cancel",

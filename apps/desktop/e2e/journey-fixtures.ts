@@ -93,7 +93,11 @@ export async function serveJourneyFixtures(): Promise<JourneyFixtures> {
           pathname === "/jobs/api/search" ||
           pathname === "/api/remote-jobs" ||
           pathname === "/api/job-board-api" ||
-          pathname === "/sparql")
+          pathname === "/sparql" ||
+          // The community board lists of the wide scan, and a second board the search names.
+          pathname.startsWith("/Feashliaa/job-board-aggregator/main/data/") ||
+          pathname === "/v0/postings/globex" ||
+          pathname === "/jobs/api")
       ) {
         send(response, 404, "text/plain", "not found");
         return;
