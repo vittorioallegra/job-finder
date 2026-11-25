@@ -335,8 +335,8 @@
     "searchChangedAction": "Find companies for them",
     "unsaved": "Unsaved changes.",
     "educationType": {
-      "degree": "University degree",
-      "course": "Course or program"
+      "degree": "Degree",
+      "course": "Training course"
     }
   },
   "onboarding": {

@@ -335,8 +335,8 @@
     "searchChangedAction": "Cerca le aziende per questi",
     "unsaved": "Modifiche non salvate.",
     "educationType": {
-      "degree": "Titolo universitario",
-      "course": "Corso o programma"
+      "degree": "Titolo di studio",
+      "course": "Corso di formazione"
     }
   },
   "onboarding": {
