@@ -1,5 +1,5 @@
-// protects=generateDocument returns a document only after it passes the profile checks, retries once with the rules a first answer broke, reports an answer that still breaks them as invalid-output, maps provider failures to their codes, and asks for the text in the language it is given;
-// fails_when=an answer with an invented employer or a new number is returned, the retry omits the broken rules, a second broken answer is accepted, a provider rejection is reported as invalid-output, more than two answers are requested, or the prompt names another language than the one given;
+// protects=generateDocument returns a document only after it passes the profile checks, sets small drifts right from the profile instead of rejecting the answer, retries once with the rules broken when nothing usable is left, reports an answer still unusable as invalid-output, maps provider failures to their codes, and asks for the text in the language it is given;
+// fails_when=an invented employer, date, skill or number reaches the result, a drifted answer is rejected instead of corrected, the retry omits the broken rules, a second unusable answer is accepted, a provider rejection is reported as invalid-output, more than two answers are requested, or the prompt names another language than the one given;
 // no_claim=every provider answer is a scripted double, not a live model; the quality of real output is not shown;
 import { describe, expect, it } from "vitest";
 import type { AiProviderConfig } from "../ai/provider";
@@ -58,11 +58,6 @@ const VALID_CV = {
   skills: [],
 };
 
-const INVENTED_CV = {
-  ...VALID_CV,
-  experience: [{ ...VALID_CV.experience[0]!, company: "Initech" }],
-};
-
 function chatCompletion(content: string, status = 200): Response {
   const body =
     status === 200
@@ -109,26 +104,55 @@ describe("generateDocument", () => {
     expect(bodies).toHaveLength(1);
   });
 
-  it("sends the rules back once when the first answer invents a fact, and accepts a corrected answer", async () => {
-    const { fetchImpl, bodies } = scriptedFetch([
-      () => chatCompletion(JSON.stringify(INVENTED_CV)),
-      () => chatCompletion(JSON.stringify(VALID_CV)),
-    ]);
+  it("sets a drifted CV right from the profile instead of rejecting it, after one call", async () => {
+    const drifted = {
+      ...VALID_CV,
+      summary: "Engineer for 25 years. Cut latency.",
+      experience: [
+        {
+          ...VALID_CV.experience[0]!,
+          company: "Initech",
+          endDate: "2024-12",
+          bullets: [{ source: 0, text: "Cut latency by 90%" }],
+        },
+      ],
+      skills: [{ source: 5, name: "Invented" }],
+    };
+    const { fetchImpl, bodies } = scriptedFetch([() => chatCompletion(JSON.stringify(drifted))]);
 
     const outcome = await generateDocument(input(), { fetch: fetchImpl });
 
     expect(outcome.ok).toBe(true);
-    expect(bodies).toHaveLength(2);
-    expect(bodies[1]).toContain("experience.0: field-mismatch");
+    if (!outcome.ok || outcome.content.kind !== "cv") return;
+    const entry = outcome.content.cv.experience[0];
+    expect(entry).toMatchObject({ company: "Acme", endDate: "2024" });
+    expect(entry?.bullets).toEqual([{ source: 0, text: "Cut latency by 40%" }]);
+    expect(outcome.content.cv.summary).toBe("Cut latency.");
+    expect(outcome.content.cv.skills).toEqual([]);
+    expect(bodies).toHaveLength(1);
   });
 
-  it("reports invalid-output when the retry is still broken, and makes no third call", async () => {
+  it("sends the rules back once when a letter has nothing left after the repair, and accepts a corrected answer", async () => {
     const { fetchImpl, bodies } = scriptedFetch([
-      () => chatCompletion(JSON.stringify(INVENTED_CV)),
-      () => chatCompletion(JSON.stringify(INVENTED_CV)),
+      () => chatCompletion(JSON.stringify({ paragraphs: ["I have 25 years of experience."] })),
+      () => chatCompletion(JSON.stringify({ paragraphs: ["I cut latency by 40% at Acme."] })),
     ]);
 
-    const outcome = await generateDocument(input(), { fetch: fetchImpl });
+    const outcome = await generateDocument(input({ kind: "cover-letter" }), { fetch: fetchImpl });
+
+    expect(outcome.ok).toBe(true);
+    expect(bodies).toHaveLength(2);
+    expect(bodies[1]).toContain("paragraphs.0: numbers-not-in-profile");
+  });
+
+  it("reports invalid-output when the retry leaves nothing either, and makes no third call", async () => {
+    const invented = { paragraphs: ["I have 25 years of experience."] };
+    const { fetchImpl, bodies } = scriptedFetch([
+      () => chatCompletion(JSON.stringify(invented)),
+      () => chatCompletion(JSON.stringify(invented)),
+    ]);
+
+    const outcome = await generateDocument(input({ kind: "cover-letter" }), { fetch: fetchImpl });
 
     expect(outcome).toEqual({ ok: false, code: "invalid-output" });
     expect(bodies).toHaveLength(2);

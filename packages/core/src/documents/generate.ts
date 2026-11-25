@@ -13,6 +13,7 @@ import { documentSystemPrompt, documentUserPrompt, type DocumentJob } from "./pr
 import {
   CoverLetterSchema,
   TailoredCvSchema,
+  repairDocument,
   validateDocument,
   type DocumentContent,
   type DocumentIssue,
@@ -45,10 +46,18 @@ export type GenerateDocumentOutcome =
 /** A tailored CV is about as long as the profile's JSON; hosted providers stop at this limit. */
 const DOCUMENT_MAX_OUTPUT_TOKENS = 8192;
 
+/** A repair that dropped everything it was given has nothing to show. */
+function isEmpty(content: DocumentContent): boolean {
+  return content.kind === "cover-letter"
+    ? content.letter.paragraphs.length === 0
+    : content.cv.experience.length === 0 && content.cv.skills.length === 0;
+}
+
 /**
  * Generates a tailored CV or a cover letter with one structured AI call per attempt. An answer that
- * breaks a rule of the validator (see `schema.ts`) is sent back once with the rules it broke; an
- * answer still broken after that is `invalid-output`, so no invented fact is ever returned. Provider
+ * breaks a rule of the validator (see `schema.ts`) is first set right from the profile
+ * (`repairDocument`); when nothing usable is left it is sent back once with the rules it broke, and
+ * an answer still broken after that is `invalid-output`, so no invented fact is ever returned. Provider
  * failures come back as their AI codes. Nothing is logged here.
  */
 export async function generateDocument(
@@ -93,6 +102,11 @@ export async function generateDocument(
       issues = validateDocument(content, input.profile);
       if (issues.length === 0) {
         return { ok: true, content, warnings: attemptWarnings };
+      }
+      // Small drifts are set right from the profile; a document left with nothing is asked again.
+      const repaired = repairDocument(content, input.profile);
+      if (!isEmpty(repaired) && validateDocument(repaired, input.profile).length === 0) {
+        return { ok: true, content: repaired, warnings: attemptWarnings };
       }
     } catch (error) {
       return { ok: false, code: toAiError(error).code };

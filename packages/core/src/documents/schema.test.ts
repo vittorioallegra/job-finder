@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { emptyProfile, type Profile } from "../profile/schema";
 import {
   DocumentContentSchema,
+  repairDocument,
   validateCoverLetter,
   validateDocument,
   validateTailoredCv,
@@ -233,5 +234,48 @@ describe("validation across languages", () => {
       summary: "Ingegnere backend con un decennio di lavoro sulle API.",
     });
     expect(validateTailoredCv(verbatimEmployer, profile())).toEqual([]);
+  });
+
+  it("repairs a drifted CV so that it passes the validator, using only the profile's facts", () => {
+    const base = cv();
+    const drifted = cv({
+      summary: "Ten years of APIs. Led 999 people.",
+      experience: [
+        {
+          ...base.experience[0]!,
+          company: "Made Up Inc",
+          startDate: "1999",
+          bullets: [
+            ...base.experience[0]!.bullets,
+            { source: 0, text: "Grew revenue by 777%" },
+            { source: 99, text: "Points at no bullet" },
+          ],
+        },
+        { ...base.experience[0]! },
+        { ...base.experience[0]!, source: 99 },
+      ],
+      skills: [{ source: 0, name: "Totally Different" }],
+    });
+    expect(validateTailoredCv(drifted, profile()).length).toBeGreaterThan(0);
+
+    const repaired = repairDocument({ kind: "cv", cv: drifted }, profile());
+
+    expect(validateDocument(repaired, profile())).toEqual([]);
+    if (repaired.kind !== "cv") return;
+    expect(repaired.cv.experience).toHaveLength(1);
+    expect(repaired.cv.experience[0]?.company).toBe(profile().experience[0]?.company);
+    expect(repaired.cv.summary).toBe("Ten years of APIs.");
+    expect(repaired.cv.skills[0]?.name).toBe(profile().skills[0]?.name);
+  });
+
+  it("drops the letter paragraphs that add a number and keeps the others", () => {
+    const repaired = repairDocument(
+      { kind: "cover-letter", letter: { paragraphs: ["Plain paragraph.", "Led 4242 people."] } },
+      profile(),
+    );
+    expect(repaired).toEqual({
+      kind: "cover-letter",
+      letter: { paragraphs: ["Plain paragraph."] },
+    });
   });
 });

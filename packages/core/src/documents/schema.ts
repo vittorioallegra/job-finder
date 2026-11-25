@@ -268,3 +268,94 @@ export function validateDocument(content: DocumentContent, profile: Profile): Do
     ? validateTailoredCv(content.cv, profile)
     : validateCoverLetter(content.letter, profile);
 }
+
+/** A sentence is the run up to a full stop, "!" or "?" and the space after it. */
+function sentencesOf(text: string): string[] {
+  return text.split(/(?<=[.!?])\s+/).filter((sentence) => sentence.trim() !== "");
+}
+
+/**
+ * Brings an answer back to the profile's facts instead of throwing it away. Models drift in small
+ * ways (a date written another way, a rounded number, a skill renamed); a rejected answer costs the
+ * user a whole generation, so what can be set right from the profile is set right:
+ * - employers, titles, locations, dates, institutions, degrees, grades and skill names are copied
+ *   from the profile item the entry points at;
+ * - an entry pointing at no profile item, or at one already used, is dropped;
+ * - a bullet whose number is not in its source bullet becomes the source bullet's own text, and a
+ *   bullet pointing at no source bullet is dropped;
+ * - sentences of the summary and paragraphs of a letter with a number the profile lacks are dropped.
+ * Nothing is added that the profile does not state. What is left still goes through
+ * `validateDocument`.
+ */
+export function repairDocument(content: DocumentContent, profile: Profile): DocumentContent {
+  const profileNumbers = numbersOf(profileText(profile));
+  if (content.kind === "cover-letter") {
+    return {
+      kind: "cover-letter",
+      letter: {
+        paragraphs: content.letter.paragraphs.filter(
+          (paragraph) => !hasNumberOutside(paragraph, profileNumbers),
+        ),
+      },
+    };
+  }
+
+  const cv = content.cv;
+  const usedExperience = new Set<number>();
+  const experience = cv.experience.flatMap((entry) => {
+    const item = profile.experience[entry.source];
+    if (!item || usedExperience.has(entry.source)) return [];
+    usedExperience.add(entry.source);
+    const bullets = entry.bullets.flatMap((bullet) => {
+      const sourceBullet = item.bullets[bullet.source];
+      if (sourceBullet === undefined) return [];
+      const text = hasNumberOutside(bullet.text, numbersOf(sourceBullet))
+        ? sourceBullet.trim()
+        : bullet.text;
+      return text === "" ? [] : [{ source: bullet.source, text }];
+    });
+    return [
+      {
+        source: entry.source,
+        company: item.company,
+        title: item.title,
+        location: item.location,
+        startDate: item.startDate,
+        endDate: item.endDate,
+        bullets,
+      },
+    ];
+  });
+
+  const usedEducation = new Set<number>();
+  const education = cv.education.flatMap((entry) => {
+    const item = profile.education[entry.source];
+    if (!item || usedEducation.has(entry.source)) return [];
+    usedEducation.add(entry.source);
+    return [
+      {
+        source: entry.source,
+        institution: item.institution,
+        degree: item.degree,
+        grade: item.grade,
+        startDate: item.startDate,
+        endDate: item.endDate,
+      },
+    ];
+  });
+
+  const usedSkills = new Set<number>();
+  const skills = cv.skills.flatMap((entry) => {
+    const item = profile.skills[entry.source];
+    if (!item || usedSkills.has(entry.source)) return [];
+    usedSkills.add(entry.source);
+    const name =
+      entry.name === item.name || item.aliases.includes(entry.name) ? entry.name : item.name;
+    return [{ source: entry.source, name }];
+  });
+
+  const summary = sentencesOf(cv.summary)
+    .filter((sentence) => !hasNumberOutside(sentence, profileNumbers))
+    .join(" ");
+  return { kind: "cv", cv: { summary, experience, education, skills } };
+}
