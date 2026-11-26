@@ -14,6 +14,7 @@ describe("job filter schema", () => {
       hideDismissed: true,
       hideApplied: true,
       newOnly: false,
+      maxAgeDays: 0,
     });
   });
 

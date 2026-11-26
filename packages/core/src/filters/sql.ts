@@ -141,7 +141,7 @@ function placeCondition(places: readonly string[]): SQL | undefined {
  * The SQL condition of a filter on the `jobs` table, or undefined when the filter narrows nothing.
  * Flags are read through subqueries, so the condition can be added to any query over `jobs`.
  */
-export function jobFilterCondition(filter: JobFilter): SQL | undefined {
+export function jobFilterCondition(filter: JobFilter, now: number = Date.now()): SQL | undefined {
   // Jobs of a company removed from the sources never show, whatever the filter.
   const parts: SQL[] = [
     sql`${jobs.companyId} not in (select ${companies.id} from ${companies} where ${companies.excludedAt} is not null)`,
@@ -169,6 +169,11 @@ export function jobFilterCondition(filter: JobFilter): SQL | undefined {
 
   const places = placeCondition(filter.places);
   if (places !== undefined) parts.push(places);
+
+  if (filter.maxAgeDays > 0) {
+    const cutoff = now - filter.maxAgeDays * 24 * 60 * 60 * 1000;
+    parts.push(sql`coalesce(${jobs.postedAt}, ${jobs.firstSeenAt}) >= ${cutoff}`);
+  }
 
   if (filter.workModes.length > 0) parts.push(inArray(jobs.workMode, filter.workModes));
   if (filter.employmentTypes.length > 0) {

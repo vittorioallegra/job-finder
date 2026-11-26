@@ -2,6 +2,9 @@ import { z } from "zod";
 import { EMPLOYMENT_TYPES, WORK_MODES } from "../normalize/job";
 import type { JobPreferences } from "../profile/schema";
 
+/** Postings older than this are not shown: a posting kept online for a year is rarely still hiring. */
+export const MAX_POSTING_AGE_DAYS = 90;
+
 /** Result orders: by affinity (unscored jobs last) or by newest posting first. */
 export const JOB_SORTS = ["affinity", "newest"] as const;
 export type JobSort = (typeof JOB_SORTS)[number];
@@ -32,6 +35,11 @@ export const JobFilterSchema = z.strictObject({
   hideApplied: z.boolean().default(true),
   /** Only jobs the user has not opened yet. */
   newOnly: z.boolean().default(false),
+  /**
+   * Hides jobs posted more than this many days ago (a job with no posting date counts from when it
+   * was first seen). 0 narrows nothing.
+   */
+  maxAgeDays: z.number().int().min(0).max(3650).default(0),
 });
 
 export type JobFilter = z.output<typeof JobFilterSchema>;
@@ -64,5 +72,6 @@ export function filterFromPreferences(preferences: JobPreferences | null): JobFi
     places: [...preferences.locations],
     workModes: withUnknown(preferences.workModes),
     employmentTypes: withUnknown(preferences.employmentTypes),
+    maxAgeDays: MAX_POSTING_AGE_DAYS,
   };
 }

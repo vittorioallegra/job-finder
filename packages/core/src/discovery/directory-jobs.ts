@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { buildJob, locationsFromText } from "../ats/build";
 import { htmlToText, type NormalizedJob } from "../normalize";
+import { isFreshPosting } from "./place-match";
 import { directoryPlaces } from "./workable-directory";
 import type { SearchOptions } from "./source";
 import type { DiscoveryCriteria } from "./types";
@@ -107,7 +108,8 @@ export async function directoryJobs(
           const parsed = Posting.safeParse(item);
           if (!parsed.success) continue;
           const job = jobFromDirectory(parsed.data);
-          jobs.set(job.sourceJobId, job);
+          // Workable keeps dead postings online for months: only recent ones are kept.
+          if (isFreshPosting(job)) jobs.set(job.sourceJobId, job);
         }
         token = data.nextPageToken;
         if (!token) break;

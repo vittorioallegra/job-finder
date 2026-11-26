@@ -1,4 +1,4 @@
-// protects=roles match the title without level words or hyphens and with engineer, developer and sviluppatore taken as one, each job filter includes and excludes the expected jobs over a fixed fixture set in SQLite, the combinations narrow the results, the affinity order puts unscored jobs last and the newest order uses the posting date when there is one, and dismissed, closed and unknown jobs stay out;
+// protects=a job posted before the age limit is hidden, roles match the title without level words or hyphens and with engineer, developer and sviluppatore taken as one, each job filter includes and excludes the expected jobs over a fixed fixture set in SQLite, the combinations narrow the results, the affinity order puts unscored jobs last and the newest order uses the posting date when there is one, and dismissed, closed and unknown jobs stay out;
 // fails_when=a filter includes a job it should exclude or drops one it should keep, a LIKE wildcard in a place matches everything, a dismissed or closed job is listed, or the score order is wrong;
 // no_claim=the scoring run is not covered here; the core filter schema tests and the scoring service tests cover them, and the fixture set is small, not a sample of real postings;
 import { mkdtempSync } from "node:fs";
@@ -280,6 +280,28 @@ describe("job filters over the fixture set", () => {
     );
     // The description does not count: a role is what the job is called.
     expect(await titles({ roles: ["Kubernetes"] })).toEqual([]);
+  });
+
+  it("hides jobs posted before the age limit, counting an undated job from when it was first seen", async () => {
+    const { jobFilterCondition } = await import("@job-finder/core/filters/sql");
+    const open = async (maxAgeDays: number) =>
+      (
+        await database.db
+          .select({ title: jobs.title })
+          .from(jobs)
+          .where(
+            jobFilterCondition(JobFilterSchema.parse({ maxAgeDays, hideDismissed: false }), NOW),
+          )
+      )
+        .map((row) => row.title)
+        .sort();
+    const all = await open(0);
+    const recent = await open(30);
+    // "Data Engineer" was posted 40 days before, "Frontend Developer" 1 day before.
+    expect(all).toContain("Data Engineer");
+    expect(recent).not.toContain("Data Engineer");
+    expect(recent).toContain("Frontend Developer");
+    expect(recent.length).toBeLessThan(all.length);
   });
 
   it("treats LIKE wildcards in a place as plain characters", async () => {

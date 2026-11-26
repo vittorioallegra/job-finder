@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { buildJob, locationsFromText } from "../ats/build";
 import { foldForMatch, htmlToText, resolvePlace, type NormalizedJob } from "../normalize";
-import { jobMatchesPlaces } from "./place-match";
+import { isFreshPosting, jobMatchesPlaces } from "./place-match";
 import type { SearchOptions } from "./source";
 import type { DiscoveryCriteria } from "./types";
 
@@ -164,7 +164,12 @@ export async function workdayBoard(
       employmentLabel: info.timeType ?? undefined,
       postedAt: info.startDate ?? undefined,
     });
-    if (jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: false })) jobs.push(job);
+    if (
+      isFreshPosting(job) &&
+      jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: false })
+    ) {
+      jobs.push(job);
+    }
   }
   return { jobs, dead: false };
 }

@@ -1,7 +1,7 @@
 import { getAdapter } from "../ats";
 import type { AtsId } from "../ats/types";
 import type { NormalizedJob } from "../normalize";
-import { jobMatchesPlaces } from "./place-match";
+import { isFreshPosting, jobMatchesPlaces } from "./place-match";
 import { workdayBoard } from "./workday";
 import type { SearchOptions } from "./source";
 import type { DiscoveryCriteria } from "./types";
@@ -121,8 +121,10 @@ export async function wideScan(
         if (gone) checked.push({ board: id, kind: "dead" });
         return;
       }
-      const kept = result.jobs.filter((job) =>
-        jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: false }),
+      const kept = result.jobs.filter(
+        (job) =>
+          isFreshPosting(job) &&
+          jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: false }),
       );
       jobs.push(...kept);
       if (kept.length === 0) checked.push({ board: id, kind: "idle" });

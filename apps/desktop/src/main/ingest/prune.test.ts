@@ -62,8 +62,8 @@ describe("pruning companies off the profile", () => {
       employmentType: "unknown",
       seniority: "unknown",
       visaSponsorship: "unknown",
-      firstSeenAt: 1,
-      lastSeenAt: 1,
+      firstSeenAt: Date.now(),
+      lastSeenAt: Date.now(),
     });
     await db.insert(runs).values({ id: "r1", kind: "ingest", status: "succeeded", startedAt: 1 });
     for (const [seq, id] of ["far", "hand", "near"].entries()) {

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { buildJob, locationsFromText } from "../ats/build";
 import { htmlToText, resolvePlace, type NormalizedJob } from "../normalize";
-import { jobMatchesPlaces } from "./place-match";
+import { isFreshPosting, jobMatchesPlaces } from "./place-match";
 import type { SearchOptions } from "./source";
 import type { DiscoveryCriteria } from "./types";
 
@@ -111,7 +111,10 @@ export async function himalayasJobs(
           seniorityLabel: raw.data.seniority?.join(" "),
           postedAt: isoFrom(raw.data.pubDate),
         });
-        if (jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: true })) {
+        if (
+          isFreshPosting(job) &&
+          jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: true })
+        ) {
           jobs.set(job.sourceJobId, job);
         }
       }
@@ -147,7 +150,10 @@ export async function arbeitnowJobs(
         workModeHints: [raw.data.remote ? "remote" : undefined],
         postedAt: isoFrom(raw.data.created_at),
       });
-      if (jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: false })) {
+      if (
+        isFreshPosting(job) &&
+        jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: false })
+      ) {
         jobs.set(job.sourceJobId, job);
       }
     }

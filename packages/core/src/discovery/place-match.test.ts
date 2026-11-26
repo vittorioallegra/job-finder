@@ -3,7 +3,7 @@
 // no_claim=the SQL the jobs list runs, which this mirrors for the wide scan: the two are kept alike by hand;
 import { describe, expect, it } from "vitest";
 import { normalizeLocation, type NormalizedJob } from "../normalize";
-import { jobMatchesPlaces } from "./place-match";
+import { isFreshPosting, jobMatchesPlaces } from "./place-match";
 
 const job = (over: Partial<NormalizedJob> & { places?: string[] }): NormalizedJob => ({
   source: "greenhouse",
@@ -67,5 +67,13 @@ describe("job places", () => {
     expect(jobMatchesPlaces(job({ places: ["Milan, Italy"] }), ["Milan"])).toBe(true);
     expect(jobMatchesPlaces(job({ places: ["Rome, Italy"] }), ["Milan"])).toBe(false);
     expect(jobMatchesPlaces(job({ places: ["Rome, Italy"] }), [])).toBe(true);
+  });
+
+  it("keeps a recent or undated posting and drops one posted long ago", () => {
+    const now = Date.parse("2026-11-26T00:00:00Z");
+    expect(isFreshPosting(job({ postedAt: "2026-11-01T00:00:00Z" }), now)).toBe(true);
+    expect(isFreshPosting(job({ postedAt: "2025-06-13T07:51:32Z" }), now)).toBe(false);
+    expect(isFreshPosting(job({}), now)).toBe(true);
+    expect(isFreshPosting(job({ postedAt: "not a date" }), now)).toBe(true);
   });
 });
