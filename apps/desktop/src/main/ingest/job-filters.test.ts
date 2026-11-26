@@ -1,4 +1,4 @@
-// protects=roles match the title without level words or hyphens, each job filter includes and excludes the expected jobs over a fixed fixture set in SQLite, the combinations narrow the results, the affinity order puts unscored jobs last and the newest order uses the posting date when there is one, and dismissed, closed and unknown jobs stay out;
+// protects=roles match the title without level words or hyphens and with engineer, developer and sviluppatore taken as one, each job filter includes and excludes the expected jobs over a fixed fixture set in SQLite, the combinations narrow the results, the affinity order puts unscored jobs last and the newest order uses the posting date when there is one, and dismissed, closed and unknown jobs stay out;
 // fails_when=a filter includes a job it should exclude or drops one it should keep, a LIKE wildcard in a place matches everything, a dismissed or closed job is listed, or the score order is wrong;
 // no_claim=the scoring run is not covered here; the core filter schema tests and the scoring service tests cover them, and the fixture set is small, not a sample of real postings;
 import { mkdtempSync } from "node:fs";
@@ -271,8 +271,12 @@ describe("job filters over the fixture set", () => {
 
   it("matches roles against the title, without level words and whatever the hyphens or spaces", async () => {
     expect(await titles({ roles: ["Senior Front-end Developer"] })).toEqual(["Frontend Developer"]);
+    // Engineer, developer and the Italian "sviluppatore" name the same work.
     expect(await titles({ roles: ["Backend Engineer", "Data Engineer"] })).toEqual(
-      ["Backend Engineer", "Data Engineer"].sort(),
+      ["Backend Engineer", "Data Engineer", "Sviluppatore Backend"].sort(),
+    );
+    expect(await titles({ roles: ["Backend Developer"] })).toEqual(
+      ["Backend Engineer", "Sviluppatore Backend"].sort(),
     );
     // The description does not count: a role is what the job is called.
     expect(await titles({ roles: ["Kubernetes"] })).toEqual([]);

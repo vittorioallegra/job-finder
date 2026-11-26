@@ -39,6 +39,29 @@ export function roleTitleTerms(role: string): string[] {
   return words.slice(start);
 }
 
+/**
+ * Words that name the same kind of work, in English and Italian: a role written with one matches a
+ * title written with another ("Software Engineer" finds "Sviluppatore Software" and "Software
+ * Developer"). Each group is interchangeable inside a role.
+ */
+const SAME_WORK: readonly (readonly string[])[] = [
+  [
+    "engineer",
+    "developer",
+    "programmer",
+    "dev",
+    "sviluppatore",
+    "sviluppatrice",
+    "programmatore",
+    "programmatrice",
+  ],
+];
+
+/** The words that count for one term of a role: the term itself and the words that mean the same. */
+export function termAlternatives(word: string): readonly string[] {
+  return SAME_WORK.find((group) => group.includes(word)) ?? [word];
+}
+
 /** The title as `roleTitleTerms` compares it: lower case, with hyphens and spaces removed. */
 const comparableTitle = sql`replace(replace(replace(lower(${jobs.title}), '-', ''), ' ', ''), '/', '')`;
 
@@ -129,7 +152,15 @@ export function jobFilterCondition(filter: JobFilter): SQL | undefined {
     const anyRole = roles.map(
       (words) =>
         sql`(${sql.join(
-          words.map((word) => sql`${comparableTitle} like ${likePattern(word)} escape '\\'`),
+          words.map(
+            (word) =>
+              sql`(${sql.join(
+                termAlternatives(word).map(
+                  (same) => sql`${comparableTitle} like ${likePattern(same)} escape '\\'`,
+                ),
+                sql` or `,
+              )})`,
+          ),
           sql` and `,
         )})`,
     );

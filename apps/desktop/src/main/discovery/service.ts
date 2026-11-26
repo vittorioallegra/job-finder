@@ -55,6 +55,9 @@ export interface DiscoveryServiceOptions {
   };
 }
 
+/** The job directories are read again after this long. */
+const POSTINGS_EVERY_MS = 6 * 60 * 60 * 1000;
+
 /** Each keyed provider reads its own secret; the name is fixed here, never taken from the renderer. */
 const KEYED_SECRETS: Record<KeyedSearchConfig["provider"], SecretName> = {
   brave: "search.brave",
@@ -68,6 +71,8 @@ const KEYED_SECRETS: Record<KeyedSearchConfig["provider"], SecretName> = {
  */
 export function createDiscoveryService(options: DiscoveryServiceOptions): DiscoveryService {
   let widening = false;
+  // When the directories' postings were last read: they change slowly, the board lists are walked often.
+  let postingsAt = 0;
   let status: BackgroundReadStatus = { running: false, phase: null, stored: 0 };
   return {
     status: () => ({ ...status }),
@@ -82,12 +87,15 @@ export function createDiscoveryService(options: DiscoveryServiceOptions): Discov
       };
       try {
         // The postings of the job directories first, then the next slice of the board lists.
-        const postings = await current.discoverCompanies(
-          { keywords: request.keywords, locations: request.locations, postings: true },
-          { duckduckgo: false, keyed: [] },
-        );
-        if (postings.ok && postings.jobs && postings.jobs.length > 0) {
-          await keep(postings.jobs);
+        if (Date.now() - postingsAt >= POSTINGS_EVERY_MS) {
+          const postings = await current.discoverCompanies(
+            { keywords: request.keywords, locations: request.locations, postings: true },
+            { duckduckgo: false, keyed: [] },
+          );
+          if (postings.ok) postingsAt = Date.now();
+          if (postings.ok && postings.jobs && postings.jobs.length > 0) {
+            await keep(postings.jobs);
+          }
         }
         status = { ...status, phase: "boards" };
         const offset = await options.wideCursor.get();

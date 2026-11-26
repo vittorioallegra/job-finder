@@ -27,7 +27,7 @@ import { createIngestionService } from "./ingest/service";
 import { createDiscoveryService } from "./discovery/service";
 import { createDirectoryJobStore } from "./ingest/directory-jobs";
 import { companiesWithOffers, pruneOffProfileCompanies } from "./ingest/prune";
-import { createProfileDiscovery } from "./discovery/from-profile";
+import { createProfileDiscovery, discoveryRequestFor } from "./discovery/from-profile";
 import { createProfileRepository } from "./profile/repository";
 import { createScoringService } from "./scoring/service";
 import { createApplicationRepository } from "./applications/repository";
@@ -421,6 +421,16 @@ if (gotSingleInstanceLock) {
       addCompany: (input) => ingestRepository.addCompany(input),
       startRun: () => ingestion.start(),
     });
+    // While the app runs, the board lists are walked in the background without waiting for the
+    // daily search: a slice every half hour. A slice that finds nothing new is quick, since boards
+    // known to be gone or empty are skipped.
+    const widenNow = async (): Promise<void> => {
+      const preferences = (await profileRepository.get())?.profile.preferences ?? null;
+      const request = preferences === null ? null : discoveryRequestFor(preferences);
+      if (request !== null) await discovery.widen(request);
+    };
+    setTimeout(() => void widenNow(), 60_000).unref();
+    setInterval(() => void widenNow(), 30 * 60_000).unref();
     /** Creates the main window, or shows the existing one (also from the tray and a notification). */
     function showMainWindow(): void {
       if (!mainWindow || mainWindow.isDestroyed()) {

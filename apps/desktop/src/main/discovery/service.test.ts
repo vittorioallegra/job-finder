@@ -211,5 +211,12 @@ describe("discovery service", () => {
     expect(service.status()).toEqual({ running: false, phase: null, stored: 3 });
     expect(cursor).toBe(2000);
     expect(checked).toEqual([{ board: "greenhouse/gone", kind: "dead" }]);
+
+    // A second pass soon after walks the board lists again but does not read the directories again.
+    answers.push({ ok: true, candidates: [], wideNext: 4000 });
+    await service.widen({ keywords: ["dev"], locations: ["Italia"] });
+    expect(asked).toHaveLength(3);
+    expect(asked[2]?.criteria).toMatchObject({ wide: { offset: 2000 } });
+    expect(cursor).toBe(4000);
   });
 });
