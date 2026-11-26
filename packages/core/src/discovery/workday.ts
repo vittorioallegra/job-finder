@@ -165,7 +165,7 @@ export async function workdayBoard(
       postedAt: info.startDate ?? undefined,
     });
     if (
-      isFreshPosting(job) &&
+      isFreshPosting(job, criteria.maxAgeDays) &&
       jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: false })
     ) {
       jobs.push(job);

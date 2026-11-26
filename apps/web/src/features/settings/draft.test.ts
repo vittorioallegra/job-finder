@@ -14,6 +14,7 @@ describe("settings draft", () => {
       ui: { language: "system" },
       notifications: { enabled: true },
       scheduler: { intervalHours: 24 },
+      jobs: { maxAgeDays: 30 },
       app: { closeBehavior: "ask", launchAtLogin: false },
       updates: { checkEnabled: true },
     });

@@ -123,7 +123,7 @@ export async function wideScan(
       }
       const kept = result.jobs.filter(
         (job) =>
-          isFreshPosting(job) &&
+          isFreshPosting(job, criteria.maxAgeDays) &&
           jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: false }),
       );
       jobs.push(...kept);

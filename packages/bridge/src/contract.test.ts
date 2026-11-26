@@ -23,6 +23,16 @@ describe("settings contract", () => {
     expect(AppSettingsPatchSchema.safeParse(patch(168)).success).toBe(true);
   });
 
+  it("defaults the age limit of jobs to 30 days and rejects one outside 1 to 365", () => {
+    expect(DEFAULT_APP_SETTINGS.jobs.maxAgeDays).toBe(30);
+    const patch = (maxAgeDays: number) => ({ jobs: { maxAgeDays } });
+    expect(AppSettingsPatchSchema.safeParse(patch(0)).success).toBe(false);
+    expect(AppSettingsPatchSchema.safeParse(patch(366)).success).toBe(false);
+    expect(AppSettingsPatchSchema.safeParse(patch(7.5)).success).toBe(false);
+    expect(AppSettingsPatchSchema.safeParse(patch(1)).success).toBe(true);
+    expect(AppSettingsPatchSchema.safeParse(patch(365)).success).toBe(true);
+  });
+
   it("rejects unknown sections and unknown keys inside a section", () => {
     expect(AppSettingsPatchSchema.safeParse({ unknown: { a: 1 } }).success).toBe(false);
     expect(

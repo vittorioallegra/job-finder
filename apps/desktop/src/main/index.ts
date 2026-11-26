@@ -537,7 +537,10 @@ if (gotSingleInstanceLock) {
           startRun: () => ingestion.start(),
           newMatches: async (since) =>
             findNewMatches(
-              filterFromPreferences((await profileRepository.get())?.profile.preferences ?? null),
+              filterFromPreferences(
+                (await profileRepository.get())?.profile.preferences ?? null,
+                (await settingsRepository.get()).jobs.maxAgeDays,
+              ),
               since,
               (filter) => ingestRepository.listJobs({ filter, sort: "newest" }, 500),
             ),
@@ -585,6 +588,7 @@ if (gotSingleInstanceLock) {
           withOffers: await companiesWithOffers(
             database.db,
             (await profileRepository.get())?.profile.preferences ?? null,
+            (await settingsRepository.get()).jobs.maxAgeDays,
           ),
         }),
         ingestion,

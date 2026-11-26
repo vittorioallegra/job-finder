@@ -26,6 +26,7 @@ export interface SettingsDraft {
   language: UiLanguage;
   notifications: boolean;
   intervalHours: string;
+  maxAgeDays: string;
   closeBehavior: CloseBehavior;
   launchAtLogin: boolean;
   checkUpdates: boolean;
@@ -46,6 +47,7 @@ export function draftFromSettings(settings: AppSettings): SettingsDraft {
     language: settings.ui.language,
     notifications: settings.notifications.enabled,
     intervalHours: String(settings.scheduler.intervalHours),
+    maxAgeDays: String(settings.jobs.maxAgeDays),
     closeBehavior: settings.app.closeBehavior,
     launchAtLogin: settings.app.launchAtLogin,
     checkUpdates: settings.updates.checkEnabled,
@@ -68,6 +70,7 @@ export function patchFromDraft(draft: SettingsDraft): AppSettingsPatch | null {
     ui: { language: draft.language },
     notifications: { enabled: draft.notifications },
     scheduler: { intervalHours: Number(draft.intervalHours) },
+    jobs: { maxAgeDays: Number(draft.maxAgeDays) },
     app: { closeBehavior: draft.closeBehavior, launchAtLogin: draft.launchAtLogin },
     updates: { checkEnabled: draft.checkUpdates },
   };

@@ -58,8 +58,12 @@ export function jobMatchesPlaces(
  * Whether a posting is recent enough to keep: one with a posting date older than the age limit is
  * not stored (job directories keep dead postings online for months); one without a date is kept.
  */
-export function isFreshPosting(job: NormalizedJob, now: number = Date.now()): boolean {
+export function isFreshPosting(
+  job: NormalizedJob,
+  maxAgeDays: number = MAX_POSTING_AGE_DAYS,
+  now: number = Date.now(),
+): boolean {
   if (job.postedAt === undefined) return true;
   const posted = Date.parse(job.postedAt);
-  return Number.isNaN(posted) || posted >= now - MAX_POSTING_AGE_DAYS * 24 * 60 * 60 * 1000;
+  return Number.isNaN(posted) || posted >= now - maxAgeDays * 24 * 60 * 60 * 1000;
 }

@@ -13,6 +13,8 @@ export interface DiscoveryCriteria {
    * places. `offset` and `count` pick the slice; the outcome's `wideNext` is where the next starts.
    */
   wide?: { offset: number; count: number };
+  /** Postings older than this many days are not kept (default 30). */
+  maxAgeDays?: number;
   /** Boards a wide scan skips: gone, or with nothing in the places lately, as "<ats>/<slug>". */
   skipBoards?: string[];
   /** Run only the postings sources (Workable's directory, Himalayas, Arbeitnow): the outcome's `jobs`. */

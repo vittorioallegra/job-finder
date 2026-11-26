@@ -112,7 +112,7 @@ export async function himalayasJobs(
           postedAt: isoFrom(raw.data.pubDate),
         });
         if (
-          isFreshPosting(job) &&
+          isFreshPosting(job, criteria.maxAgeDays) &&
           jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: true })
         ) {
           jobs.set(job.sourceJobId, job);
@@ -151,7 +151,7 @@ export async function arbeitnowJobs(
         postedAt: isoFrom(raw.data.created_at),
       });
       if (
-        isFreshPosting(job) &&
+        isFreshPosting(job, criteria.maxAgeDays) &&
         jobMatchesPlaces(job, criteria.locations, { remoteWithoutScope: false })
       ) {
         jobs.set(job.sourceJobId, job);

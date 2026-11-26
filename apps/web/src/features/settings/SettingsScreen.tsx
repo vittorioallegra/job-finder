@@ -300,6 +300,20 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
         />
       </Card>
 
+      <Card as="section" aria-labelledby="settings-jobs" className="flex flex-col gap-4">
+        <CardTitle id="settings-jobs">{t("settings.sections.jobs")}</CardTitle>
+        <TextInput
+          label={t("settings.jobs.maxAgeDays")}
+          hint={t("settings.jobs.hint")}
+          type="number"
+          inputMode="numeric"
+          min={SETTING_LIMITS.jobsMaxAgeDaysMin}
+          max={SETTING_LIMITS.jobsMaxAgeDaysMax}
+          value={draft.maxAgeDays}
+          onChange={(event) => change("maxAgeDays", event.target.value)}
+        />
+      </Card>
+
       <Card as="section" aria-labelledby="settings-window" className="flex flex-col gap-4">
         <CardTitle id="settings-window">{t("settings.sections.window")}</CardTitle>
         <SelectInput

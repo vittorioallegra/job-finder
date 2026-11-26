@@ -71,9 +71,9 @@ describe("job places", () => {
 
   it("keeps a recent or undated posting and drops one posted long ago", () => {
     const now = Date.parse("2026-11-26T00:00:00Z");
-    expect(isFreshPosting(job({ postedAt: "2026-11-01T00:00:00Z" }), now)).toBe(true);
-    expect(isFreshPosting(job({ postedAt: "2025-06-13T07:51:32Z" }), now)).toBe(false);
-    expect(isFreshPosting(job({}), now)).toBe(true);
-    expect(isFreshPosting(job({ postedAt: "not a date" }), now)).toBe(true);
+    expect(isFreshPosting(job({ postedAt: "2026-11-01T00:00:00Z" }), 30, now)).toBe(true);
+    expect(isFreshPosting(job({ postedAt: "2025-06-13T07:51:32Z" }), 30, now)).toBe(false);
+    expect(isFreshPosting(job({}), 30, now)).toBe(true);
+    expect(isFreshPosting(job({ postedAt: "not a date" }), 30, now)).toBe(true);
   });
 });

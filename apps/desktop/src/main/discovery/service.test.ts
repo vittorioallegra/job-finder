@@ -202,7 +202,8 @@ describe("discovery service", () => {
     expect(service.status()).toEqual({ running: false, phase: null, stored: 0 });
     await service.widen({ keywords: ["dev"], locations: ["Italia"] });
 
-    expect(asked[0]?.criteria).toMatchObject({ postings: true });
+    // The age limit of the settings goes with every request.
+    expect(asked[0]?.criteria).toMatchObject({ postings: true, maxAgeDays: 30 });
     expect(asked[1]?.criteria).toMatchObject({
       wide: { offset: 0, count: expect.any(Number) },
       skipBoards: ["greenhouse/old"],

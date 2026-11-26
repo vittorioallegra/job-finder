@@ -3,7 +3,7 @@ import { EMPLOYMENT_TYPES, WORK_MODES } from "../normalize/job";
 import type { JobPreferences } from "../profile/schema";
 
 /** Postings older than this are not shown: a posting kept online for a year is rarely still hiring. */
-export const MAX_POSTING_AGE_DAYS = 90;
+export const MAX_POSTING_AGE_DAYS = 30;
 
 /** Result orders: by affinity (unscored jobs last) or by newest posting first. */
 export const JOB_SORTS = ["affinity", "newest"] as const;
@@ -64,14 +64,17 @@ function withUnknown<T extends string>(chosen: readonly T[]): (T | "unknown")[] 
  * The filter a profile's preferences give: its roles, places, work modes and contracts. The level
  * is left to the affinity score, which reads the experience.
  */
-export function filterFromPreferences(preferences: JobPreferences | null): JobFilter {
-  if (preferences === null) return DEFAULT_JOB_FILTER;
+export function filterFromPreferences(
+  preferences: JobPreferences | null,
+  maxAgeDays: number = MAX_POSTING_AGE_DAYS,
+): JobFilter {
+  if (preferences === null) return { ...DEFAULT_JOB_FILTER, maxAgeDays };
   return {
     ...DEFAULT_JOB_FILTER,
     roles: [...preferences.roles],
     places: [...preferences.locations],
     workModes: withUnknown(preferences.workModes),
     employmentTypes: withUnknown(preferences.employmentTypes),
-    maxAgeDays: MAX_POSTING_AGE_DAYS,
+    maxAgeDays,
   };
 }

@@ -7,10 +7,14 @@ import type { AppDb } from "../db/operations";
 import { DIRECTORY_URL_PREFIX } from "./directory-jobs";
 
 /** The profile's places alone: a company stays for offers in them, whatever the roles. */
-function placesFilter(preferences: JobPreferences | null, recentOnly: boolean): JobFilter | null {
+function placesFilter(
+  preferences: JobPreferences | null,
+  recentOnly: boolean,
+  maxAgeDays?: number,
+): JobFilter | null {
   if (preferences === null) return null;
   return {
-    ...filterFromPreferences(preferences),
+    ...filterFromPreferences(preferences, maxAgeDays),
     roles: [],
     workModes: [],
     employmentTypes: [],
@@ -64,8 +68,9 @@ export async function pruneOffProfileCompanies(
 export async function companiesWithOffers(
   db: AppDb,
   preferences: JobPreferences | null,
+  maxAgeDays?: number,
 ): Promise<number> {
-  const filter = placesFilter(preferences, true);
+  const filter = placesFilter(preferences, true, maxAgeDays);
   const condition = filter === null ? undefined : jobFilterCondition(filter);
   const open = condition === undefined ? sql`1 = 1` : condition;
   const [row] = await db

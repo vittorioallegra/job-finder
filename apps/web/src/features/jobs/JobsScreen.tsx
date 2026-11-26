@@ -39,7 +39,8 @@ type LoadState = { status: "loading" } | { status: "error" } | ({ status: "ready
 const SORTS: readonly JobSort[] = ["affinity", "newest"];
 
 function isDefaultFilter(filter: JobFilter): boolean {
-  return JSON.stringify(filter) === JSON.stringify(DEFAULT_JOB_FILTER);
+  // The age limit comes from the settings, not from a choice made here.
+  return JSON.stringify({ ...filter, maxAgeDays: 0 }) === JSON.stringify(DEFAULT_JOB_FILTER);
 }
 
 /**
@@ -94,7 +95,8 @@ export function JobsScreen() {
     try {
       const profile = await bridge.profile.get().catch(() => null);
       const preferences = profile?.profile.preferences ?? null;
-      const base = filterFromPreferences(preferences);
+      const settings = await bridge.settings.get().catch(() => null);
+      const base = filterFromPreferences(preferences, settings?.jobs.maxAgeDays);
       const [lists, latest] = await Promise.all([
         readLists(base, "affinity"),
         bridge.ingest.latest(),

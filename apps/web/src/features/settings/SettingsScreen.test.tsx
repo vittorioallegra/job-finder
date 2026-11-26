@@ -270,6 +270,21 @@ describe("settings screen", () => {
     expect(field(container, "Model")).toBeInstanceOf(HTMLInputElement);
   });
 
+  it("shows the age limit of jobs at 30 days and saves a changed one", async () => {
+    const memory = createMemoryBridge();
+    const update = vi.fn(memory.settings.update);
+    await render({ ...memory, settings: { ...memory.settings, update } });
+    expect(field(container, "Show jobs posted within the last").value).toBe("30");
+    await act(async () => {
+      setInputValue(field(container, "Show jobs posted within the last"), "14");
+    });
+    await act(async () => {
+      button(container, "Save settings").click();
+    });
+    await act(async () => {});
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ jobs: { maxAgeDays: 14 } }));
+  });
+
   it("refuses an out-of-range interval without calling the bridge", async () => {
     const memory = createMemoryBridge();
     const update = vi.fn(memory.settings.update);

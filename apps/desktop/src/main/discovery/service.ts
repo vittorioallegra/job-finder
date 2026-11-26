@@ -80,6 +80,7 @@ export function createDiscoveryService(options: DiscoveryServiceOptions): Discov
       const current = options.engine();
       if (!current || widening || !options.storeJobs || !options.wideCursor) return;
       widening = true;
+      const maxAgeDays = (await options.settings.get()).jobs.maxAgeDays;
       status = { running: true, phase: "postings", stored: 0 };
       const keep = async (jobs: NormalizedJob[]): Promise<void> => {
         const stored = await options.storeJobs?.(jobs);
@@ -89,7 +90,12 @@ export function createDiscoveryService(options: DiscoveryServiceOptions): Discov
         // The postings of the job directories first, then the next slice of the board lists.
         if (Date.now() - postingsAt >= POSTINGS_EVERY_MS) {
           const postings = await current.discoverCompanies(
-            { keywords: request.keywords, locations: request.locations, postings: true },
+            {
+              keywords: request.keywords,
+              locations: request.locations,
+              postings: true,
+              maxAgeDays,
+            },
             { duckduckgo: false, keyed: [] },
           );
           if (postings.ok) postingsAt = Date.now();
@@ -104,6 +110,7 @@ export function createDiscoveryService(options: DiscoveryServiceOptions): Discov
           {
             keywords: request.keywords,
             locations: request.locations,
+            maxAgeDays,
             wide: { offset, count: WIDE_SLICE },
             knownBoards,
             skipBoards: options.wideChecked ? await options.wideChecked.skip() : [],

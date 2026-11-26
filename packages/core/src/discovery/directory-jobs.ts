@@ -109,7 +109,7 @@ export async function directoryJobs(
           if (!parsed.success) continue;
           const job = jobFromDirectory(parsed.data);
           // Workable keeps dead postings online for months: only recent ones are kept.
-          if (isFreshPosting(job)) jobs.set(job.sourceJobId, job);
+          if (isFreshPosting(job, criteria.maxAgeDays)) jobs.set(job.sourceJobId, job);
         }
         token = data.nextPageToken;
         if (!token) break;

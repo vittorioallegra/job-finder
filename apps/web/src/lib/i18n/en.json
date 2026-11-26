@@ -68,7 +68,8 @@
       "notifications": "Notifications",
       "scheduler": "Scheduler",
       "window": "Window and startup",
-      "updates": "Updates"
+      "updates": "Updates",
+      "jobs": "Jobs"
     },
     "ai": {
       "provider": "Provider",
@@ -197,6 +198,10 @@
       "keyFailed": "The key could not be saved.",
       "removeFailed": "The key could not be removed.",
       "storagePlain": "Keys are kept in the app's data folder on this computer, without the system keychain."
+    },
+    "jobs": {
+      "maxAgeDays": "Show jobs posted within the last (days)",
+      "hint": "Older jobs are not shown, scored or stored. Between 1 and 365 days."
     }
   },
   "profile": {

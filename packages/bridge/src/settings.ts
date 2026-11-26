@@ -16,6 +16,8 @@ export const SETTING_LIMITS = {
   contextSizeMax: 1_000_000,
   schedulerIntervalHoursMin: 1,
   schedulerIntervalHoursMax: 168,
+  jobsMaxAgeDaysMin: 1,
+  jobsMaxAgeDaysMax: 365,
   modelMaxLength: 200,
   baseUrlMaxLength: 500,
 } as const;
@@ -66,6 +68,15 @@ const schedulerSection = z.strictObject({
     .max(SETTING_LIMITS.schedulerIntervalHoursMax),
 });
 
+const jobsSection = z.strictObject({
+  /** Jobs posted longer ago than this are not shown, scored or kept. */
+  maxAgeDays: z
+    .number()
+    .int()
+    .min(SETTING_LIMITS.jobsMaxAgeDaysMin)
+    .max(SETTING_LIMITS.jobsMaxAgeDaysMax),
+});
+
 const appSection = z.strictObject({
   closeBehavior: z.enum(CLOSE_BEHAVIORS),
   launchAtLogin: z.boolean(),
@@ -80,6 +91,7 @@ export const SETTINGS_SECTIONS = {
   ui: uiSection,
   notifications: notificationsSection,
   scheduler: schedulerSection,
+  jobs: jobsSection,
   app: appSection,
   updates: updatesSection,
 } as const;
@@ -104,6 +116,7 @@ export const AppSettingsPatchSchema = z
     ui: uiSection.partial(),
     notifications: notificationsSection.partial(),
     scheduler: schedulerSection.partial(),
+    jobs: jobsSection.partial(),
     app: appSection.partial(),
     updates: updatesSection.partial(),
   })
@@ -119,6 +132,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   ui: { language: "system" },
   notifications: { enabled: true },
   scheduler: { intervalHours: 24 },
+  jobs: { maxAgeDays: 30 },
   app: { closeBehavior: "ask", launchAtLogin: false },
   updates: { checkEnabled: true },
 };

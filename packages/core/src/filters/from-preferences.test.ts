@@ -6,7 +6,9 @@ import { DEFAULT_JOB_FILTER, filterFromPreferences } from "./schema";
 
 describe("filterFromPreferences", () => {
   it("starts from the default filter without preferences", () => {
-    expect(filterFromPreferences(null)).toEqual(DEFAULT_JOB_FILTER);
+    // Even without preferences, the age limit applies.
+    expect(filterFromPreferences(null)).toEqual({ ...DEFAULT_JOB_FILTER, maxAgeDays: 30 });
+    expect(filterFromPreferences(null, 14).maxAgeDays).toBe(14);
   });
 
   it("carries the roles and the places, and keeps unknown modes when modes are chosen", () => {
