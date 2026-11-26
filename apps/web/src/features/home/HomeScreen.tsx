@@ -1,4 +1,4 @@
-import { Briefcase, KanbanSquare, Target, UserRound, type LucideIcon } from "lucide-react";
+import { Briefcase, Check, KanbanSquare, Target, UserRound, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -107,7 +107,6 @@ export function HomeScreen() {
             done={false}
             to="/jobs"
             action={t("home.jobsAction")}
-            primary={state.overview.hasProfile && state.overview.roles.length > 0}
           />
           <StepCard
             icon={KanbanSquare}
@@ -135,25 +134,23 @@ interface StepCardProps {
   done: boolean;
   to: string;
   action: string;
-  primary?: boolean;
 }
 
-function StepCard({ step, icon: Icon, title, body, done, to, action, primary }: StepCardProps) {
+function StepCard({ step, icon: Icon, title, body, done, to, action }: StepCardProps) {
   const { t } = useTranslation();
   return (
     <Card as="li" className="flex flex-col gap-4">
       <div className="flex items-start gap-4">
-        <div
-          className={`grid size-11 flex-none place-items-center rounded-full ${
-            done ? "bg-app-good-soft text-app-good" : "bg-app-accent-soft text-app-accent"
-          }`}
-        >
+        <div className="grid size-11 flex-none place-items-center rounded-full bg-app-accent-soft text-app-accent">
           <Icon aria-hidden="true" className="size-5" strokeWidth={1.8} />
         </div>
         <div className="min-w-0">
           {step ? (
-            <p className="text-xs font-medium tracking-wide text-app-subtle uppercase">
+            <p className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-app-subtle uppercase">
               {t("home.stepLabel", { n: step })}
+              {done ? (
+                <Check aria-hidden="true" className="size-3.5 text-app-good" strokeWidth={2.4} />
+              ) : null}
             </p>
           ) : null}
           <h2 className="font-display text-xl font-semibold text-app-fg">{title}</h2>
@@ -161,7 +158,7 @@ function StepCard({ step, icon: Icon, title, body, done, to, action, primary }: 
         </div>
       </div>
       <div className="mt-auto flex justify-end border-t border-dashed border-app-border pt-4">
-        <Link to={to} className={buttonClass(primary ? "accent" : "secondary", "sm")}>
+        <Link to={to} className={buttonClass("secondary", "sm")}>
           {action}
         </Link>
       </div>
