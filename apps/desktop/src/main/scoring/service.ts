@@ -1,4 +1,10 @@
-import { hasAiConsent, type ScoreStartRequest, type ScoreStartResult } from "@job-finder/bridge";
+import {
+  aiConsentTarget,
+  hasAiConsent,
+  isCloudAiEndpoint,
+  type ScoreStartRequest,
+  type ScoreStartResult,
+} from "@job-finder/bridge";
 import { hardFilter, JobFilterSchema, type JobFilter } from "@job-finder/core/filters";
 import { scoringFields } from "@job-finder/core/profile";
 import type { ExplanationLanguage } from "@job-finder/core/ranking";
@@ -26,7 +32,7 @@ export interface ScoringService {
 export interface ScoringServiceOptions {
   engine: ScoringEngine;
   profile: Pick<ProfileRepository, "get">;
-  settings: Pick<SettingsRepository, "get">;
+  settings: Pick<SettingsRepository, "get" | "update">;
   secrets: Pick<SecretStore, "read">;
   /**
    * Open job ids that pass the given (hard) filter: the `preferredIds` first, then the newest, at most
@@ -59,8 +65,15 @@ export function createScoringService(options: ScoringServiceOptions): ScoringSer
       return { ok: false, code: "no-profile" };
     }
     const { ai, ui } = await options.settings.get();
+    if (!ai.enabled) {
+      return { ok: false, code: "ai-unavailable" };
+    }
     if (!hasAiConsent(ai, request)) {
       return { ok: false, code: "consent-required" };
+    }
+    // The consent given here is kept, so a later scan can score its new jobs without asking again.
+    if (isCloudAiEndpoint(ai) && ai.consentTarget !== aiConsentTarget(ai)) {
+      await options.settings.update({ ai: { consentTarget: aiConsentTarget(ai) } });
     }
     // The jobs that pass the hard filters are scored; the new-only view only narrows the list, so it
     // does not narrow the run.

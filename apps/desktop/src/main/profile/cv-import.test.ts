@@ -1,5 +1,5 @@
 // protects=a CV goes to the engine only with the key and the file, and a cloud provider receives it only after the user consents, while a loopback endpoint does not need consent;
-// fails_when=a cloud import without consent reaches the engine, a loopback import is refused for missing consent, the key is missing from the engine request, or an engine failure is passed on as a raw error;
+// fails_when=a CV is read with the AI off, a cloud import without consent reaches the engine, a loopback import is refused for missing consent, the key is missing from the engine request, or an engine failure is passed on as a raw error;
 // no_claim=the consent note text and the renderer checkbox are not checked here; the engine's extraction is covered in packages/core.
 import { describe, expect, it } from "vitest";
 import { DEFAULT_APP_SETTINGS, type AppSettings } from "@job-finder/bridge";
@@ -14,7 +14,10 @@ function services(
   engine: Omit<CvEngine, "cancelCvImports"> & Partial<Pick<CvEngine, "cancelCvImports">>,
 ) {
   const settings: SettingsRepository = {
-    get: async () => ({ ...DEFAULT_APP_SETTINGS, ai: { ...DEFAULT_APP_SETTINGS.ai, ...ai } }),
+    get: async () => ({
+      ...DEFAULT_APP_SETTINGS,
+      ai: { ...DEFAULT_APP_SETTINGS.ai, enabled: true, ...ai },
+    }),
     update: async () => DEFAULT_APP_SETTINGS,
   };
   const secrets = { read: async () => "sk-cv-test" } as unknown as SecretStore;
@@ -104,5 +107,24 @@ describe("CV import service", () => {
     const brokenResult = await broken.importCv(upload(false));
     expect(brokenResult).toEqual({ ok: false, code: "unknown" });
     expect(JSON.stringify(brokenResult)).not.toContain("secret parser detail");
+  });
+
+  it("does not read a CV without an AI, and never reaches the engine", async () => {
+    const calls: EngineCvImportRequest[] = [];
+    const service = services(
+      { enabled: false, provider: "anthropic", model: "claude-test" },
+      {
+        importCv: async (request) => {
+          calls.push(request);
+          return { ok: false, code: "unknown" };
+        },
+      },
+    );
+
+    expect(await service.importCv(upload(true, "anthropic"))).toEqual({
+      ok: false,
+      code: "not-configured",
+    });
+    expect(calls).toHaveLength(0);
   });
 });

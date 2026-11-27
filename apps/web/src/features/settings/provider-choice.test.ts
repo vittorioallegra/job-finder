@@ -9,21 +9,38 @@ describe("AI provider choice", () => {
   it("saves Ollama as the OpenAI-compatible provider and reads it back as Ollama", () => {
     const saved = aiSettingsFromChoice({ choice: "ollama", model: "qwen3:8b", baseUrl: "" });
     expect(saved).toEqual({
+      enabled: true,
       provider: "openai-compatible",
       model: "qwen3:8b",
       baseUrl: OLLAMA_BASE_URL,
     });
     expect(aiChoiceFromSettings(saved)).toBe("ollama");
     expect(
-      aiChoiceFromSettings({ provider: "openai-compatible", baseUrl: "http://localhost:1234/v1" }),
+      aiChoiceFromSettings({
+        enabled: true,
+        provider: "openai-compatible",
+        baseUrl: "http://localhost:1234/v1",
+      }),
     ).toBe("openai-compatible");
-    expect(aiChoiceFromSettings({ provider: "anthropic", baseUrl: "" })).toBe("anthropic");
+    expect(aiChoiceFromSettings({ enabled: true, provider: "anthropic", baseUrl: "" })).toBe(
+      "anthropic",
+    );
+    // With the AI switched off the menu shows "none", whatever provider is saved.
+    expect(aiChoiceFromSettings({ enabled: false, provider: "anthropic", baseUrl: "" })).toBe(
+      "none",
+    );
+    expect(aiSettingsFromChoice({ choice: "none", model: "x", baseUrl: "y" })).toEqual({
+      enabled: false,
+      provider: "anthropic",
+      model: "",
+      baseUrl: "",
+    });
   });
 
   it("drops the base URL for a hosted provider", () => {
     expect(
       aiSettingsFromChoice({ choice: "openai", model: "m", baseUrl: "http://localhost:11434/v1" }),
-    ).toEqual({ provider: "openai", model: "m", baseUrl: "" });
+    ).toEqual({ enabled: true, provider: "openai", model: "m", baseUrl: "" });
   });
 
   it("starts the model and address over on every provider switch", () => {
@@ -46,6 +63,7 @@ describe("Gemini choice", () => {
   it("saves Gemini at Google's address and reads it back as Gemini", () => {
     const saved = aiSettingsFromChoice({ choice: "gemini", model: "gemini-flash", baseUrl: "" });
     expect(saved).toEqual({
+      enabled: true,
       provider: "openai-compatible",
       model: "gemini-flash",
       baseUrl: GEMINI_BASE_URL,

@@ -10,9 +10,10 @@ import {
  * What the provider menu offers. Gemini and Ollama are not providers of their own in the
  * settings: each is the OpenAI-compatible provider at its known address, shown as a guided choice.
  */
-export type AiChoice = AiProvider | "gemini" | "ollama";
+export type AiChoice = "none" | AiProvider | "gemini" | "ollama";
 
 export const AI_CHOICES: readonly AiChoice[] = [
+  "none",
   "anthropic",
   "openai",
   "gemini",
@@ -27,27 +28,39 @@ export interface AiChoiceFields {
   baseUrl: string;
 }
 
-/** The menu entry for saved settings: Gemini or Ollama when the OpenAI-compatible URL is theirs. */
-export function aiChoiceFromSettings(ai: { provider: AiProvider; baseUrl: string }): AiChoice {
-  return aiSourceFor(ai);
+/**
+ * The menu entry for saved settings: "none" when the AI is off, Gemini or Ollama when the
+ * OpenAI-compatible URL is theirs.
+ */
+export function aiChoiceFromSettings(ai: {
+  enabled: boolean;
+  provider: AiProvider;
+  baseUrl: string;
+}): AiChoice {
+  return ai.enabled ? aiSourceFor(ai) : "none";
 }
 
 /** The provider and base URL to save for a menu entry. Hosted providers keep no base URL. */
 export function aiSettingsFromChoice(fields: AiChoiceFields): {
+  enabled: boolean;
   provider: AiProvider;
   model: string;
   baseUrl: string;
 } {
+  if (fields.choice === "none") {
+    return { enabled: false, provider: "anthropic", model: "", baseUrl: "" };
+  }
   if (fields.choice === "gemini") {
     // The address is fixed; the screen does not show it.
     const baseUrl = isGeminiBaseUrl(fields.baseUrl) ? fields.baseUrl : GEMINI_BASE_URL;
-    return { provider: "openai-compatible", model: fields.model, baseUrl };
+    return { enabled: true, provider: "openai-compatible", model: fields.model, baseUrl };
   }
   if (fields.choice === "ollama") {
     const baseUrl = fields.baseUrl.trim() === "" ? OLLAMA_BASE_URL : fields.baseUrl;
-    return { provider: "openai-compatible", model: fields.model, baseUrl };
+    return { enabled: true, provider: "openai-compatible", model: fields.model, baseUrl };
   }
   return {
+    enabled: true,
     provider: fields.choice,
     model: fields.model,
     baseUrl: fields.choice === "openai-compatible" ? fields.baseUrl : "",

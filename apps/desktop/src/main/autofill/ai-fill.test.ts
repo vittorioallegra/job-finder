@@ -1,5 +1,5 @@
 // protects=the autofill AI adapter reports the AI as not configured until a model (and a base URL for an OpenAI-compatible endpoint) is set, treats a remote endpoint as cloud and a local one as not, and hands the saved key, the settings and the draft language to the engine only for the mapping;
-// fails_when=an empty model reads as ready, a remote endpoint reads as local, a local endpoint needs consent, the saved key or the wrong language is sent, or an engine failure is reported as a valid answer;
+// fails_when=the form fallback runs with the AI off, an empty model reads as ready, a remote endpoint reads as local, a local endpoint needs consent, the saved key or the wrong language is sent, or an engine failure is reported as a valid answer;
 // no_claim=the engine is a scripted double and the settings and secrets are in-memory stand-ins; no provider is called and the key store's encryption is not exercised here;
 import { describe, expect, it, vi } from "vitest";
 import type { SettingsRepository } from "../settings/repository";
@@ -9,9 +9,12 @@ import { createAutofillAi } from "./ai-fill";
 import type { MapFormFieldsRequest } from "../../engine/protocol";
 import { emptyProfile } from "@job-finder/core/profile";
 
-function settingsWith(ai: Partial<{ provider: string; model: string; baseUrl: string }>) {
+function settingsWith(
+  ai: Partial<{ enabled: boolean; provider: string; model: string; baseUrl: string }>,
+) {
   const value = {
     ai: {
+      enabled: true,
       provider: "openai-compatible",
       model: "local-model",
       baseUrl: "http://localhost:1234/v1",
@@ -141,5 +144,29 @@ describe("createAutofillAi", () => {
     const input = { applicationId: "a1", profile: emptyProfile(), fields: [], consent: false };
     expect(await unavailable.map(input)).toEqual({ ok: false, code: "engine-unavailable" });
     expect(await broken.map(input)).toEqual({ ok: false, code: "unknown" });
+  });
+
+  it("is not configured while the AI is off, and sends nothing then", async () => {
+    const ai = createAutofillAi({
+      settings: settingsWith({ enabled: false }),
+      secrets,
+      engine: {
+        mapFormFields: async () => {
+          throw new Error("must not be called");
+        },
+      },
+      language: async () => "en",
+    } as never);
+
+    expect(await ai.status()).toEqual({ state: "not-configured" });
+    expect(
+      await ai.map({
+        applicationId: "a",
+        profile: {} as never,
+        fields: [],
+        consent: true,
+        consentTarget: "x",
+      } as never),
+    ).toEqual({ ok: false, code: "not-configured" });
   });
 });

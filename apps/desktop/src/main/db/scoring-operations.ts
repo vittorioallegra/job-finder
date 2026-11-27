@@ -1,5 +1,5 @@
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
-import { companies, jobScores, jobs } from "@job-finder/core";
+import { and, eq, gte, inArray, isNull, sql } from "drizzle-orm";
+import { companies, jobScores, jobs, runs } from "@job-finder/core";
 import { jobFilterCondition } from "@job-finder/core/filters/sql";
 import type { JobFilter } from "@job-finder/core/filters";
 import type { JobLocation, Salary } from "@job-finder/core/normalize";
@@ -105,4 +105,15 @@ export async function scoringCandidateIds(
     .orderBy(...preferredFirst, newest, jobs.title)
     .limit(limit);
   return rows.map((row) => row.id);
+}
+
+/** How many jobs were first seen since the run started: what a scan found that was not there before. */
+export async function newJobsSinceRun(db: AppDb, runId: string): Promise<number> {
+  const [run] = await db.select({ startedAt: runs.startedAt }).from(runs).where(eq(runs.id, runId));
+  if (!run) return 0;
+  const [row] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(jobs)
+    .where(gte(jobs.firstSeenAt, run.startedAt));
+  return Number(row?.count ?? 0);
 }

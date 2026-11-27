@@ -19,12 +19,21 @@ import { ApplicationDocuments } from "./ApplicationDocuments";
 
 const cloudSettings = {
   ...DEFAULT_APP_SETTINGS,
-  ai: { provider: "anthropic" as const, model: "claude-test", baseUrl: "", contextSize: 8192 },
+  ai: {
+    enabled: true,
+    consentTarget: "",
+    provider: "anthropic" as const,
+    model: "claude-test",
+    baseUrl: "",
+    contextSize: 8192,
+  },
 };
 
 const localSettings = {
   ...DEFAULT_APP_SETTINGS,
   ai: {
+    enabled: true,
+    consentTarget: "",
     provider: "openai-compatible" as const,
     model: "local-model",
     baseUrl: "http://localhost:11434/v1",

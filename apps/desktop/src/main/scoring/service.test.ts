@@ -1,5 +1,5 @@
 // protects=a scoring run starts only with a saved profile and, for a cloud provider, the user's consent; its candidates pass the hard filters with the visible jobs first; the explanations are asked for in the UI language (the system locale when the setting follows the system); the engine gets the ranking fields and the key but no contact details; a second run is refused while one is active; and an engine that is gone is reported as unavailable;
-// fails_when=the run scores jobs outside the hard filters, the minimum score or the new-only view narrows the run, the visible jobs are not first, the explanations are asked in another language than the UI setting, the engine is asked without a profile or without consent for a cloud provider, the contact details leave main with the profile, the key is missing from the request, a second run starts while one is active, or a lost engine is reported as a store failure;
+// fails_when=the run goes ahead with the AI off, a cloud consent is not kept, the run scores jobs outside the hard filters, the minimum score or the new-only view narrows the run, the visible jobs are not first, the explanations are asked in another language than the UI setting, the engine is asked without a profile or without consent for a cloud provider, the contact details leave main with the profile, the key is missing from the request, a second run starts while one is active, or a lost engine is reported as a store failure;
 // no_claim=the real engine, the database and the provider are not reached; the engine and database tests cover them;
 import { describe, expect, it } from "vitest";
 import { DEFAULT_APP_SETTINGS, type AppSettings } from "@job-finder/bridge";
@@ -19,7 +19,14 @@ function profile(): Profile {
 function settings(provider: AppSettings["ai"]["provider"], baseUrl = ""): AppSettings {
   return {
     ...DEFAULT_APP_SETTINGS,
-    ai: { ...DEFAULT_APP_SETTINGS.ai, provider, model: "local-model", baseUrl, contextSize: 4096 },
+    ai: {
+      ...DEFAULT_APP_SETTINGS.ai,
+      enabled: true,
+      provider,
+      model: "local-model",
+      baseUrl,
+      contextSize: 4096,
+    },
   };
 }
 
@@ -30,6 +37,7 @@ function deps(overrides: {
   key?: string | null;
   ui?: AppSettings["ui"];
   locale?: string;
+  onUpdate?: (patch: unknown) => void;
 }) {
   const requests: ScoreJobsRequest[] = [];
   const candidateCalls: Array<{ filter: JobFilter; preferredIds: string[] }> = [];
@@ -52,6 +60,10 @@ function deps(overrides: {
         ...(overrides.ai ?? settings("openai-compatible", "http://localhost:11434/v1")),
         ui: overrides.ui ?? DEFAULT_APP_SETTINGS.ui,
       }),
+      update: async (patch) => {
+        overrides.onUpdate?.(patch);
+        return DEFAULT_APP_SETTINGS;
+      },
     },
     secrets: { read: async () => (overrides.key === undefined ? "sk-test" : overrides.key) },
     candidateIds: async (filter, preferredIds, limit) => {
@@ -179,7 +191,10 @@ describe("scoring service", () => {
     const service = createScoringService({
       engine,
       profile: { get: async () => ({ profile: profile(), version: 1, updatedAt: 1 }) },
-      settings: { get: async () => settings("openai-compatible", "http://localhost:11434/v1") },
+      settings: {
+        get: async () => settings("openai-compatible", "http://localhost:11434/v1"),
+        update: async () => DEFAULT_APP_SETTINGS,
+      },
       secrets: { read: async () => null },
       candidateIds: async () => ["j1"],
       systemLocale: () => "en-US",
@@ -203,7 +218,10 @@ describe("scoring service", () => {
         },
       },
       profile: { get: async () => ({ profile: profile(), version: 1, updatedAt: 1 }) },
-      settings: { get: async () => settings("openai-compatible", "http://localhost:11434/v1") },
+      settings: {
+        get: async () => settings("openai-compatible", "http://localhost:11434/v1"),
+        update: async () => DEFAULT_APP_SETTINGS,
+      },
       secrets: { read: async () => null },
       candidateIds: async () => ["j1"],
       systemLocale: () => "en-US",
@@ -213,5 +231,24 @@ describe("scoring service", () => {
       ok: false,
       code: "engine-unavailable",
     });
+  });
+
+  it("does not run without an AI, and keeps the consent given for a cloud provider so a scan can score by itself later", async () => {
+    const off = deps({
+      ai: { ...settings("anthropic"), ai: { ...settings("anthropic").ai, enabled: false } },
+    });
+    expect(await off.service.start({ consent: true, consentTarget: "anthropic" })).toEqual({
+      ok: false,
+      code: "ai-unavailable",
+    });
+    expect(off.requests).toHaveLength(0);
+
+    const updates: unknown[] = [];
+    const cloud = deps({ ai: settings("anthropic"), onUpdate: (patch) => updates.push(patch) });
+    await cloud.service.start({ consent: true, consentTarget: "anthropic" });
+    expect(updates).toEqual([{ ai: { consentTarget: "anthropic" } }]);
+    const local = deps({ onUpdate: (patch) => updates.push(patch) });
+    await local.service.start({ consent: false });
+    expect(updates).toHaveLength(1);
   });
 });

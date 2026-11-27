@@ -119,6 +119,7 @@ test("the journey runs from onboarding to a blocked second application", async (
     await call(window, "settings", "update", { ui: { language: "en" } });
     await call(window, "settings", "update", {
       ai: {
+        enabled: true,
         provider: "openai-compatible",
         model: "fixture-replay-model",
         baseUrl: `${fixtures.url}/v1`,
@@ -157,6 +158,20 @@ test("the journey runs from onboarding to a blocked second application", async (
     const job = listed.find((item) => item.title === "Software Engineer");
     expect(job).toBeDefined();
     if (!job) return;
+
+    // The scan that found the job scored it by itself: the AI is on and runs on this computer.
+    await expect
+      .poll(
+        async () =>
+          (
+            await call<{ title: string; score: number | null }[]>(window, "jobs", "list", {
+              filter: {},
+              sort: "newest",
+            })
+          ).find((item) => item.title === "Software Engineer")?.score ?? null,
+        { timeout: 20_000 },
+      )
+      .toBe(82);
 
     // Open the job and prepare it: a preparing application, a stored CV and cover letter (autofill prints them to PDFs when the form opens).
     expect(await call(window, "jobs", "detail", { jobId: job.id })).not.toBeNull();

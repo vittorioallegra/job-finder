@@ -1,4 +1,10 @@
-import { hasAiConsent, type CvImportRequest, type CvImportResult } from "@job-finder/bridge";
+import {
+  aiConsentTarget,
+  hasAiConsent,
+  isCloudAiEndpoint,
+  type CvImportRequest,
+  type CvImportResult,
+} from "@job-finder/bridge";
 import type {
   CvImportOutcome,
   CvImportRequest as EngineCvImportRequest,
@@ -37,8 +43,13 @@ export function createCvImportService(options: CvImportServiceOptions): CvImport
   return {
     async importCv(request) {
       const { ai } = await options.settings.get();
+      if (!ai.enabled) return { ok: false, code: "not-configured" };
       if (!hasAiConsent(ai, request)) {
         return { ok: false, code: "consent-required" };
+      }
+      // The consent given here is kept, so a later scan can score its new jobs without asking again.
+      if (isCloudAiEndpoint(ai) && ai.consentTarget !== aiConsentTarget(ai)) {
+        await options.settings.update({ ai: { consentTarget: aiConsentTarget(ai) } });
       }
       const apiKey = await readAiKey(options.secrets, ai);
       try {

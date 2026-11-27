@@ -61,7 +61,14 @@ export interface MemoryBridgeOptions {
  * runs without the desktop preload. Nothing is persisted and secret values are never kept.
  */
 export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinderBridge {
-  let settings: AppSettings = structuredClone(options.settings ?? DEFAULT_APP_SETTINGS);
+  // The in-memory bridge starts with an AI provider chosen, so the screens that use one can be
+  // exercised; the real app starts with none (`DEFAULT_APP_SETTINGS`).
+  let settings: AppSettings = structuredClone(
+    options.settings ?? {
+      ...DEFAULT_APP_SETTINGS,
+      ai: { ...DEFAULT_APP_SETTINGS.ai, enabled: true },
+    },
+  );
   const keys = Object.fromEntries(SECRET_NAMES.map((name) => [name, false])) as Record<
     SecretName,
     boolean

@@ -141,7 +141,16 @@ export function OnboardingScreen() {
           bridge={bridge}
           settings={settings}
           onSaved={setSettings}
-          onContinue={() => setStep("cv")}
+          onContinue={(aiOn) => {
+            // Without an AI the CV cannot be read: the profile is filled in by hand.
+            if (aiOn) {
+              setStep("cv");
+            } else {
+              setDraft(draftFromProfile(emptyProfile()));
+              setWarnings([]);
+              setStep("review");
+            }
+          }}
         />
       ) : null}
 
@@ -184,7 +193,7 @@ export function OnboardingScreen() {
             }
           />
           <div>
-            <Button variant="ghost" onClick={() => setStep("cv")}>
+            <Button variant="ghost" onClick={() => setStep(settings.ai.enabled ? "cv" : "ai")}>
               <ArrowLeft aria-hidden className="size-4" />
               {t("onboarding.back")}
             </Button>
@@ -199,7 +208,7 @@ interface AiStepProps {
   bridge: JobFinderBridge;
   settings: AppSettings;
   onSaved: (settings: AppSettings) => void;
-  onContinue: () => void;
+  onContinue: (aiOn: boolean) => void;
 }
 
 /** Saves the provider, model and endpoint, then the key. Continue unlocks only once the settings are saved. */
@@ -321,12 +330,17 @@ function AiStep({ bridge, settings, onSaved, onContinue }: AiStepProps) {
           </Button>
         </div>
       </form>
-      <AiConnectionTest
-        bridge={bridge}
-        saveChanges={() => (dirty ? saveFields() : Promise.resolve(true))}
-      />
+      {fields.choice === "none" ? null : (
+        <AiConnectionTest
+          bridge={bridge}
+          saveChanges={() => (dirty ? saveFields() : Promise.resolve(true))}
+        />
+      )}
       <div className="flex justify-end border-t border-app-border pt-4">
-        <Button onClick={onContinue} disabled={dirty || message === "saving"}>
+        <Button
+          onClick={() => onContinue(fields.choice !== "none")}
+          disabled={dirty || message === "saving"}
+        >
           {t("onboarding.ai.continue")}
         </Button>
       </div>

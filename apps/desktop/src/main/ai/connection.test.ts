@@ -1,5 +1,5 @@
 // protects=the connection test reads the saved AI settings and the key in main, hands the key only to the engine, and returns a code (never the key) for every outcome including an unreachable engine; each provider gets only its own key (Ollama none), and the model list sends the OpenAI-compatible key only to the saved server and asks Ollama only on loopback;
-// fails_when=the key is returned or logged in the result, the wrong provider or model is sent, an unreachable engine is reported as a generic failure, or the key reaches another address through the model list;
+// fails_when=a connection is tested with the AI off, the key is returned or logged in the result, the wrong provider or model is sent, an unreachable engine is reported as a generic failure, or the key reaches another address through the model list;
 // no_claim=the provider request itself and the keychain are not exercised; the engine round trip is covered by the supervisor test.
 import { describe, expect, it } from "vitest";
 import { DEFAULT_APP_SETTINGS, type AppSettings, type SecretName } from "@job-finder/bridge";
@@ -24,7 +24,7 @@ const noModels = async (): Promise<AiModelsOutcome> => ({
 function settingsWith(ai: Partial<AppSettings["ai"]>): SettingsRepository {
   const settings: AppSettings = {
     ...DEFAULT_APP_SETTINGS,
-    ai: { ...DEFAULT_APP_SETTINGS.ai, ...ai },
+    ai: { ...DEFAULT_APP_SETTINGS.ai, enabled: true, ...ai },
   };
   return {
     get: async () => settings,
@@ -221,5 +221,23 @@ describe("AI connection service", () => {
     await expect(
       withoutKey.listModels({ source: "ollama", baseUrl: "http://127.0.0.1:11434/v1" }),
     ).resolves.toEqual({ ok: false, code: "engine-unavailable" });
+  });
+
+  it("does not test a connection with the AI off", async () => {
+    let asked = 0;
+    const service = createAiConnectionService({
+      settings: settingsWith({ enabled: false, provider: "anthropic", model: "claude-test" }),
+      secrets: secretsReturning(KEY),
+      engine: {
+        listModels: noModels,
+        testAiConnection: async () => {
+          asked += 1;
+          return { ok: true, model: "x" };
+        },
+      },
+    });
+
+    expect(await service.testConnection()).toEqual({ ok: false, code: "not-configured" });
+    expect(asked).toBe(0);
   });
 });

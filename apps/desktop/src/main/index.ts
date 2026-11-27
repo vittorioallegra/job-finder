@@ -18,7 +18,8 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { backfillLocationCountries, refreshCompanyCountries } from "./db/company-country";
 import { openAppDatabase, resolveMigrationsFolder, type AppDatabase } from "./db/database";
 import { executeDbCalls, reconcileInterruptedRuns } from "./db/operations";
-import { scoringCandidateIds } from "./db/scoring-operations";
+import { newJobsSinceRun, scoringCandidateIds } from "./db/scoring-operations";
+import { createAutoScoring, type AutoScoring } from "./scoring/auto";
 import { registerIpcHandlers } from "./ipc/handlers";
 import { createAiConnectionService } from "./ai/connection";
 import { createCvImportService } from "./profile/cv-import";
@@ -214,6 +215,8 @@ if (gotSingleInstanceLock) {
     const secretRows = createSettingsSecretRows(database.db);
     const secretStore = createSecretStore({ rows: secretRows });
     let supervisor: EngineSupervisor | null = null;
+    // Scores the jobs a scan found, once the scoring service exists.
+    let autoScoring: AutoScoring | null = null;
     const ingestion = createIngestionService({
       onBoardGone: (companyId) => {
         void ingestRepository.removeCompany(companyId, undefined, "gone").then(
@@ -230,7 +233,8 @@ if (gotSingleInstanceLock) {
           .catch((error: unknown) =>
             logger.log("warn", `could not refresh company countries: ${String(error)}`),
           )
-          .then(() => scheduler?.handleRunFinished(runId, status));
+          .then(() => scheduler?.handleRunFinished(runId, status))
+          .then(() => autoScoring?.handleRunFinished(runId, status));
       },
       engine: () => supervisor,
       broadcast: (event) => {
@@ -241,6 +245,7 @@ if (gotSingleInstanceLock) {
       // Generic careers pages use the saved AI provider; the key is read here and handed only to the engine.
       aiSettings: async () => {
         const { ai } = await settingsRepository.get();
+        if (!ai.enabled) return undefined;
         return {
           config: {
             provider: ai.provider,
@@ -328,6 +333,12 @@ if (gotSingleInstanceLock) {
       candidateIds: (filter, preferredIds, limit) =>
         scoringCandidateIds(database.db, filter, preferredIds, limit),
       systemLocale: () => app.getLocale(),
+    });
+    autoScoring = createAutoScoring({
+      settings: settingsRepository,
+      scoring,
+      newJobsOf: (runId) => newJobsSinceRun(database.db, runId),
+      log: (level, message) => logger.log(level, message),
     });
     const documentsRoot = join(userData, "applications");
     const uploadsRoot = join(app.getPath("temp"), "job-finder-uploads");

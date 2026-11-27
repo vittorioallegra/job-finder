@@ -166,6 +166,7 @@ export function createDocumentService(options: DocumentServiceOptions): Document
       const saved = await options.profile.get();
       if (saved === null) return { ok: false, code: "no-profile" };
       const { ai } = await options.settings.get();
+      if (!ai.enabled) return { ok: false, code: "not-configured" };
       const language: DocumentLanguage =
         request.language ?? (await languageFor(request.applicationId, postingLanguage)).language;
       const apiKey = await readAiKey(options.secrets, ai);

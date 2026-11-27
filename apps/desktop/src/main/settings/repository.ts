@@ -36,6 +36,11 @@ function parseSection(section: AppSettingsSection, raw: string | undefined): unk
   } catch {
     return fallback;
   }
+  // Settings saved before the AI could be switched off: it was on when a model had been chosen.
+  if (section === "ai" && typeof value === "object" && value !== null && !("enabled" in value)) {
+    const model = (value as { model?: unknown }).model;
+    value = { ...value, enabled: typeof model === "string" && model.trim() !== "" };
+  }
   const parsed = SETTINGS_SECTIONS[section].safeParse(value);
   return parsed.success ? parsed.data : fallback;
 }

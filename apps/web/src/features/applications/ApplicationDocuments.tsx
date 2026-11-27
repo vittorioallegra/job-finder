@@ -146,6 +146,7 @@ export function ApplicationDocuments({ applicationId }: ApplicationDocumentsProp
         const { ai: aiSettings } = settings;
         setAi({
           configured:
+            aiSettings.enabled &&
             aiSettings.model.trim() !== "" &&
             (aiSettings.provider !== "openai-compatible" || aiSettings.baseUrl.trim() !== ""),
         });

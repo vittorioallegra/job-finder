@@ -1,5 +1,5 @@
 // protects=the AI test channel takes no payload and the failure code list matches the codes the AI layer and engine can produce, so the renderer can translate every outcome; the model list channel takes a source and an address but never a key, and Ollama is recognised only on a loopback host and its port, Gemini only on Google's API host; each provider maps to its own key and Ollama to none;
-// fails_when=the channel accepts a payload that could carry a key, or a failure code the UI has no message for is added without an entry in this list;
+// fails_when=a consent saved for one provider counts for another, a saved consent counts with the AI off, the channel accepts a payload that could carry a key, or a failure code the UI has no message for is added without an entry in this list;
 // no_claim=the result type is not checked against the core error codes at runtime, only as a list here; renderer translations are checked in apps/web.
 import { describe, expect, it } from "vitest";
 import {
@@ -10,6 +10,7 @@ import {
   aiConsentTarget,
   isCloudAiEndpoint,
   hasAiConsent,
+  hasStoredAiConsent,
   aiKeyNameFor,
   isGeminiBaseUrl,
   isOllamaBaseUrl,
@@ -113,5 +114,26 @@ describe("AI keys per provider", () => {
     expect(
       aiKeyNameFor({ provider: "openai-compatible", baseUrl: "https://llm.example.com/v1" }),
     ).toBe("ai.apiKey.openai-compatible");
+  });
+});
+
+describe("stored AI consent", () => {
+  const base = { enabled: true, provider: "anthropic" as const, baseUrl: "", consentTarget: "" };
+
+  it("holds for a model on this computer, for a cloud provider only with its saved target, and never with the AI off", () => {
+    const local = {
+      ...base,
+      provider: "openai-compatible" as const,
+      baseUrl: "http://localhost:11434/v1",
+    };
+    expect(hasStoredAiConsent(local)).toBe(true);
+    expect(hasStoredAiConsent(base)).toBe(false);
+    expect(hasStoredAiConsent({ ...base, consentTarget: aiConsentTarget(base) })).toBe(true);
+    // The consent was for another provider or host: it does not carry over.
+    expect(hasStoredAiConsent({ ...base, consentTarget: "openai" })).toBe(false);
+    expect(
+      hasStoredAiConsent({ ...base, enabled: false, consentTarget: aiConsentTarget(base) }),
+    ).toBe(false);
+    expect(hasStoredAiConsent({ ...local, enabled: false })).toBe(false);
   });
 });

@@ -29,6 +29,7 @@ const OLLAMA_REASONS = new Set<string>(["not-local", "unreachable", "invalid-res
 export const OLLAMA_EXAMPLE_MODEL = "qwen3:8b";
 
 const CHOICE_LABEL_KEYS: Record<AiChoice, string> = {
+  none: "settings.ai.providers.none",
   anthropic: "settings.ai.providers.anthropic",
   openai: "settings.ai.providers.openai",
   gemini: "settings.ai.providers.gemini",
@@ -37,6 +38,7 @@ const CHOICE_LABEL_KEYS: Record<AiChoice, string> = {
 };
 
 const CHOICE_HELP_KEYS: Record<AiChoice, string> = {
+  none: "settings.ai.help.none",
   anthropic: "settings.ai.help.anthropic",
   openai: "settings.ai.help.openai",
   gemini: "settings.ai.help.gemini",
@@ -74,7 +76,7 @@ export function AiProviderFields({
   onContextSize,
 }: AiProviderFieldsProps) {
   const { t } = useTranslation();
-  const keyName = aiKeyNameForSource(value.choice);
+  const keyName = value.choice === "none" ? null : aiKeyNameForSource(value.choice);
   const keySet = keyName !== null && isKeySet(keyName);
   const options: SelectOption[] = AI_CHOICES.map((choice) => ({
     value: choice,
@@ -106,7 +108,7 @@ export function AiProviderFields({
         />
         <p className="text-sm text-app-muted">{help}</p>
       </div>
-      {value.choice === "ollama" ? (
+      {value.choice === "none" ? null : value.choice === "ollama" ? (
         <>
           {modelField}
           <TextInput
@@ -178,7 +180,8 @@ function ModelField({
   const { t } = useTranslation();
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState<LoadedModels | null>(null);
-  const source = value.choice;
+  // Rendered only for a provider: with no AI there is no model to pick.
+  const source = value.choice as Exclude<AiChoice, "none">;
   const usesAddress = source === "ollama" || source === "openai-compatible";
   const baseUrl = usesAddress ? value.baseUrl.trim() : "";
   const missingAddress = usesAddress && baseUrl === "";

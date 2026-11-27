@@ -1,5 +1,5 @@
 // protects=onboarding saves the AI provider before Continue unlocks, with the same context controls as Settings, asks for consent before a CV goes to a cloud provider but not to a local endpoint, shows AI unavailable when the engine fails, shows one progress message with a spinner while the CV is read, locks manual setup during the import and stops it on demand or when the user goes back, lets each step go back, and opens the review with the extracted draft;
-// fails_when=Continue unlocks with unsaved AI edits, a cloud import is enabled without consent, a local endpoint asks for consent, an engine failure shows no reason, or the extracted draft is not shown for review;
+// fails_when=the first run does not start with no AI, no AI still asks for a CV, Continue unlocks with unsaved AI edits, a cloud import is enabled without consent, a local endpoint asks for consent, an engine failure shows no reason, or the extracted draft is not shown for review;
 // no_claim=the real file dialog, the engine's extraction quality and the OS keychain are not exercised; the bridge is an in-memory double.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -75,7 +75,7 @@ const extraction: CvImportResult = {
 };
 
 function withAi(ai: Partial<AppSettings["ai"]>): AppSettings {
-  return { ...DEFAULT_APP_SETTINGS, ai: { ...DEFAULT_APP_SETTINGS.ai, ...ai } };
+  return { ...DEFAULT_APP_SETTINGS, ai: { ...DEFAULT_APP_SETTINGS.ai, enabled: true, ...ai } };
 }
 
 describe("onboarding", () => {
@@ -119,6 +119,20 @@ describe("onboarding", () => {
     await act(async () => button(container, "Save provider").click());
     await act(async () => button(container, "Continue to the CV").click());
   }
+
+  it("starts with no AI, and continuing skips the CV import straight to filling in the profile", async () => {
+    await render({ settings: DEFAULT_APP_SETTINGS });
+    expect(container.querySelector("select")?.value).toBe("none");
+    expect(container.textContent).not.toContain("Test connection");
+    expect(container.textContent).not.toContain("Model");
+
+    await act(async () => button(container, "Continue to the CV").click());
+
+    expect(container.querySelector("#onboarding-cv-file")).toBeNull();
+    expect(container.textContent).toContain("Check your profile");
+    await act(async () => button(container, "Back").click());
+    expect(container.textContent).toContain("AI provider");
+  });
 
   it("keeps Continue locked while the AI settings have unsaved edits", async () => {
     await render({});

@@ -60,7 +60,9 @@ export function createAutofillAi(options: AiFillOptions): AiFill {
     async status() {
       const { ai } = await options.settings.get();
       const configured =
-        ai.model.trim() !== "" && (ai.provider !== "openai-compatible" || ai.baseUrl.trim() !== "");
+        ai.enabled &&
+        ai.model.trim() !== "" &&
+        (ai.provider !== "openai-compatible" || ai.baseUrl.trim() !== "");
       return configured
         ? { state: "ready", cloud: isCloudAiEndpoint(ai), consentTarget: aiConsentTarget(ai) }
         : { state: "not-configured" };
@@ -70,7 +72,7 @@ export function createAutofillAi(options: AiFillOptions): AiFill {
       // The settings are read again here, after the page has loaded: the provider may have changed
       // since the consent was checked, and a cloud provider never gets the profile without it.
       const { ai } = await options.settings.get();
-      if (!hasAiConsent(ai, { consent, consentTarget })) {
+      if (!ai.enabled || !hasAiConsent(ai, { consent, consentTarget })) {
         return { ok: false, code: "not-configured" };
       }
       const apiKey = await readAiKey(options.secrets, ai);

@@ -1,5 +1,5 @@
 // protects=settings sections round-trip through the database, a patch changes only the sections it names, and malformed stored rows fall back to defaults;
-// fails_when=a patch resets other sections, an invalid patch is written, or a corrupt row makes the whole settings object unreadable;
+// fails_when=a user who had an AI set up loses it after an update, a patch resets other sections, an invalid patch is written, or a corrupt row makes the whole settings object unreadable;
 // no_claim=concurrent writers and transaction atomicity across sections are not covered here.
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -65,5 +65,19 @@ describe("settings repository", () => {
     const current = await repository.get();
     expect(current.ui).toEqual(DEFAULT_APP_SETTINGS.ui);
     expect(current.notifications.enabled).toBe(false);
+  });
+
+  it("reads settings saved before the AI could be switched off: on when a model was chosen, off otherwise", async () => {
+    const legacy = { provider: "anthropic", model: "claude-x", baseUrl: "", contextSize: 8192 };
+    await database.db
+      .insert(settings)
+      .values({ key: "settings.ai", value: JSON.stringify(legacy), updatedAt: 1 });
+    const repository = createSettingsRepository(database.db);
+    expect((await repository.get()).ai).toMatchObject({ enabled: true, model: "claude-x" });
+
+    await database.db.update(settings).set({ value: JSON.stringify({ ...legacy, model: "" }) });
+    expect((await repository.get()).ai.enabled).toBe(false);
+    // A fresh install has no AI until the user picks one.
+    expect(DEFAULT_APP_SETTINGS.ai.enabled).toBe(false);
   });
 });

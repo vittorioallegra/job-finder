@@ -1,5 +1,5 @@
 // protects=the settings screen loads and saves values through the bridge, never shows a stored key, leaves only Remove once a key is saved (the input and Save return after removing), keeps a key per provider, sets up Ollama;
-// fails_when=an invalid change is saved, a key value is shown, a saved key still shows its input or Save, Remove shows without a key, a key leaks across providers;
+// fails_when=a choice of no AI still shows the AI fields or is not saved as off, an invalid change is saved, a key value is shown, a saved key still shows its input or Save, Remove shows without a key, a key leaks across providers;
 // no_claim=visual layout, keyboard focus order and the real OS keychain are not checked here.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -255,6 +255,7 @@ describe("settings screen", () => {
           ...DEFAULT_APP_SETTINGS,
           ai: {
             ...DEFAULT_APP_SETTINGS.ai,
+            enabled: true,
             provider: "openai-compatible",
             baseUrl: OLLAMA_BASE_URL,
           },
@@ -383,6 +384,31 @@ describe("settings screen", () => {
     expect(text).toContain("Tavily key");
     expect(text).toContain("Serper key");
     expect(text).not.toContain("Try DuckDuckGo first");
+  });
+
+  it("with no AI chosen, shows no model, key or connection test, and saves the AI as off", async () => {
+    const memory = createMemoryBridge({ settings: DEFAULT_APP_SETTINGS });
+    const update = vi.fn(memory.settings.update);
+    await render({ ...memory, settings: { ...memory.settings, update } });
+    expect(field(container, "Provider").value).toBe("none");
+    expect(container.textContent).not.toContain("Test connection");
+    expect(container.textContent).not.toContain("API key");
+
+    await act(async () => {
+      setInputValue(field(container, "Provider"), "openai");
+    });
+    expect(container.textContent).toContain("API key");
+    await act(async () => {
+      setInputValue(field(container, "Provider"), "none");
+    });
+    await act(async () => {
+      button(container, "Save settings").click();
+    });
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ai: expect.objectContaining({ enabled: false, provider: "anthropic", model: "" }),
+      }),
+    );
   });
 
   it("hides launch at login on Linux, and asks no keyring there", async () => {

@@ -35,6 +35,14 @@ function isEmptyOrHttpUrl(value: string): boolean {
 }
 
 const aiSection = z.strictObject({
+  /**
+   * Whether the AI features are on. Off is the starting state: nothing leaves the machine, and the
+   * features that need an AI (CV import, affinity scores, tailored documents, the form fallback,
+   * reading careers pages without a board) stay unavailable.
+   */
+  enabled: z.boolean().default(false),
+  /** The cloud consent the user gave, as `aiConsentTarget`: lets a scan score new jobs by itself. */
+  consentTarget: z.string().max(600).default(""),
   provider: z.enum(AI_PROVIDERS),
   model: z.string().trim().max(SETTING_LIMITS.modelMaxLength),
   baseUrl: z
@@ -127,7 +135,14 @@ export type AppSettingsSection = keyof typeof SETTINGS_SECTIONS;
 export type AppSettingsPatch = z.input<typeof AppSettingsPatchSchema>;
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
-  ai: { provider: "anthropic", model: "", baseUrl: "", contextSize: 8192 },
+  ai: {
+    enabled: false,
+    consentTarget: "",
+    provider: "anthropic",
+    model: "",
+    baseUrl: "",
+    contextSize: 8192,
+  },
   search: { duckduckgo: true, brave: false, tavily: false, serper: false },
   ui: { language: "system" },
   notifications: { enabled: true },

@@ -50,6 +50,7 @@ function settingsFor(
     get: async () =>
       ({
         ai: {
+          enabled: true,
           provider: cloud ? "anthropic" : "openai-compatible",
           model: "model-x",
           baseUrl: cloud ? "" : "http://localhost:1234/v1",

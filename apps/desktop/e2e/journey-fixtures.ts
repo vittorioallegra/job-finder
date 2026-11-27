@@ -97,7 +97,12 @@ export async function serveJourneyFixtures(): Promise<JourneyFixtures> {
           // The community board lists of the wide scan, and a second board the search names.
           pathname.startsWith("/Feashliaa/job-board-aggregator/main/data/") ||
           pathname === "/v0/postings/globex" ||
-          pathname === "/jobs/api")
+          pathname === "/jobs/api" ||
+          // The search result that is not a board (example.com) is read for its careers page:
+          // its home page and the usual careers paths, none of which exists here.
+          pathname === "/" ||
+          pathname === "/careers" ||
+          pathname === "/jobs")
       ) {
         send(response, 404, "text/plain", "not found");
         return;

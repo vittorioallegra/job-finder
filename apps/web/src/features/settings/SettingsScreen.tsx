@@ -207,10 +207,12 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
           )}
         />
         {/* The test reads the saved settings, so the changes on screen are saved first. */}
-        <AiConnectionTest
-          bridge={bridge}
-          saveChanges={() => (unsaved ? saveDraft() : Promise.resolve(true))}
-        />
+        {draft.aiProvider === "none" ? null : (
+          <AiConnectionTest
+            bridge={bridge}
+            saveChanges={() => (unsaved ? saveDraft() : Promise.resolve(true))}
+          />
+        )}
       </Card>
 
       <Card as="section" aria-labelledby="settings-search" className="flex flex-col gap-4">

@@ -23,6 +23,13 @@
       "path": "/v1/chat/completions",
       "status": 200,
       "body": "{\"id\":\"chatcmpl-hand-made\",\"object\":\"chat.completion\",\"created\":1767225600,\"model\":\"fixture-replay-model\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"paragraphs\\\":[\\\"Dear Acme hiring team, I am a backend engineer who builds payment services in TypeScript, and I would like to join your Software Engineer role in Milano.\\\",\\\"At Northwind I reduced checkout latency, and I work with PostgreSQL every day. I would welcome the chance to build the payments platform with your team.\\\"]}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":100,\"completion_tokens\":50,\"total_tokens\":150}}"
+    },
+    {
+      "key": "ce17a6a8841e2f889ed6b8a025621a2ac400b2552acc403ff1abbd46303425bc",
+      "method": "POST",
+      "path": "/v1/chat/completions",
+      "status": 200,
+      "body": "{\"id\":\"chatcmpl-hand-made\",\"object\":\"chat.completion\",\"created\":1767225600,\"model\":\"fixture-replay-model\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"score\\\": 82, \\\"explanation\\\": \\\"Strong match on TypeScript and PostgreSQL for a payments role; Milano fits.\\\"}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":100,\"completion_tokens\":50,\"total_tokens\":150}}"
     }
   ]
 }

@@ -1,11 +1,12 @@
 // protects=the jobs screen lists open jobs with scores, scans only when companies exist, opens with the profile's preferences as the filter, links to the sources, follows a scan in a log and cancels it, asks for consent before scoring with a cloud provider, explains an empty list with places by the company-country rule, and shows an error with a retry;
-// fails_when=an unscored job looks scored, a scan starts without companies, the profile's preferences are ignored, a cancel misses its run, a cloud call goes without consent, an empty list with places gives no reason or no link to the sources, or an error shows a blank page;
+// fails_when=scoring is offered with the AI off, an unscored job looks scored, a scan starts without companies, the profile's preferences are ignored, a cancel misses its run, a cloud call goes without consent, an empty list with places gives no reason or no link to the sources, or an error shows a blank page;
 // no_claim=layout, keyboard focus order, the real provider's answers and the real engine run are not checked here; the core ranking tests and the engine and ingestion tests cover the scoring and the run, and company entry is tested on the Sources screen.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  DEFAULT_APP_SETTINGS,
   emptyPreferences,
   emptyProfile,
   type CompanyRecord,
@@ -275,6 +276,22 @@ describe("jobs screen", () => {
     expect(container.querySelector('a[href="/settings"]')).not.toBeNull();
     expect(container.textContent).toContain("Backend Engineer");
     expect(container.textContent).toContain("Not scored yet");
+  });
+
+  it("offers no scoring with the AI off, and says so with a link to Settings", async () => {
+    const bridge = createMemoryBridge({
+      companies: [acme],
+      jobs: [posting],
+      settings: DEFAULT_APP_SETTINGS,
+    });
+    await render(bridge);
+
+    expect(container.textContent).toContain("The AI is off");
+    expect(
+      [...container.querySelectorAll("button")].some((node) => node.textContent === "Score jobs"),
+    ).toBe(false);
+    expect(container.querySelector('a[href="/settings"]')).not.toBeNull();
+    expect(container.textContent).toContain("Backend Engineer");
   });
 
   it("opens with the profile's roles and work modes as the filter, keeping jobs that do not say their mode", async () => {

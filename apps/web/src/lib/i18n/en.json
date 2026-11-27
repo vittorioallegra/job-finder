@@ -78,7 +78,8 @@
         "openai": "OpenAI",
         "gemini": "Google Gemini",
         "openaiCompatible": "Other OpenAI-compatible server",
-        "ollama": "Ollama (on this computer)"
+        "ollama": "Ollama (on this computer)",
+        "none": "None"
       },
       "model": "Model",
       "baseUrl": "Base URL",
@@ -114,7 +115,8 @@
         "openai": "GPT models, in the cloud. Create an API key on the OpenAI platform and paste it below. Your CV and job texts are sent to OpenAI.",
         "gemini": "Gemini models, in the cloud. Create an API key in Google AI Studio (aistudio.google.com) and paste it below. Your CV and job texts are sent to Google; on the free tier Google may use them to improve its models.",
         "ollama": "Runs on this computer: no key, and nothing leaves your machine. Install Ollama from ollama.com, open it, then download a model in the terminal, for example: ollama pull {{example}}",
-        "openaiCompatible": "Any server with an OpenAI-compatible API, such as LM Studio or vLLM. Enter its address and, if it asks for one, a key."
+        "openaiCompatible": "Any server with an OpenAI-compatible API, such as LM Studio or vLLM. Enter its address and, if it asks for one, a key.",
+        "none": "Nothing is sent to any AI. The profile is filled in by hand and the jobs are not scored by affinity; the rest of the app works as usual. You can turn the AI on later."
       },
       "ollama": {
         "address": "Ollama address",
@@ -428,7 +430,8 @@
         "engine-unavailable": "The background engine is not available. Try again in a moment.",
         "store-failed": "The scores could not be saved.",
         "unknown": "The jobs could not be scored."
-      }
+      },
+      "off": "The AI is off, so the jobs are not scored by affinity. Choose a provider in Settings to turn it on."
     },
     "log": {
       "heading": "Scan log",

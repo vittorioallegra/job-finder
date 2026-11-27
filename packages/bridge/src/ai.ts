@@ -47,6 +47,21 @@ export function hasAiConsent(
   return request.consent === true && request.consentTarget === aiConsentTarget(ai);
 }
 
+/**
+ * True when the AI is on and nothing needs asking: it runs on this computer, or the user already
+ * agreed to this provider and host (`consentTarget` saved in the settings). A scan may then score
+ * the new jobs by itself.
+ */
+export function hasStoredAiConsent(ai: {
+  enabled: boolean;
+  provider: AiProvider;
+  baseUrl: string;
+  consentTarget: string;
+}): boolean {
+  if (!ai.enabled) return false;
+  return !isCloudAiEndpoint(ai) || ai.consentTarget === aiConsentTarget(ai);
+}
+
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 /**

@@ -78,7 +78,8 @@
         "openai": "OpenAI",
         "gemini": "Google Gemini",
         "openaiCompatible": "Altro server compatibile con OpenAI",
-        "ollama": "Ollama (su questo computer)"
+        "ollama": "Ollama (su questo computer)",
+        "none": "Nessuno"
       },
       "model": "Modello",
       "baseUrl": "URL base",
@@ -114,7 +115,8 @@
         "openai": "Modelli GPT, nel cloud. Crea una chiave API sulla piattaforma OpenAI e incollala qui sotto. Il CV e i testi delle offerte vengono inviati a OpenAI.",
         "gemini": "Modelli Gemini, nel cloud. Crea una chiave API in Google AI Studio (aistudio.google.com) e incollala qui sotto. Il CV e i testi delle offerte vengono inviati a Google; con il piano gratuito Google può usarli per migliorare i suoi modelli.",
         "ollama": "Gira su questo computer: nessuna chiave, e nulla esce dal computer. Installa Ollama da ollama.com, aprilo, poi scarica un modello dal terminale, per esempio: ollama pull {{example}}",
-        "openaiCompatible": "Qualsiasi server con un'API compatibile con OpenAI, come LM Studio o vLLM. Inserisci il suo indirizzo e, se la richiede, una chiave."
+        "openaiCompatible": "Qualsiasi server con un'API compatibile con OpenAI, come LM Studio o vLLM. Inserisci il suo indirizzo e, se la richiede, una chiave.",
+        "none": "Non viene inviato nulla a nessuna IA. Il profilo si compila a mano e le offerte non vengono ordinate per affinità; il resto dell'app funziona come sempre. Puoi attivare l'IA in seguito."
       },
       "ollama": {
         "address": "Indirizzo di Ollama",
@@ -428,7 +430,8 @@
         "engine-unavailable": "Il motore in background non è disponibile. Riprova tra poco.",
         "store-failed": "I punteggi non sono stati salvati.",
         "unknown": "Gli annunci non sono stati valutati."
-      }
+      },
+      "off": "L'IA è disattivata, quindi le offerte non vengono ordinate per affinità. Scegli un provider nelle Impostazioni per attivarla."
     },
     "log": {
       "heading": "Registro della scansione",

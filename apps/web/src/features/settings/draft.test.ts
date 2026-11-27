@@ -9,7 +9,8 @@ describe("settings draft", () => {
   it("turns loaded settings into a patch that keeps every value", () => {
     const patch = patchFromDraft(draftFromSettings(DEFAULT_APP_SETTINGS));
     expect(patch).toEqual({
-      ai: { provider: "anthropic", model: "", baseUrl: "", contextSize: 128_000 },
+      // The starting state has no AI: the menu shows "none" and saves it as off.
+      ai: { enabled: false, provider: "anthropic", model: "", baseUrl: "", contextSize: 128_000 },
       search: { duckduckgo: true, brave: false, tavily: false, serper: false },
       ui: { language: "system" },
       notifications: { enabled: true },
@@ -30,7 +31,14 @@ describe("settings draft", () => {
   it("sets the context size for hosted providers and keeps the one typed for a server", () => {
     const hosted = draftFromSettings({
       ...DEFAULT_APP_SETTINGS,
-      ai: { provider: "openai", model: "m", baseUrl: "", contextSize: 128_000 },
+      ai: {
+        enabled: true,
+        consentTarget: "",
+        provider: "openai",
+        model: "m",
+        baseUrl: "",
+        contextSize: 128_000,
+      },
     });
     expect(patchFromDraft(hosted)?.ai?.contextSize).toBe(128_000);
     // Switching to Ollama starts from the usual size, never the hosted one.

@@ -52,6 +52,7 @@ export function createAiConnectionService(
   return {
     async testConnection() {
       const { ai } = await options.settings.get();
+      if (!ai.enabled) return { ok: false, code: "not-configured" };
       const apiKey = await readAiKey(options.secrets, ai);
       try {
         return await options.engine.testAiConnection({

@@ -67,6 +67,8 @@ export function JobsScreen() {
   const [aiTarget, setAiTarget] = useState<string | null>(null);
   const { consent, consentTarget, setConsent } = useAiConsent(aiTarget);
   const [scoring, setScoring] = useState(false);
+  // Affinity scores need an AI: with none chosen the controls give way to a pointer to Settings.
+  const [aiOn, setAiOn] = useState(true);
   const [scoreResult, setScoreResult] = useState<ScoreStartResult | null>(null);
 
   // The filter and order the results show. The filter comes from the profile's "what you are looking for".
@@ -126,6 +128,7 @@ export function JobsScreen() {
       .get()
       .then((settings) => {
         if (!active) return;
+        setAiOn(settings.ai.enabled);
         setCloud(isCloudAiEndpoint(settings.ai));
         setAiTarget(aiConsentTarget(settings.ai));
         setProviderName(t(`settings.ai.providers.${settings.ai.provider}`));
@@ -319,14 +322,16 @@ export function JobsScreen() {
         actions={
           load.status === "ready" ? (
             <>
-              <Button
-                variant="secondary"
-                onClick={() => void scoreJobs()}
-                disabled={scoring || load.jobs.length === 0}
-              >
-                <Sparkles aria-hidden="true" className="size-4" strokeWidth={1.8} />
-                {t("jobs.score.start")}
-              </Button>
+              {aiOn ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => void scoreJobs()}
+                  disabled={scoring || load.jobs.length === 0}
+                >
+                  <Sparkles aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                  {t("jobs.score.start")}
+                </Button>
+              ) : null}
               {activeRunId === null ? (
                 <Button
                   onClick={() => void startScan()}
@@ -461,8 +466,15 @@ export function JobsScreen() {
                   {t("jobs.score.heading")}
                 </h2>
               </div>
-              <p className="text-[13px] text-app-muted">{t("jobs.score.intro")}</p>
-              {cloud ? (
+              <p className="text-[13px] text-app-muted">
+                {aiOn ? t("jobs.score.intro") : t("jobs.score.off")}
+              </p>
+              {!aiOn ? (
+                <Link to="/settings" className="text-[13px] text-app-accent underline">
+                  {t("jobs.score.openSettings")}
+                </Link>
+              ) : null}
+              {aiOn && cloud ? (
                 <div className="flex flex-col gap-2 rounded-lg bg-app-sunken p-3">
                   <p className="text-[13px] text-app-fg">
                     {t("jobs.score.consentNote", { provider: providerName })}
