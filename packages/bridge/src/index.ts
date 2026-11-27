@@ -30,7 +30,15 @@ import type {
 import type { AppStatus, OpenNewJobsRequest } from "./app";
 import type { AppSettings, AppSettingsPatch } from "./settings";
 import type { SecretName, SecretsStatus } from "./secrets";
-import type { CvImportRequest, CvImportResult, Profile, ProfileRecord } from "./profile";
+import type {
+  CvImportRequest,
+  CvImportResult,
+  Profile,
+  ProfileRecord,
+  ProfileReviewAiRequest,
+  ProfileReviewAiResult,
+  ProfileReviewView,
+} from "./profile";
 import type { BackgroundReadStatus, ProfileDiscoveryResult } from "./discovery";
 import type { ScoreStartRequest, ScoreStartResult } from "./scoring";
 import type { JobDetail, JobDetailRequest, JobFlagRequest, JobsListRequest } from "./jobs";
@@ -87,6 +95,10 @@ export interface JobFinderBridge {
     importCv(request: CvImportRequest): Promise<CvImportResult>;
     /** Stops a running import; the import then answers `cancelled`. Nothing happens when none runs. */
     cancelImport(): Promise<void>;
+    /** The checks of the saved profile that need no AI, and the written review if one was asked for. */
+    review(): Promise<ProfileReviewView>;
+    /** Asks the AI for a written review of the saved profile and keeps it until the profile changes. */
+    reviewAi(request: ProfileReviewAiRequest): Promise<ProfileReviewAiResult>;
   };
   readonly companies: {
     /** Companies the engine scans, in the order they were added. */

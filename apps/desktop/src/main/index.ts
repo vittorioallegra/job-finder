@@ -19,6 +19,9 @@ import { backfillLocationCountries, refreshCompanyCountries } from "./db/company
 import { openAppDatabase, resolveMigrationsFolder, type AppDatabase } from "./db/database";
 import { executeDbCalls, reconcileInterruptedRuns } from "./db/operations";
 import { newJobsSinceRun, scoringCandidateIds } from "./db/scoring-operations";
+import { marketJobTexts } from "./db/review-operations";
+import { createProfileReviewService } from "./profile/review";
+import { createProfileReviewStore } from "./profile/review-store";
 import { createAutoScoring, type AutoScoring } from "./scoring/auto";
 import { registerIpcHandlers } from "./ipc/handlers";
 import { createAiConnectionService } from "./ai/connection";
@@ -325,6 +328,15 @@ if (gotSingleInstanceLock) {
       secrets: secretStore,
       engine: supervisor,
     });
+    const profileReview = createProfileReviewService({
+      profile: profileRepository,
+      settings: settingsRepository,
+      secrets: secretStore,
+      engine: supervisor,
+      store: createProfileReviewStore(database.db),
+      marketTexts: (filter, limit) => marketJobTexts(database.db, filter, limit),
+      systemLocale: () => app.getLocale(),
+    });
     const scoring = createScoringService({
       engine: supervisor,
       profile: profileRepository,
@@ -594,6 +606,7 @@ if (gotSingleInstanceLock) {
         ai: aiConnection,
         profile: profileRepository,
         cvImport,
+        profileReview,
         repository: ingestRepository,
         companySummary: async () => ({
           withOffers: await companiesWithOffers(

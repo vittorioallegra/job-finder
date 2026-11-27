@@ -24,8 +24,10 @@ import type {
   IngestAiSettings,
   IngestStartCode,
   ScoreJobsOutcome,
+  ReviewProfileRequest,
   ScoreJobsRequest,
 } from "../../engine/protocol";
+import type { ReviewProfileOutcome } from "@job-finder/core/profile/review-ai";
 import type { PortLike } from "../../engine/port";
 
 export type LogLevel = "info" | "warn" | "error";
@@ -131,6 +133,8 @@ export interface EngineSupervisor {
   scoreJobs(request: ScoreJobsRequest): Promise<ScoreJobsOutcome>;
   /** Generates a tailored CV or cover letter with the AI in the engine. */
   generateDocument(request: GenerateDocumentRequest): Promise<GenerateDocumentOutcome>;
+  /** A written review of the profile with the AI. Rejects with `EngineUnavailableError` when the engine is gone. */
+  reviewProfile(request: ReviewProfileRequest): Promise<ReviewProfileOutcome>;
   /** Maps the fields the rules left with the AI. Rejects with `EngineUnavailableError` when the engine is gone. */
   mapFormFields(request: MapFormFieldsRequest): Promise<AutofillMapOutcome>;
   /** Asks the engine for the latest release. Rejects with EngineUnavailableError when the engine is gone. */
@@ -178,6 +182,11 @@ interface PendingDocument {
   reject: (error: Error) => void;
 }
 
+interface PendingProfileReview {
+  resolve: (outcome: ReviewProfileOutcome) => void;
+  reject: (error: Error) => void;
+}
+
 interface PendingFormMap {
   resolve: (outcome: AutofillMapOutcome) => void;
   reject: (error: Error) => void;
@@ -204,6 +213,7 @@ interface Current {
   pendingScorings: Map<number, PendingScoring>;
   pendingDocuments: Map<number, PendingDocument>;
   pendingFormMaps: Map<number, PendingFormMap>;
+  pendingProfileReviews: Map<number, PendingProfileReview>;
   pendingUpdateChecks: Map<number, PendingUpdateCheck>;
   pendingModelLists: Map<number, PendingModelList>;
 }
@@ -247,6 +257,7 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pendingScorings: new Map(),
       pendingDocuments: new Map(),
       pendingFormMaps: new Map(),
+      pendingProfileReviews: new Map(),
       pendingUpdateChecks: new Map(),
       pendingModelLists: new Map(),
     };
@@ -301,6 +312,10 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       pending.reject(new EngineUnavailableError(reason));
     }
     state.pendingDocuments.clear();
+    for (const pending of state.pendingProfileReviews.values()) {
+      pending.reject(new EngineUnavailableError(reason));
+    }
+    state.pendingProfileReviews.clear();
     for (const pending of state.pendingFormMaps.values()) {
       pending.reject(new EngineUnavailableError(reason));
     }
@@ -364,6 +379,12 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
     if (message.type === "generate-document-result") {
       const pending = state.pendingDocuments.get(message.id);
       state.pendingDocuments.delete(message.id);
+      pending?.resolve(message.outcome);
+      return;
+    }
+    if (message.type === "review-profile-result") {
+      const pending = state.pendingProfileReviews.get(message.id);
+      state.pendingProfileReviews.delete(message.id);
       pending?.resolve(message.outcome);
       return;
     }
@@ -525,6 +546,15 @@ export function startEngineSupervisor(options: EngineSupervisorOptions): EngineS
       return new Promise<GenerateDocumentOutcome>((resolve, reject) => {
         ready.pendingDocuments.set(id, { resolve, reject });
         ready.handle.port.postMessage({ type: "generate-document", id, request });
+      });
+    },
+    async reviewProfile(request) {
+      const ready = current?.ready ? current : await waitUntilReady();
+      const id = nextRequestId;
+      nextRequestId += 1;
+      return new Promise<ReviewProfileOutcome>((resolve, reject) => {
+        ready.pendingProfileReviews.set(id, { resolve, reject });
+        ready.handle.port.postMessage({ type: "review-profile", id, request });
       });
     },
     async checkForUpdate(currentVersion) {

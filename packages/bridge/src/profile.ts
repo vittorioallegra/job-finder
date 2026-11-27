@@ -1,5 +1,12 @@
 import { z } from "zod";
 import type { CvExtraction, Profile } from "@job-finder/core/profile";
+import type { AiProfileReview, RuleFinding } from "@job-finder/core/profile/review-types";
+
+export type {
+  AiProfileReview,
+  AiSuggestion,
+  RuleFinding,
+} from "@job-finder/core/profile/review-types";
 
 /** Largest CV upload the renderer may send. Must equal `CV_MAX_BYTES` in packages/core/src/cv (tested). */
 export const CV_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
@@ -88,3 +95,53 @@ export type {
   ProfileDate,
   JobPreferences,
 } from "@job-finder/core/profile";
+
+/**
+ * The review of the saved profile. `findings` are the checks that need no AI, computed each time;
+ * `ai` is the written review, which is kept until the profile changes.
+ */
+export interface ProfileReviewView {
+  /** False before a profile is saved: there is nothing to review. */
+  hasProfile: boolean;
+  findings: RuleFinding[];
+  /** Postings for the profile's roles read for the skills check; 0 when there were too few. */
+  marketJobs: number;
+  ai: {
+    /** An AI provider is chosen. */
+    enabled: boolean;
+    /** A cloud provider the user has not agreed to send the profile to yet. */
+    needsConsent: boolean;
+    /** The review of the profile as it is now, or null when none was asked for. */
+    review: AiProfileReview | null;
+    /** Epoch milliseconds of that review. */
+    reviewedAt: number | null;
+  };
+}
+
+/** Why the written review could not be made. The last seven mirror the AI layer's error codes. */
+export const PROFILE_REVIEW_FAILURE_CODES = [
+  "no-profile",
+  "consent-required",
+  "engine-unavailable",
+  "not-configured",
+  "invalid-key",
+  "model-not-found",
+  "rate-limited",
+  "unreachable",
+  "timeout",
+  "invalid-output",
+  "unknown",
+] as const;
+export type ProfileReviewFailureCode = (typeof PROFILE_REVIEW_FAILURE_CODES)[number];
+
+export type ProfileReviewAiResult =
+  | { ok: true; review: AiProfileReview; reviewedAt: number }
+  | { ok: false; code: ProfileReviewFailureCode };
+
+export const ProfileReviewAiRequestSchema = z.strictObject({
+  /** The user agreed to send the profile to the configured cloud provider. */
+  consent: z.boolean().optional(),
+  /** The provider and host the consent was given for (`aiConsentTarget`). */
+  consentTarget: z.string().max(600).optional(),
+});
+export type ProfileReviewAiRequest = z.infer<typeof ProfileReviewAiRequestSchema>;

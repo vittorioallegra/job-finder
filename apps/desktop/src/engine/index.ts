@@ -8,6 +8,7 @@ import { discoverCompanies } from "@job-finder/core/discovery";
 import { createHttpClient } from "@job-finder/core/net";
 import { createIngestController } from "./ingest";
 import { generateDocument } from "@job-finder/core/documents/generate";
+import { reviewProfileWithAi } from "@job-finder/core/profile/review-ai";
 import { mapFormFields } from "@job-finder/core/ats/autofill/ai";
 import { checkLatestRelease, RELEASES_REPOSITORY } from "@job-finder/core/updates";
 import { createScoringRunner } from "./scoring";
@@ -91,6 +92,16 @@ if (parentPort) {
               kind: request.kind,
               profile: request.profile,
               job: request.job,
+              language: request.language,
+              config: request.ai.config,
+              contextSize: request.ai.contextSize,
+            },
+            { abortSignal: aiDeadline(request.ai.config, DOCUMENT_TIMEOUT_MS) },
+          ),
+        reviewProfile: (request) =>
+          reviewProfileWithAi(
+            {
+              profile: request.profile,
               language: request.language,
               config: request.ai.config,
               contextSize: request.ai.contextSize,

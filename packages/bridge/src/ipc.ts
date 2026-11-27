@@ -4,8 +4,13 @@ import { AppSettingsPatchSchema, SETTING_LIMITS } from "./settings";
 import { AI_MODEL_SOURCES, type AiModelsResult, type AiTestResult } from "./ai";
 import type { SecretsStatus } from "./secrets";
 import { SecretClearRequestSchema, SecretSetRequestSchema } from "./secrets";
-import type { CvImportResult, ProfileRecord } from "./profile";
-import { CvImportRequestSchema, ProfileSchema } from "./profile";
+import type {
+  CvImportResult,
+  ProfileRecord,
+  ProfileReviewAiResult,
+  ProfileReviewView,
+} from "./profile";
+import { CvImportRequestSchema, ProfileReviewAiRequestSchema, ProfileSchema } from "./profile";
 import type {
   CompanyRecord,
   DirectoryCompany,
@@ -82,6 +87,8 @@ export const IPC_REQUEST_SCHEMAS = {
   "profile:save": ProfileSchema,
   "profile:import-cv": CvImportRequestSchema,
   "profile:cancel-import": z.undefined(),
+  "profile:review": z.undefined(),
+  "profile:review-ai": ProfileReviewAiRequestSchema,
   "companies:list": z.undefined(),
   "companies:summary": z.undefined(),
   "companies:directory": z.undefined(),
@@ -133,6 +140,8 @@ export interface IpcResponses {
   "profile:save": ProfileRecord;
   "profile:import-cv": CvImportResult;
   "profile:cancel-import": void;
+  "profile:review": ProfileReviewView;
+  "profile:review-ai": ProfileReviewAiResult;
   "companies:list": CompanyRecord[];
   "companies:summary": { withOffers: number };
   "companies:directory": DirectoryCompany[];

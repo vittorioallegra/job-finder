@@ -340,6 +340,80 @@
     "educationType": {
       "degree": "Titolo di studio",
       "course": "Corso di formazione"
+    },
+    "review": {
+      "title": "Valutazione del tuo profilo",
+      "intro": "Cosa si può migliorare nel tuo profilo, confrontato con le offerte per i tuoi ruoli. I consigli sono da applicare a mano: qui non cambia nulla nel tuo profilo.",
+      "loading": "Controllo il tuo profilo…",
+      "loadFailed": "Non è stato possibile caricare la valutazione.",
+      "retry": "Riprova",
+      "checks": "Controlli",
+      "noFindings": "I controlli non hanno trovato nulla da sistemare.",
+      "market": "Competenze confrontate con {{count}} offerte per i tuoi ruoli.",
+      "severity": {
+        "high": "Importante",
+        "medium": "Da fare",
+        "low": "Minore"
+      },
+      "sections": {
+        "headline": "Titolo",
+        "summary": "Riepilogo",
+        "experience": "Esperienza",
+        "education": "Formazione",
+        "skills": "Competenze",
+        "languages": "Lingue",
+        "certifications": "Certificazioni",
+        "links": "Link",
+        "preferences": "Cosa cerchi"
+      },
+      "rules": {
+        "no-headline": "Nessun titolo. Una riga che dice chi sei professionalmente aiuta, per esempio \"Backend engineer, TypeScript e PostgreSQL\".",
+        "no-summary": "Nessun riepilogo. Due o tre frasi su cosa fai e cosa cerchi aiutano chi legge e l'abbinamento.",
+        "short-summary": "Il riepilogo è di soli {{length}} caratteri. Qualche frase in più dà all'abbinamento più materiale.",
+        "no-experience": "Nessuna esperienza inserita. Aggiungi i tuoi ruoli, anche brevi, che mostrano le competenze che vuoi usare.",
+        "experience-no-bullets_one": "{{count}} ruolo non ha dettagli. Racconta cosa hai fatto, con un risultato dove puoi.",
+        "experience-no-bullets_other": "{{count}} ruoli non hanno dettagli. Racconta cosa hai fatto in ciascuno, con un risultato dove puoi.",
+        "experience-no-dates_one": "{{count}} ruolo non ha la data di inizio.",
+        "experience-no-dates_other": "{{count}} ruoli non hanno la data di inizio.",
+        "no-numbers": "Nessuno dei tuoi {{count}} punti contiene una cifra. Un numero (tempo risparmiato, utenti, dimensioni) rende credibile un risultato.",
+        "no-skills": "Nessuna competenza inserita. L'abbinamento e i tuoi documenti partono da questo elenco.",
+        "few-skills_one": "Solo {{count}} competenza inserita. Aggiungi gli strumenti che usi davvero, con i nomi usati nelle offerte.",
+        "few-skills_other": "Solo {{count}} competenze inserite. Aggiungi gli strumenti che usi davvero, con i nomi usati nelle offerte.",
+        "unbacked-skills": "{{count}} competenze dell'elenco non compaiono mai nel tuo lavoro: {{skills}}. Una competenza con un esempio dietro convince di più.",
+        "no-languages": "Nessuna lingua inserita.",
+        "no-education": "Nessuna formazione inserita. Aggiungila, o un corso, se sostiene i ruoli che cerchi.",
+        "no-links": "Nessun link. Un portfolio, GitHub o LinkedIn permette a chi legge di verificare il tuo lavoro.",
+        "no-roles": "Nessun ruolo cercato. Senza, l'app non può cercare aziende né dire quali offerte ti si addicono.",
+        "no-places": "Nessun luogo. Aggiungi dove vuoi lavorare, altrimenti l'app mostra offerte da ovunque.",
+        "market-skill-missing": "{{skill}} compare nel {{percent}}% delle offerte per i tuoi ruoli ({{jobs}} offerte) e da nessuna parte nel tuo profilo. Se la conosci, aggiungila; se no, potrebbe valere la pena impararla."
+      },
+      "ai": {
+        "title": "Valutazione scritta",
+        "intro": "L'IA legge il tuo profilo come farebbe un selezionatore e suggerisce cosa cambiare. Nome, email, telefono e link non vengono inviati.",
+        "off": "L'IA è disattivata. Scegli un provider nelle Impostazioni per avere una valutazione scritta.",
+        "openSettings": "Apri le Impostazioni",
+        "consentNote": "Per scrivere la valutazione il tuo profilo (senza i dati di contatto) viene inviato a {{provider}}.",
+        "consent": "Accetto di inviarlo a {{provider}}",
+        "start": "Valuta con l'IA",
+        "again": "Valuta di nuovo",
+        "running": "Leggo il tuo profilo…",
+        "reviewedAt": "Scritta il {{date}}. Resta salvata finché il profilo non cambia.",
+        "noSuggestions": "Nessun suggerimento: l'IA non ha trovato nulla da cambiare.",
+        "example": "Per esempio:"
+      },
+      "failures": {
+        "no-profile": "Salva prima il tuo profilo.",
+        "consent-required": "Spunta la casella per accettare prima che il profilo venga inviato.",
+        "engine-unavailable": "Il motore in background non è disponibile. Riprova tra un momento.",
+        "not-configured": "Il provider IA non è del tutto configurato nelle Impostazioni.",
+        "invalid-key": "Il provider ha rifiutato la chiave API.",
+        "model-not-found": "Il provider non conosce il modello configurato.",
+        "rate-limited": "Il provider sta limitando le richieste. Riprova più tardi.",
+        "unreachable": "Non è stato possibile raggiungere il provider.",
+        "timeout": "Il modello non ha risposto in tempo. Riprova, o scegli un modello più leggero nelle Impostazioni.",
+        "invalid-output": "L'IA non ha restituito una valutazione utilizzabile. Riprova.",
+        "unknown": "Non è stato possibile fare la valutazione."
+      }
     }
   },
   "onboarding": {

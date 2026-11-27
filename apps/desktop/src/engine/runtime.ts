@@ -13,6 +13,7 @@ import type {
 import { guardPageRender, type HttpClient, type PageRenderResult } from "@job-finder/core/net";
 import type { GenerateDocumentOutcome } from "@job-finder/core/documents/generate";
 import type { AutofillMapOutcome } from "@job-finder/core/ats/autofill/ai";
+import type { ReviewProfileOutcome } from "@job-finder/core/profile/review-ai";
 import type { UpdateCheckOutcome } from "@job-finder/core/updates";
 import type {
   DbCall,
@@ -21,6 +22,7 @@ import type {
   GenerateDocumentRequest,
   MainToEngineMessage,
   MapFormFieldsRequest,
+  ReviewProfileRequest,
   ScoreJobsOutcome,
 } from "./protocol";
 import type { PortLike } from "./port";
@@ -66,6 +68,8 @@ export interface EngineServices {
   generateDocument(request: GenerateDocumentRequest): Promise<GenerateDocumentOutcome>;
   /** Maps the fields the rules left with the AI; the answer is checked against the form by main. */
   mapFormFields(request: MapFormFieldsRequest): Promise<AutofillMapOutcome>;
+  /** A written review of the profile with the AI. */
+  reviewProfile(request: ReviewProfileRequest): Promise<ReviewProfileOutcome>;
   /** Asks GitHub for the latest release through the engine's HTTP path. */
   checkForUpdate(currentVersion: string): Promise<UpdateCheckOutcome>;
   /** Lists the models installed in a local Ollama server. */
@@ -177,6 +181,14 @@ export function createEngineRuntime(port: PortLike, services: EngineServices): E
         .mapFormFields(request)
         .catch((): AutofillMapOutcome => ({ ok: false, code: "unknown" }))
         .then((outcome) => post(port, { type: "map-form-fields-result", id, outcome }));
+      return;
+    }
+    if (message.type === "review-profile") {
+      const { id, request } = message;
+      void services
+        .reviewProfile(request)
+        .catch((): ReviewProfileOutcome => ({ ok: false, code: "unknown" }))
+        .then((outcome) => post(port, { type: "review-profile-result", id, outcome }));
       return;
     }
     if (message.type === "check-update") {

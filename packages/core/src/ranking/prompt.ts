@@ -96,7 +96,8 @@ function jobLines(job: ScoringJob): string[] {
   ];
 }
 
-function profileLines(profile: ScoringFields): string[] {
+/** The profile as lines of text for a prompt: no contact details, only what the AI needs to judge it. */
+export function profileLines(profile: ScoringFields): string[] {
   const experience = profile.experience.map(
     (item) =>
       `- ${item.title} at ${item.company}${period(item.startDate, item.endDate)}: ${item.bullets.join("; ")}`,

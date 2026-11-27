@@ -8,6 +8,7 @@ import { Button, buttonClass } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { ProfileEditor } from "./ProfileEditor";
+import { ProfileReview } from "./ProfileReview";
 import { draftFromProfile } from "./profile-draft";
 
 type LoadState =
@@ -89,6 +90,8 @@ export function ProfileScreen() {
           </Link>
         </p>
       ) : null}
+
+      {state.status === "ready" ? <ProfileReview key={state.record.version} /> : null}
 
       {state.status === "ready" ? (
         <ProfileEditor

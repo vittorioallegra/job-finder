@@ -119,6 +119,7 @@ async function startHarness(): Promise<Harness> {
         return { ok: true, release: { version: "9.0.0", url: "https://example.test/release" } };
       },
       generateDocument: async () => ({ ok: false as const, code: "unknown" as const }),
+      reviewProfile: async () => ({ ok: false as const, code: "unknown" as const }),
       mapFormFields: async () => ({ ok: false as const, code: "unknown" as const }),
       createScoring: () => ({
         score: async (request) => {

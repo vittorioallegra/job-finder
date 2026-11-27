@@ -16,6 +16,7 @@ import type { IngestEvent } from "@job-finder/core/ingest/events";
 import type { PageRenderResult } from "@job-finder/core/net";
 import type { ExplanationLanguage, ScoreOutcome, StoredScore } from "@job-finder/core/ranking";
 import type { ScoringFields, Profile } from "@job-finder/core/profile";
+import type { ReviewProfileOutcome } from "@job-finder/core/profile/review-ai";
 import type { DocumentJob } from "@job-finder/core/documents/prompt";
 import type { DocumentKind } from "@job-finder/core/documents/schema";
 import type { GenerateDocumentOutcome } from "@job-finder/core/documents/generate";
@@ -94,6 +95,17 @@ export interface GenerateDocumentRequest {
 }
 
 /**
+ * One request for a written review of the profile with the AI. Main sends the ranking fields and
+ * the target roles only, never the contact details; nothing is stored in the engine.
+ */
+export interface ReviewProfileRequest {
+  profile: Profile;
+  /** The language of the review: the user's UI language. */
+  language: ExplanationLanguage;
+  ai: IngestAiSettings;
+}
+
+/**
  * One request to map the fields the rules left, with the AI. The engine gets the fields the rules
  * could not map, the profile and the AI provider with its key; nothing is stored.
  */
@@ -129,6 +141,8 @@ export type MainToEngineMessage =
   | { type: "generate-document"; id: number; request: GenerateDocumentRequest }
   /** Maps the fields the rules left with the AI; the answer is `map-form-fields-result`. */
   | { type: "map-form-fields"; id: number; request: MapFormFieldsRequest }
+  /** A written review of the profile with the AI; the answer is `review-profile-result`. */
+  | { type: "review-profile"; id: number; request: ReviewProfileRequest }
   /**
    * Asks GitHub for the latest release. The engine makes the request through its HTTP client (fixture
    * override and robots.txt apply); the answer is `check-update-result`.
@@ -163,6 +177,7 @@ export type EngineToMainMessage =
   | { type: "score-jobs-result"; id: number; outcome: ScoreJobsOutcome }
   | { type: "generate-document-result"; id: number; outcome: GenerateDocumentOutcome }
   | { type: "map-form-fields-result"; id: number; outcome: AutofillMapOutcome }
+  | { type: "review-profile-result"; id: number; outcome: ReviewProfileOutcome }
   /** The answer to a `check-update` request. */
   | { type: "check-update-result"; id: number; outcome: UpdateCheckOutcome }
   /** The answer to a `list-models` request. */

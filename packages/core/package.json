@@ -31,7 +31,10 @@
     "./filters/sql": "./src/filters/sql.ts",
     "./normalize/job": "./src/normalize/job.ts",
     "./updates": "./src/updates/release.ts",
-    "./updates/version": "./src/updates/version.ts"
+    "./updates/version": "./src/updates/version.ts",
+    "./profile/review": "./src/profile/review.ts",
+    "./profile/review-types": "./src/profile/review-types.ts",
+    "./profile/review-ai": "./src/profile/review-ai.ts"
   },
   "scripts": {
     "typecheck": "node ../../node_modules/typescript7/bin/tsc --noEmit -p tsconfig.json"

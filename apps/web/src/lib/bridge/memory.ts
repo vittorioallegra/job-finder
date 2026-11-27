@@ -10,6 +10,8 @@ import {
   SECRET_NAMES,
   type AiTestResult,
   type ProfileDiscoveryResult,
+  type ProfileReviewAiResult,
+  type ProfileReviewView,
   type AiModelsResult,
   type AppSettings,
   type AppSettingsPatch,
@@ -41,6 +43,10 @@ export interface MemoryBridgeOptions {
   cvImport?: CvImportResult;
   /** A profile already saved before the page loads. Defaults to none (onboarding not done). */
   profile?: Profile;
+  /** What the profile review answers; defaults to no findings and no written review. */
+  profileReview?: ProfileReviewView;
+  /** Outcome of the written review. Defaults to engine unavailable, since there is no engine here. */
+  profileReviewAi?: ProfileReviewAiResult;
   companies?: CompanyRecord[];
   jobs?: JobListItem[];
   /** Extra detail fields per job id; missing fields fall back to "unknown". */
@@ -128,6 +134,22 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
       importCv: async () =>
         structuredClone(options.cvImport ?? { ok: false, code: "engine-unavailable" }),
       cancelImport: async () => undefined,
+      review: async () =>
+        structuredClone(
+          options.profileReview ?? {
+            hasProfile: profile !== null,
+            findings: [],
+            marketJobs: 0,
+            ai: {
+              enabled: settings.ai.enabled,
+              needsConsent: false,
+              review: null,
+              reviewedAt: null,
+            },
+          },
+        ),
+      reviewAi: async () =>
+        structuredClone(options.profileReviewAi ?? { ok: false, code: "engine-unavailable" }),
     },
     companies: {
       summary: async () => ({ withOffers: 0 }),

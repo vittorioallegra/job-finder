@@ -1,5 +1,5 @@
 // protects=the engine renders pages through main only after the URL is resolved and allowed by robots.txt, and matches main's answer to its request id; the engine answers an AI connection test, a document request and a form mapping with the service's result (a failed document request reports only its code), reports an unexpected service failure as unknown without its message, relays ingestion start and cancel to its controller and answers the start under its request id, and keeps answering pings;
-// fails_when=a test request gets no reply, a thrown error text is passed back to main, or the reply is sent to a different request id;
+// fails_when=a profile review answer is lost or leaks the key, a test request gets no reply, a thrown error text is passed back to main, or the reply is sent to a different request id;
 // no_claim=the real provider call and the utility process transport are not exercised here; the supervisor test covers the round trip through main.
 import { describe, expect, it } from "vitest";
 import type { AiConnectionResult, AiProviderConfig } from "@job-finder/core/ai";
@@ -26,6 +26,7 @@ const noIngest = () => ({ start: () => "accepted" as const, cancel: () => {} });
 /** A document generator that answers nothing; the document tests replace it. */
 const noDocuments = async () => ({ ok: false as const, code: "unknown" as const });
 const noMapping = async () => ({ ok: false as const, code: "unknown" as const });
+const noReview = async () => ({ ok: false as const, code: "unknown" as const });
 
 /** A scoring runner that answers nothing; the scoring tests replace it. */
 const noScoring = () => ({
@@ -73,6 +74,7 @@ describe("engine runtime", () => {
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
+      reviewProfile: noReview,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: true, model: "claude-test" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
@@ -97,6 +99,7 @@ describe("engine runtime", () => {
       createScoring: noScoring,
       mapFormFields: async () => ({ ok: true, answers: [] }),
       generateDocument: noDocuments,
+      reviewProfile: noReview,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: true, model: "claude-test" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
@@ -121,6 +124,48 @@ describe("engine runtime", () => {
     ]);
   });
 
+  it("answers a profile review with the service result, and a failing service as unknown", async () => {
+    const port = fakePort();
+    let calls = 0;
+    const services: EngineServices = {
+      createIngest: noIngest,
+      checkForUpdate: async () => ({ ok: false as const, code: "unavailable" as const }),
+      listModels: async () => ({ ok: false as const, code: "unreachable" as const }),
+      createScoring: noScoring,
+      mapFormFields: noMapping,
+      generateDocument: noDocuments,
+      reviewProfile: async () => {
+        calls += 1;
+        if (calls === 2) throw new Error(`boom with ${config.apiKey}`);
+        return { ok: true as const, review: { summary: "Fine.", suggestions: [] } };
+      },
+      net: fakeNet(),
+      testAiConnection: async () => ({ ok: false as const, code: "unknown" as const }),
+      importCv: async () => ({ ok: false, code: "unknown" }),
+      discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
+    };
+    createEngineRuntime(port, services);
+    const request = {
+      profile: emptyProfile(),
+      language: "en" as const,
+      ai: { config, contextSize: 8192 },
+    };
+
+    port.deliver({ type: "review-profile", id: 4, request });
+    port.deliver({ type: "review-profile", id: 5, request });
+    await settle();
+
+    expect(port.sent).toEqual([
+      {
+        type: "review-profile-result",
+        id: 4,
+        outcome: { ok: true, review: { summary: "Fine.", suggestions: [] } },
+      },
+      { type: "review-profile-result", id: 5, outcome: { ok: false, code: "unknown" } },
+    ]);
+    expect(JSON.stringify(port.sent)).not.toContain(config.apiKey);
+  });
+
   it("reports an unexpected service failure as unknown, without the error text", async () => {
     const port = fakePort();
     const services: EngineServices = {
@@ -130,6 +175,7 @@ describe("engine runtime", () => {
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
+      reviewProfile: noReview,
       net: fakeNet(),
       testAiConnection: async () => {
         throw new Error(`boom with ${config.apiKey}`);
@@ -156,6 +202,7 @@ describe("engine runtime", () => {
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
+      reviewProfile: noReview,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async (request) => {
@@ -187,6 +234,7 @@ describe("engine runtime", () => {
       listModels: async () => ({ ok: false as const, code: "unreachable" as const }),
       createScoring: noScoring,
       mapFormFields: noMapping,
+      reviewProfile: noReview,
       generateDocument: async (request) => {
         seen.push(`${request.kind}:${request.language}:${request.ai.config.apiKey}`);
         return { ok: false, code: "invalid-key" };
@@ -225,6 +273,7 @@ describe("engine runtime", () => {
       listModels: async () => ({ ok: false as const, code: "unreachable" as const }),
       createScoring: noScoring,
       mapFormFields: noMapping,
+      reviewProfile: noReview,
       generateDocument: async () => {
         throw new Error("secret detail from the provider");
       },
@@ -262,6 +311,7 @@ describe("engine runtime", () => {
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
+      reviewProfile: noReview,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => {
@@ -293,6 +343,7 @@ describe("engine runtime", () => {
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
+      reviewProfile: noReview,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       // Like a model call: it ends only when its signal aborts, then fails as a timeout would.
@@ -330,6 +381,7 @@ describe("engine runtime", () => {
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
+      reviewProfile: noReview,
       net: fakeNet(),
       testAiConnection: async () => ({ ok: false, code: "unknown" }),
       importCv: async () => ({ ok: false, code: "unknown" }),
@@ -351,6 +403,7 @@ describe("engine runtime", () => {
         createScoring: noScoring,
         mapFormFields: noMapping,
         generateDocument: noDocuments,
+        reviewProfile: noReview,
         testAiConnection: async () => ({ ok: false, code: "unknown" }),
         importCv: async () => ({ ok: false, code: "unknown" }),
         discoverCompanies: async () => ({ ok: false, code: "search-failed" }),
@@ -441,6 +494,7 @@ describe("engine runtime", () => {
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
+      reviewProfile: noReview,
       createIngest: () => ({
         start: (runId, companyId) => {
           started.push([runId, companyId]);
@@ -470,6 +524,7 @@ describe("engine runtime", () => {
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
+      reviewProfile: noReview,
       createIngest: (api) => ({
         start: (_runId, _companyId, ai) => {
           received = { ai, rendersPages: typeof api.renderPage === "function" };
@@ -507,6 +562,7 @@ describe("engine runtime", () => {
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
+      reviewProfile: noReview,
       discoverCompanies: async (criteria, config) => {
         asked.push({ criteria, config });
         return { ok: false, code: "search-blocked" };
@@ -544,6 +600,7 @@ describe("engine runtime", () => {
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
+      reviewProfile: noReview,
       discoverCompanies: async () => {
         throw new Error("secret detail");
       },
@@ -576,6 +633,7 @@ describe("engine runtime", () => {
       createScoring: noScoring,
       mapFormFields: noMapping,
       generateDocument: noDocuments,
+      reviewProfile: noReview,
       createIngest: () => ({
         start: (runId) => {
           started.push(runId);

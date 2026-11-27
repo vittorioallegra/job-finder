@@ -86,6 +86,21 @@ function spyServices() {
       return { ok: false as const, code: "consent-required" as const };
     },
   };
+  const profileReview = {
+    get: async () => {
+      calls.push("profileReview.get");
+      return {
+        hasProfile: false,
+        findings: [],
+        marketJobs: 0,
+        ai: { enabled: false, needsConsent: false, review: null, reviewedAt: null },
+      };
+    },
+    reviewWithAi: async () => {
+      calls.push("profileReview.reviewWithAi");
+      return { ok: false as const, code: "not-configured" as const };
+    },
+  };
   const repository = {
     listExcluded: async () => [],
     restoreCompany: async () => true,
@@ -148,6 +163,7 @@ function spyServices() {
     secrets,
     ai,
     profile,
+    profileReview,
     cvImport,
     repository,
     companySummary: async () => ({ withOffers: 0 }),
@@ -373,6 +389,8 @@ describe("IPC sender and payload guard", () => {
         "jobs:flag",
         "jobs:list",
         "profile:cancel-import",
+        "profile:review",
+        "profile:review-ai",
         "profile:get",
         "profile:import-cv",
         "profile:save",

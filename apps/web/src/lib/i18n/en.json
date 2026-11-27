@@ -340,6 +340,80 @@
     "educationType": {
       "degree": "Degree",
       "course": "Training course"
+    },
+    "review": {
+      "title": "Review of your profile",
+      "intro": "What could be better in your profile, checked against the postings for your roles. The advice is for you to apply by hand: nothing here changes your profile.",
+      "loading": "Checking your profile…",
+      "loadFailed": "The review could not be loaded.",
+      "retry": "Try again",
+      "checks": "Checks",
+      "noFindings": "The checks found nothing to fix.",
+      "market": "Skills compared with {{count}} postings for your roles.",
+      "severity": {
+        "high": "Important",
+        "medium": "Worth doing",
+        "low": "Minor"
+      },
+      "sections": {
+        "headline": "Headline",
+        "summary": "Summary",
+        "experience": "Experience",
+        "education": "Education",
+        "skills": "Skills",
+        "languages": "Languages",
+        "certifications": "Certifications",
+        "links": "Links",
+        "preferences": "What you look for"
+      },
+      "rules": {
+        "no-headline": "No headline. One line saying who you are professionally helps, for example \"Backend engineer, TypeScript and PostgreSQL\".",
+        "no-summary": "No summary. Two or three sentences on what you do and what you look for help the reader and the matching.",
+        "short-summary": "The summary is only {{length}} characters. A few sentences give the matching more to work with.",
+        "no-experience": "No experience listed. Add your roles, even short ones, that show the skills you want to use.",
+        "experience-no-bullets_one": "{{count}} role has no detail. Say what you did there, with a result where you can.",
+        "experience-no-bullets_other": "{{count}} roles have no detail. Say what you did in each, with a result where you can.",
+        "experience-no-dates_one": "{{count}} role has no start date.",
+        "experience-no-dates_other": "{{count}} roles have no start date.",
+        "no-numbers": "None of your {{count}} bullets contains a figure. A number (time saved, users, size) makes a result believable.",
+        "no-skills": "No skills listed. The matching and your documents start from this list.",
+        "few-skills_one": "Only {{count}} skill listed. Add the tools you really use, with the names job posts use.",
+        "few-skills_other": "Only {{count}} skills listed. Add the tools you really use, with the names job posts use.",
+        "unbacked-skills": "{{count}} listed skills are never mentioned in your work: {{skills}}. A skill with an example behind it is more convincing.",
+        "no-languages": "No languages listed.",
+        "no-education": "No education listed. Add it, or a course, if it supports the roles you look for.",
+        "no-links": "No links. A portfolio, GitHub or LinkedIn page lets a reader check your work.",
+        "no-roles": "No target roles. Without them the app cannot look for companies or tell which jobs fit you.",
+        "no-places": "No places. Add where you want to work, or the app shows jobs from anywhere.",
+        "market-skill-missing": "{{skill}} is named in {{percent}}% of the postings for your roles ({{jobs}} postings) and nowhere in your profile. If you know it, add it; if not, it may be worth learning."
+      },
+      "ai": {
+        "title": "Written review",
+        "intro": "The AI reads your profile as a recruiter would and suggests what to change. Your name, email, phone and links are not sent.",
+        "off": "The AI is off. Choose a provider in Settings to get a written review.",
+        "openSettings": "Open Settings",
+        "consentNote": "To write the review, your profile (without contact details) is sent to {{provider}}.",
+        "consent": "I agree to send it to {{provider}}",
+        "start": "Review with the AI",
+        "again": "Review again",
+        "running": "Reading your profile…",
+        "reviewedAt": "Written on {{date}}. It is kept until your profile changes.",
+        "noSuggestions": "No suggestions: the AI found nothing to change.",
+        "example": "For example:"
+      },
+      "failures": {
+        "no-profile": "Save your profile first.",
+        "consent-required": "Tick the box to agree before the profile is sent.",
+        "engine-unavailable": "The background engine is not available. Try again in a moment.",
+        "not-configured": "The AI provider is not fully set up in Settings.",
+        "invalid-key": "The provider rejected the API key.",
+        "model-not-found": "The provider does not know the configured model.",
+        "rate-limited": "The provider is rate limiting requests. Try again later.",
+        "unreachable": "The provider could not be reached.",
+        "timeout": "The model did not answer in time. Try again, or pick a lighter model in Settings.",
+        "invalid-output": "The AI did not return a usable review. Try again.",
+        "unknown": "The review could not be made."
+      }
     }
   },
   "onboarding": {
