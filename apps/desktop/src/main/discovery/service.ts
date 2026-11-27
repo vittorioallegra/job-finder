@@ -134,19 +134,18 @@ export function createDiscoveryService(options: DiscoveryServiceOptions): Discov
         return { ok: false, code: "engine-unavailable" };
       }
       try {
-        const { search } = await options.settings.get();
+        // Every service with a saved key is a fallback, tried in this order after DuckDuckGo.
         const keyed: KeyedSearchConfig[] = [];
         for (const provider of Object.keys(KEYED_SECRETS) as KeyedSearchConfig["provider"][]) {
-          if (!search[provider]) continue;
           const apiKey = await options.secrets.read(KEYED_SECRETS[provider]);
           if (apiKey) keyed.push({ provider, apiKey });
         }
-        // One service at a time: with a usable key, DuckDuckGo stays out (settings saved before
-        // the choice became single may still have both switched on).
+        // DuckDuckGo is always the first road, free; the keyed services answer what it cannot, so
+        // their monthly quotas last.
         const known = options.knownHosts ? await options.knownHosts() : [];
         const outcome = await current.discoverCompanies(
           { keywords: request.keywords, locations: request.locations, known },
-          { duckduckgo: search.duckduckgo && keyed.length === 0, keyed },
+          { duckduckgo: true, keyed },
         );
         if (!outcome.ok) return { ok: false, code: outcome.code };
         // The note about a blocked keyless search suggests adding a key: it is left out once a key

@@ -69,6 +69,7 @@ describe("company sites", () => {
       new Set(),
     );
     expect(first.candidates.map((candidate) => candidate.name)).toEqual(["Orbyta"]);
+    expect(first.boardUrls).toEqual(["https://jobs.lever.co/globex/1"]);
     expect(first.candidates[0]?.careersUrl).toBe("https://www.orbyta.it/lavora-con-noi");
     expect(requests.filter((host) => host === "www.orbyta.it").length).toBeGreaterThan(0);
     expect(requests.some((host) => host.includes("linkedin") || host === "followed.example")).toBe(

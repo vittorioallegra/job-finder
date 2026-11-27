@@ -153,16 +153,13 @@
       }
     },
     "search": {
-      "intro": "L'app cerca sul web le bacheche delle aziende che assumono per i ruoli del tuo profilo, e quando cerchi dalla pagina Fonti. Scegli il servizio con cui cerca: DuckDuckGo non richiede nulla; gli altri sono più affidabili e hanno un piano gratuito con chiave.",
-      "duckduckgo": "DuckDuckGo",
-      "duckduckgoHint": "Gratuito e senza chiave. Basta per iniziare, ma a volte blocca le ricerche automatiche.",
+      "intro": "L'app cerca sul web le aziende che assumono per i ruoli del tuo profilo e le loro pagine di lavoro, e quando cerchi dalla pagina Fonti. Parte da DuckDuckGo, che è gratuito.",
       "keyLabel": "Chiave di {{name}}",
       "site": "Crea una chiave gratuita su {{site}}.",
       "brave": "Brave Search",
       "tavily": "Tavily",
       "serper": "Serper",
-      "needsKey": "Incolla una chiave, altrimenti questo servizio non viene usato.",
-      "service": "Servizio di ricerca"
+      "keysIntro": "A volte DuckDuckGo blocca le ricerche automatiche. Quando succede, subentrano i servizi qui sotto, in quest'ordine e solo quelli con una chiave. Ognuno ha un piano gratuito con un limite mensile: quando uno finisce, passa al successivo."
     },
     "language": {
       "label": "Lingua dell'interfaccia",
@@ -196,8 +193,7 @@
       "keySaved": "Chiave salvata.",
       "keyRemoved": "Chiave rimossa.",
       "keyFailed": "Impossibile salvare la chiave.",
-      "removeFailed": "Impossibile rimuovere la chiave.",
-      "storagePlain": "Le chiavi sono salvate nella cartella dei dati dell'app su questo computer, senza il portachiavi di sistema."
+      "removeFailed": "Impossibile rimuovere la chiave."
     },
     "jobs": {
       "maxAgeDays": "Mostra offerte pubblicate negli ultimi (giorni)",

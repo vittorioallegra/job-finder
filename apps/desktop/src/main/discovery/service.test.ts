@@ -1,5 +1,5 @@
 // protects=a discovery search is relayed to the engine with the user's terms, the enabled sources and only the keyed providers that have a saved key, and every failure reaches the renderer as a code without the error text or a key;
-// fails_when=the terms change on the way, a found board is dropped, a keyed provider runs without its toggle or key, a key is returned to the caller, an unreachable engine is reported as a search failure, or an error message leaks to the renderer;
+// fails_when=a provider with a saved key is left out, DuckDuckGo is left out, the terms change on the way, a found board is dropped, a keyed provider runs without its toggle or key, a key is returned to the caller, an unreachable engine is reported as a search failure, or an error message leaks to the renderer;
 // no_claim=the engine's requests to the search providers, which the core and engine tests cover, and the IPC payload check, which the handler tests cover.
 import { describe, expect, it } from "vitest";
 import type {
@@ -64,33 +64,23 @@ describe("discovery service", () => {
     expect(result).toEqual(found);
   });
 
-  it("passes a keyed provider only when its toggle is on and a key is saved, leaving DuckDuckGo out then", async () => {
+  it("passes every provider that has a saved key, one key each, and always keeps DuckDuckGo first", async () => {
     const asked: Asked[] = [];
     const service = createDiscoveryService({
       engine: () => engineAnswering(async () => found, asked),
-      settings: settingsWith({ brave: true, tavily: false, serper: true }),
-      secrets: secretsWith({ "search.brave": "brave-key", "search.tavily": "tavily-key" }),
+      settings: settingsWith({ duckduckgo: false }),
+      secrets: secretsWith({ "search.tavily": "tavily-key", "search.serper": "serper-key" }),
     });
 
     await service.search({ keywords: ["x"], locations: [] });
 
     expect(asked[0]?.config).toEqual({
-      duckduckgo: false,
-      keyed: [{ provider: "brave", apiKey: "brave-key" }],
+      duckduckgo: true,
+      keyed: [
+        { provider: "tavily", apiKey: "tavily-key" },
+        { provider: "serper", apiKey: "serper-key" },
+      ],
     });
-  });
-
-  it("passes the DuckDuckGo toggle through", async () => {
-    const asked: Asked[] = [];
-    const service = createDiscoveryService({
-      engine: () => engineAnswering(async () => found, asked),
-      settings: settingsWith({ duckduckgo: false }),
-      secrets: noKeys,
-    });
-
-    await service.search({ keywords: ["x"], locations: [] });
-
-    expect(asked[0]?.config.duckduckgo).toBe(false);
   });
 
   it("returns a blocked-search note alongside the boards only when no key is in use, and never a key", async () => {

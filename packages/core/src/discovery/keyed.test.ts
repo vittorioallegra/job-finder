@@ -1,5 +1,5 @@
 // protects=keyed search providers send the key only in a header, read their results through the shared client, and report a reply of the wrong shape as invalid-response without echoing it;
-// fails_when=the key appears in a URL or body, a keyed request skips the shared client, a result without a link is read as a board, a non-http target is kept, or a malformed reply is reported as results;
+// fails_when=a refused key is not reported as quota-exhausted, the key appears in a URL or body, a keyed request skips the shared client, a result without a link is read as a board, a non-http target is kept, or a malformed reply is reported as results;
 // no_claim=the providers' live answers and quotas; the request and reply shapes come from their public documentation, and no live keyed call is made here.
 import { describe, expect, it } from "vitest";
 import { createHttpClient } from "../net";
@@ -101,13 +101,27 @@ describe("keyed search providers", () => {
     expect(JSON.stringify(result)).not.toContain(KEY);
   });
 
-  it("reports an error status, such as a rejected key, as a failure", async () => {
-    const { http } = clientWith("denied", 401);
+  it("reports a refused key as quota-exhausted and another error status as a failure", async () => {
+    const refused = clientWith("denied", 401);
+    expect(
+      await createKeyedSource({ provider: "serper", apiKey: KEY }).search("q", {
+        http: refused.http,
+      }),
+    ).toEqual({ ok: false, code: "quota-exhausted" });
 
-    const result = await createKeyedSource({ provider: "serper", apiKey: KEY }).search("q", {
-      http,
+    const broken = clientWith("oops", 500);
+    const result = await createKeyedSource({ provider: "brave", apiKey: KEY }).search("q", {
+      http: createHttpClient({
+        fetch: (async (input: RequestInfo | URL) =>
+          new URL(String(input)).pathname === "/robots.txt"
+            ? new Response("", { status: 404 })
+            : new Response("oops", { status: 500 })) as typeof fetch,
+        intervalMs: 0,
+        sleep: async () => {},
+        maxAttempts: 1,
+      }),
     });
-
+    expect(broken.requests).toEqual([]);
     expect(result).toEqual({ ok: false, code: "http-status" });
   });
 });

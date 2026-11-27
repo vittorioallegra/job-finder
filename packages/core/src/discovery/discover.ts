@@ -5,6 +5,7 @@ import { commonCrawlSource } from "./commoncrawl";
 import { discoverCompanySites } from "./company-sites";
 import { duckDuckGoSource } from "./duckduckgo";
 import { createKeyedSource } from "./keyed";
+import { createFallbackSource, KEYED_REQUESTS_PER_RUN } from "./fallback";
 import { discoverFromFeeds, KEYLESS_FEEDS, type JobFeed } from "./feeds";
 import { discoverFromRegistry } from "./registry";
 import { directoryJobs } from "./directory-jobs";
@@ -78,7 +79,13 @@ export async function discoverCompanies(
       ...(wide.jobs.length > 0 ? { jobs: wide.jobs } : {}),
     };
   }
-  const sources = options.sources ?? searchSourcesFor(options.config ?? DEFAULT_CONFIG);
+  // The configured sources work as one: DuckDuckGo answers what it can, the keyed providers the rest.
+  const configured = searchSourcesFor(options.config ?? DEFAULT_CONFIG);
+  const sources =
+    options.sources ??
+    (configured.length > 0
+      ? [createFallbackSource(configured, { keyedBudget: KEYED_REQUESTS_PER_RUN })]
+      : []);
   const boardSources = options.boardSources ?? [commonCrawlSource];
   const queries = buildQueries(criteria, options.maxQueries ?? MAX_QUERIES);
   const candidates: DiscoveryCandidate[] = [];
@@ -98,6 +105,26 @@ export async function discoverCompanies(
     }
   };
 
+  // Companies with their own careers site, which no ATS search sees, asked first because they are the ones found nowhere else: the careers pages and the
+  // companies of the sector the web search returns for the places, each site read for its page.
+  if (sources.length > 0 && !options.signal?.aborted) {
+    const sites = await discoverCompanySites(
+      criteria,
+      sources,
+      { http: options.http, signal: options.signal },
+      blockedSources,
+    );
+    if (sites.answered > 0) succeeded += 1;
+    if (sites.blocked) blocked = true;
+    addUrls(sites.boardUrls);
+    for (const candidate of sites.candidates) {
+      const key = `${candidate.ats ?? "page"}/${candidate.slug ?? candidate.careersUrl}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      candidates.push(candidate);
+    }
+  }
+
   queryLoop: for (const query of queries) {
     for (const source of sources) {
       if (options.signal?.aborted) break queryLoop;
@@ -111,6 +138,7 @@ export async function discoverCompanies(
         continue;
       }
       succeeded += 1;
+      if (result.degraded) blocked = true;
       addUrls(result.urls);
     }
     if (sources.length > 0 && blockedSources.size === sources.length) break;
@@ -122,25 +150,6 @@ export async function discoverCompanies(
     if (result.ok) {
       succeeded += 1;
       addUrls(result.urls);
-    }
-  }
-
-  // Companies with their own careers site, which no ATS search sees: the careers pages and the
-  // companies of the sector the web search returns for the places, each site read for its page.
-  if (sources.length > 0 && !options.signal?.aborted) {
-    const sites = await discoverCompanySites(
-      criteria,
-      sources,
-      { http: options.http, signal: options.signal },
-      blockedSources,
-    );
-    if (sites.answered > 0) succeeded += 1;
-    if (sites.blocked) blocked = true;
-    for (const candidate of sites.candidates) {
-      const key = `${candidate.ats ?? "page"}/${candidate.slug ?? candidate.careersUrl}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      candidates.push(candidate);
     }
   }
 

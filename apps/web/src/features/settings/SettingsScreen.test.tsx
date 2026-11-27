@@ -365,22 +365,24 @@ describe("settings screen", () => {
     expect(container.textContent).toContain("A key is saved.");
   });
 
-  it("asks for the context size only for a server, and for a search key only while its service is on", async () => {
+  it("asks for the context size only for a server", async () => {
     await render(createMemoryBridge());
     expect(container.textContent).not.toContain("Longest text per request");
     await act(async () => {
       setInputValue(field(container, "Provider"), "ollama");
     });
     expect(container.textContent).toContain("Longest text per request");
+  });
 
-    expect(container.textContent).not.toContain("Brave Search key");
-    await act(async () => {
-      (field(container, "Brave Search") as HTMLInputElement).click();
-    });
-    expect(container.textContent).toContain("Brave Search key");
-    expect(container.textContent).toContain("Paste a key, or this service is skipped.");
-    // One service at a time: choosing Brave leaves DuckDuckGo off.
-    expect((field(container, "DuckDuckGo") as HTMLInputElement).checked).toBe(false);
+  it("shows no choice of search service: DuckDuckGo comes first, and each service below asks for its own key", async () => {
+    await render(createMemoryBridge());
+    const text = container.textContent ?? "";
+    expect(text).toContain("It starts with DuckDuckGo");
+    expect(container.querySelector('input[name="search-service"]')).toBeNull();
+    expect(text).toContain("Brave Search key");
+    expect(text).toContain("Tavily key");
+    expect(text).toContain("Serper key");
+    expect(text).not.toContain("Try DuckDuckGo first");
   });
 
   it("hides launch at login on Linux, and asks no keyring there", async () => {

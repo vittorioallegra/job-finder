@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import {
   SETTING_LIMITS,
   type AppSettings,
-  type SecretName,
   type SecretsStatus,
   type JobFinderBridge,
 } from "@job-finder/bridge";
@@ -14,16 +13,10 @@ import { Button } from "../../components/ui/Button";
 import { Card, CardTitle } from "../../components/ui/Card";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { CheckboxInput } from "../../components/ui/CheckboxInput";
-import { RadioInput } from "../../components/ui/RadioInput";
 import { SelectInput, type SelectOption } from "../../components/ui/SelectInput";
 import { TextInput } from "../../components/ui/TextInput";
-import {
-  chosenSearch,
-  draftFromSettings,
-  patchFromDraft,
-  searchFor,
-  type SettingsDraft,
-} from "./draft";
+import { draftFromSettings, patchFromDraft, type SettingsDraft } from "./draft";
+import { SearchKey } from "./SearchKeys";
 import { AiConnectionTest, SecretField } from "./AiControls";
 import { AiProviderFields } from "./AiProviderFields";
 import { defaultContextSize, type AiChoiceFields } from "./provider-choice";
@@ -117,7 +110,6 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
   const { t } = useTranslation();
   const [draft, setDraft] = useState<SettingsDraft>(() => draftFromSettings(initialSettings));
   const [savedDraft, setSavedDraft] = useState<SettingsDraft>(draft);
-  const searchService = chosenSearch(draft.search);
   const unsaved = JSON.stringify(draft) !== JSON.stringify(savedDraft);
   const [secrets, setSecrets] = useState<SecretsStatus>(initialSecrets);
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -224,47 +216,19 @@ function SettingsForm({ initialSettings, initialSecrets, bridge }: SettingsFormP
       <Card as="section" aria-labelledby="settings-search" className="flex flex-col gap-4">
         <CardTitle id="settings-search">{t("settings.sections.search")}</CardTitle>
         <p className="text-sm text-app-muted">{t("settings.search.intro")}</p>
-        <fieldset className="flex flex-col gap-4">
-          <legend className="sr-only">{t("settings.search.service")}</legend>
-          <RadioInput
-            name="search-service"
-            label={t("settings.search.duckduckgo")}
-            hint={t("settings.search.duckduckgoHint")}
-            checked={searchService === "duckduckgo"}
-            onChange={() => change("search", searchFor("duckduckgo"))}
-          />
-          {KEYED_SEARCH.map(({ provider, site }) => {
-            const name = t(`settings.search.${provider}`);
-            const keyName: SecretName = `search.${provider}`;
-            const chosen = searchService === provider;
-            return (
-              <div key={provider} className="flex flex-col gap-3">
-                <RadioInput
-                  name="search-service"
-                  label={name}
-                  hint={t("settings.search.site", { site })}
-                  checked={chosen}
-                  onChange={() => change("search", searchFor(provider))}
-                />
-                {/* The key matters only for the chosen service, so it shows only then. */}
-                {chosen ? (
-                  <div className="ml-6 flex flex-col gap-2 border-l-2 border-app-border pl-4">
-                    <SecretField
-                      bridge={bridge}
-                      name={keyName}
-                      label={t("settings.search.keyLabel", { name })}
-                      secrets={secrets}
-                      onStatus={setSecrets}
-                    />
-                    {secrets.keys[keyName] ? null : (
-                      <p className="text-sm text-app-danger">{t("settings.search.needsKey")}</p>
-                    )}
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </fieldset>
+        <p className="text-sm text-app-muted">{t("settings.search.keysIntro")}</p>
+        {KEYED_SEARCH.map(({ provider, site }) => (
+          <div key={provider} className="flex flex-col gap-2">
+            <p className="text-sm font-semibold text-app-fg">{t(`settings.search.${provider}`)}</p>
+            <SearchKey
+              bridge={bridge}
+              provider={provider}
+              site={site}
+              secrets={secrets}
+              onStatus={setSecrets}
+            />
+          </div>
+        ))}
       </Card>
 
       <Card as="section" aria-labelledby="settings-language" className="flex flex-col gap-4">

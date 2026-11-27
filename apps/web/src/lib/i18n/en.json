@@ -153,16 +153,13 @@
       }
     },
     "search": {
-      "intro": "The app looks on the web for the job boards of companies hiring for the roles in your profile, and when you search on the Sources page. Pick the service it searches with: DuckDuckGo needs nothing; the others are more reliable and have a free plan with a key.",
-      "duckduckgo": "DuckDuckGo",
-      "duckduckgoHint": "Free and without a key. Enough to start, but it sometimes blocks automated searches.",
+      "intro": "The app looks on the web for the companies hiring for the roles in your profile and for their job pages, and when you search on the Sources page. It starts with DuckDuckGo, which is free.",
       "keyLabel": "{{name}} key",
       "site": "Create a free key at {{site}}.",
       "brave": "Brave Search",
       "tavily": "Tavily",
       "serper": "Serper",
-      "needsKey": "Paste a key, or this service is skipped.",
-      "service": "Search service"
+      "keysIntro": "DuckDuckGo sometimes blocks automated searches. When it does, the services below take over, in this order, and only the ones with a key. Each has a free plan with a monthly limit: when one runs out, the next one takes over."
     },
     "language": {
       "label": "Interface language",
@@ -196,8 +193,7 @@
       "keySaved": "Key saved.",
       "keyRemoved": "Key removed.",
       "keyFailed": "The key could not be saved.",
-      "removeFailed": "The key could not be removed.",
-      "storagePlain": "Keys are kept in the app's data folder on this computer, without the system keychain."
+      "removeFailed": "The key could not be removed."
     },
     "jobs": {
       "maxAgeDays": "Show jobs posted within the last (days)",

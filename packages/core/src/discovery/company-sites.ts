@@ -227,10 +227,17 @@ export async function discoverCompanySites(
   sources: readonly SearchSource[],
   options: SearchOptions,
   blocked: Set<SearchSource>,
-): Promise<{ candidates: DiscoveryCandidate[]; answered: number; blocked: boolean }> {
+): Promise<{
+  candidates: DiscoveryCandidate[];
+  /** URLs of ATS boards the queries returned: left to the board search to turn into boards. */
+  boardUrls: string[];
+  answered: number;
+  blocked: boolean;
+}> {
   const known = new Set((criteria.known ?? []).map((host) => host.replace(/^www\./, "")));
   const hosts = new Map<string, URL>();
   const codes = countryCodes(criteria.locations);
+  const boardUrls = new Set<string>();
   let answered = 0;
   let sawBlock = false;
 
@@ -247,9 +254,14 @@ export async function discoverCompanySites(
         continue;
       }
       answered += 1;
+      if (result.degraded) sawBlock = true;
       for (const url of result.urls) {
         const parsed = siteOf(url);
-        if (!parsed || detectAtsFromUrl(url)) continue;
+        if (!parsed) continue;
+        if (detectAtsFromUrl(url)) {
+          boardUrls.add(url);
+          continue;
+        }
         const host = parsed.hostname.replace(/^www\./, "");
         if (isAggregator(host) || known.has(host) || looked.has(host) || hosts.has(host)) continue;
         if (!isInCountries(parsed, codes)) continue;
@@ -275,5 +287,5 @@ export async function discoverCompanySites(
       if (candidate) candidates.push(candidate);
     });
   }
-  return { candidates, answered, blocked: sawBlock };
+  return { candidates, boardUrls: [...boardUrls], answered, blocked: sawBlock };
 }

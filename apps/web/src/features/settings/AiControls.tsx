@@ -123,8 +123,6 @@ export function SecretField({ bridge, name, label, secrets, onStatus }: SecretFi
     }
   }
 
-  const storageNote = t("settings.secrets.storagePlain");
-
   return (
     <div className="flex flex-col gap-2">
       {isSet ? (
@@ -137,7 +135,6 @@ export function SecretField({ bridge, name, label, secrets, onStatus }: SecretFi
           spellCheck={false}
           value={value}
           onChange={(event) => setValue(event.target.value)}
-          hint={storageNote}
         />
       )}
       <div className="flex flex-wrap items-center gap-2">

@@ -1,8 +1,14 @@
 import type { HttpClient, HttpErrorCode } from "../net";
 
-export type SearchFailureCode = "blocked" | "invalid-response" | HttpErrorCode;
+/** `quota-exhausted`: a keyed provider refused the key (plan used up, rate limit or key not accepted). */
+export type SearchFailureCode = "blocked" | "invalid-response" | "quota-exhausted" | HttpErrorCode;
 
-export type SearchResult = { ok: true; urls: string[] } | { ok: false; code: SearchFailureCode };
+/**
+ * `degraded` is set when a source tried before the one that answered was refused (a bot challenge
+ * or a used-up plan), so the screen can say that the preferred service is not working.
+ */
+export type SearchResult =
+  { ok: true; urls: string[]; degraded?: true } | { ok: false; code: SearchFailureCode };
 
 export interface SearchOptions {
   http: HttpClient;
