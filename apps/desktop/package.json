@@ -4,6 +4,8 @@
   "private": true,
   "description": "Electron shell for job-finder: main process, preload and E2E smoke test.",
   "license": "MIT",
+  "homepage": "https://github.com/vittorioallegra/job-finder",
+  "author": "Vittorio Allegra <vittorioallegra@users.noreply.github.com>",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",

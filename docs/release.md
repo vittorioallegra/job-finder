@@ -31,6 +31,10 @@ Output goes to `apps/desktop/dist/` (ignored by git). The unpacked app is in
 The smoke test runs a copy of the packaged app with the Node inspector fuse turned on, because
 Playwright attaches through the inspector. The shipped installers keep that fuse off.
 
+The Linux `.deb` needs a project homepage and a maintainer, which electron-builder reads from
+`homepage` and `author` in `apps/desktop/package.json` (the author uses the GitHub noreply address,
+not a personal one). Without them the Linux build job fails.
+
 ## Cut a release
 
 0. The update check reads releases from `RELEASES_REPOSITORY` in
