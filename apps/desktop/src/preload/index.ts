@@ -87,6 +87,7 @@ const api: JobFinderBridge = {
   companies: {
     list: () => invoke("companies:list"),
     summary: () => invoke("companies:summary"),
+    directory: () => invoke("companies:directory"),
     remove: (companyId: string) => invoke("companies:remove", { companyId }),
     excluded: () => invoke("companies:excluded"),
     restore: (companyId: string) => invoke("companies:restore", { companyId }),

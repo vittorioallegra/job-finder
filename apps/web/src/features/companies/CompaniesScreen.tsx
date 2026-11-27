@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Building2, ChevronRight } from "lucide-react";
 import { Link } from "react-router";
-import type { CompanyRecord, CompanyScan, ExcludedCompany } from "@job-finder/bridge";
+import type {
+  CompanyRecord,
+  CompanyScan,
+  DirectoryCompany,
+  ExcludedCompany,
+} from "@job-finder/bridge";
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -18,6 +23,13 @@ type LoadState =
  * Companies the engine scans: the search from the profile finds and adds them by itself; this page
  * shows each one with its last scan, and lets the user drop one.
  */
+const NAME_ORDER = new Intl.Collator(undefined, { sensitivity: "base", numeric: true });
+
+/** The companies in name order, ignoring case and accents. */
+function byName<T extends { name: string }>(companies: readonly T[]): T[] {
+  return [...companies].sort((a, b) => NAME_ORDER.compare(a.name, b.name));
+}
+
 export function CompaniesScreen() {
   const { t, i18n } = useTranslation();
   const bridge = useBridge();
@@ -37,6 +49,20 @@ export function CompaniesScreen() {
     };
   }, [bridge]);
   const [removeFailed, setRemoveFailed] = useState(false);
+  const [directory, setDirectory] = useState<DirectoryCompany[]>([]);
+  const [directoryQuery, setDirectoryQuery] = useState("");
+  useEffect(() => {
+    let active = true;
+    bridge.companies.directory().then(
+      (found) => {
+        if (active) setDirectory(found);
+      },
+      () => {},
+    );
+    return () => {
+      active = false;
+    };
+  }, [bridge]);
   const [excluded, setExcluded] = useState<ExcludedCompany[]>([]);
   useEffect(() => {
     let active = true;
@@ -131,6 +157,11 @@ export function CompaniesScreen() {
       setRemoveFailed(true);
     }
   }
+
+  const folded = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+  const shownDirectory = byName(
+    directory.filter((company) => folded(company.name).includes(folded(directoryQuery.trim()))),
+  ).slice(0, 300);
 
   const failedCount =
     load.status === "ready"
@@ -228,7 +259,7 @@ export function CompaniesScreen() {
                 />
               ) : (
                 <ul className="grid gap-3 md:grid-cols-2">
-                  {load.companies.map((company) => (
+                  {byName(load.companies).map((company) => (
                     <Card as="li" key={company.id} className="flex flex-col gap-3">
                       <div className="flex items-start justify-between gap-3">
                         <p className="font-display text-lg font-semibold text-app-fg">
@@ -271,6 +302,48 @@ export function CompaniesScreen() {
               )}
             </section>
           </details>
+          {directory.length > 0 ? (
+            <details className="group rounded-2xl border border-app-border bg-app-surface shadow-card">
+              <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 select-none [&::-webkit-details-marker]:hidden">
+                <ChevronRight
+                  aria-hidden="true"
+                  className="size-4 text-app-muted transition-transform group-open:rotate-90"
+                  strokeWidth={1.8}
+                />
+                <h2 className="font-sans text-base font-semibold text-app-fg">
+                  {t("companies.directory.summary", { count: directory.length })}
+                </h2>
+              </summary>
+              <section className="flex flex-col gap-3 px-5 pb-5">
+                <p className="text-sm text-app-muted">{t("companies.directory.hint")}</p>
+                <input
+                  type="search"
+                  value={directoryQuery}
+                  onChange={(event) => setDirectoryQuery(event.target.value)}
+                  aria-label={t("companies.directory.search")}
+                  placeholder={t("companies.directory.search")}
+                  className="rounded-xl border border-app-border bg-app-surface px-3 py-2 text-sm text-app-fg"
+                />
+                {shownDirectory.length === 0 ? (
+                  <p className="text-sm text-app-muted">{t("companies.directory.none")}</p>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {shownDirectory.map((company) => (
+                      <li
+                        key={company.id}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-app-sunken p-3"
+                      >
+                        <p className="font-medium text-app-fg">{company.name}</p>
+                        <p className="text-sm text-app-muted">
+                          {t("companies.directory.openJobs", { count: company.openJobs })}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </details>
+          ) : null}
           {excluded.length > 0 ? (
             <details className="group rounded-2xl border border-app-border bg-app-surface shadow-card">
               <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 select-none [&::-webkit-details-marker]:hidden">
@@ -286,7 +359,7 @@ export function CompaniesScreen() {
               <section className="flex flex-col gap-3 px-5 pb-5">
                 <p className="text-sm text-app-muted">{t("companies.excluded.hint")}</p>
                 <ul className="flex flex-col gap-2">
-                  {excluded.map((company) => (
+                  {byName(excluded).map((company) => (
                     <li
                       key={company.id}
                       className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-app-sunken p-3"

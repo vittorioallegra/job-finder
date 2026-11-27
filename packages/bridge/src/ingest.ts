@@ -65,6 +65,15 @@ export interface CompanyRecord {
 }
 
 /** A company left out of the sources, with who left it out. */
+/** A company only a job directory or feed gave: not scanned, listed apart on the Sources page. */
+export interface DirectoryCompany {
+  id: string;
+  name: string;
+  country: string | null;
+  /** Open jobs it has in the profile's places. */
+  openJobs: number;
+}
+
 export interface ExcludedCompany {
   id: string;
   name: string;

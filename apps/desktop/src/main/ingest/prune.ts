@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, notLike, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, like, notLike, sql } from "drizzle-orm";
 import { companies, jobs } from "@job-finder/core";
 import { filterFromPreferences, type JobFilter } from "@job-finder/core/filters";
 import { jobFilterCondition } from "@job-finder/core/filters/sql";
@@ -78,4 +78,38 @@ export async function companiesWithOffers(
     .from(jobs)
     .where(and(isNull(jobs.closedAt), open));
   return Number(row?.count ?? 0);
+}
+
+/**
+ * The companies only a job directory or feed gave, with the open jobs they have in the profile's
+ * places: they are not scanned, so the Sources page lists them apart, by name.
+ */
+export async function directoryCompanies(
+  db: AppDb,
+  preferences: JobPreferences | null,
+  maxAgeDays?: number,
+): Promise<{ id: string; name: string; country: string | null; openJobs: number }[]> {
+  const filter = placesFilter(preferences, true, maxAgeDays);
+  const condition = filter === null ? undefined : jobFilterCondition(filter);
+  const open = condition === undefined ? sql`1 = 1` : condition;
+  const rows = await db
+    .select({
+      id: companies.id,
+      name: companies.name,
+      country: companies.country,
+      openJobs: sql<number>`count(${jobs.id})`,
+    })
+    .from(jobs)
+    .innerJoin(companies, eq(jobs.companyId, companies.id))
+    .where(
+      and(
+        isNull(jobs.closedAt),
+        isNull(companies.excludedAt),
+        like(companies.careersUrl, `${DIRECTORY_URL_PREFIX}%`),
+        open,
+      ),
+    )
+    .groupBy(companies.id)
+    .orderBy(asc(sql`lower(${companies.name})`));
+  return rows.map((row) => ({ ...row, openJobs: Number(row.openJobs) }));
 }

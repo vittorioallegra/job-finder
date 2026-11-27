@@ -2,6 +2,7 @@ import { detectAtsFromUrl } from "../ats/detect";
 import type { AtsId } from "../ats/types";
 import { canonicalBoardUrl } from "./boards";
 import { commonCrawlSource } from "./commoncrawl";
+import { discoverCompanySites } from "./company-sites";
 import { duckDuckGoSource } from "./duckduckgo";
 import { createKeyedSource } from "./keyed";
 import { discoverFromFeeds, KEYLESS_FEEDS, type JobFeed } from "./feeds";
@@ -121,6 +122,25 @@ export async function discoverCompanies(
     if (result.ok) {
       succeeded += 1;
       addUrls(result.urls);
+    }
+  }
+
+  // Companies with their own careers site, which no ATS search sees: the careers pages and the
+  // companies of the sector the web search returns for the places, each site read for its page.
+  if (sources.length > 0 && !options.signal?.aborted) {
+    const sites = await discoverCompanySites(
+      criteria,
+      sources,
+      { http: options.http, signal: options.signal },
+      blockedSources,
+    );
+    if (sites.answered > 0) succeeded += 1;
+    if (sites.blocked) blocked = true;
+    for (const candidate of sites.candidates) {
+      const key = `${candidate.ats ?? "page"}/${candidate.slug ?? candidate.careersUrl}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      candidates.push(candidate);
     }
   }
 

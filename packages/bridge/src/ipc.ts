@@ -8,6 +8,7 @@ import type { CvImportResult, ProfileRecord } from "./profile";
 import { CvImportRequestSchema, ProfileSchema } from "./profile";
 import type {
   CompanyRecord,
+  DirectoryCompany,
   ExcludedCompany,
   IngestStartResult,
   JobListItem,
@@ -83,6 +84,7 @@ export const IPC_REQUEST_SCHEMAS = {
   "profile:cancel-import": z.undefined(),
   "companies:list": z.undefined(),
   "companies:summary": z.undefined(),
+  "companies:directory": z.undefined(),
   "companies:remove": CompanyRemoveRequestSchema,
   "companies:excluded": z.undefined(),
   "companies:restore": CompanyRemoveRequestSchema,
@@ -133,6 +135,7 @@ export interface IpcResponses {
   "profile:cancel-import": void;
   "companies:list": CompanyRecord[];
   "companies:summary": { withOffers: number };
+  "companies:directory": DirectoryCompany[];
   "companies:remove": boolean;
   "companies:excluded": ExcludedCompany[];
   "companies:restore": boolean;

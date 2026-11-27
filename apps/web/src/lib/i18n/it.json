@@ -632,6 +632,15 @@
         "engine-unavailable": "Il motore in background non è in esecuzione. Riprova tra poco."
       }
     },
+    "directory": {
+      "summary_one": "{{count}} azienda dalle directory di lavoro",
+      "summary_other": "{{count}} aziende dalle directory di lavoro",
+      "hint": "Le directory e i feed di offerte hanno dato le offerte di queste aziende nei tuoi luoghi. Non vengono scansionate una per una, quindi qui non c'è nulla da gestire: cercane una per nome per controllare che sia coperta.",
+      "search": "Cerca per nome",
+      "openJobs_one": "{{count}} offerta aperta",
+      "openJobs_other": "{{count}} offerte aperte",
+      "none": "Nessuna azienda corrisponde."
+    },
     "excluded": {
       "summary_one": "{{count}} azienda esclusa",
       "summary_other": "{{count}} aziende escluse",

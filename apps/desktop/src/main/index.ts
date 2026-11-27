@@ -26,7 +26,7 @@ import { createIngestRepository } from "./ingest/repository";
 import { createIngestionService } from "./ingest/service";
 import { createDiscoveryService } from "./discovery/service";
 import { createDirectoryJobStore } from "./ingest/directory-jobs";
-import { companiesWithOffers, pruneOffProfileCompanies } from "./ingest/prune";
+import { companiesWithOffers, directoryCompanies, pruneOffProfileCompanies } from "./ingest/prune";
 import { createProfileDiscovery, discoveryRequestFor } from "./discovery/from-profile";
 import { createProfileRepository } from "./profile/repository";
 import { createScoringService } from "./scoring/service";
@@ -591,6 +591,12 @@ if (gotSingleInstanceLock) {
             (await settingsRepository.get()).jobs.maxAgeDays,
           ),
         }),
+        directoryCompanies: async () =>
+          directoryCompanies(
+            database.db,
+            (await profileRepository.get())?.profile.preferences ?? null,
+            (await settingsRepository.get()).jobs.maxAgeDays,
+          ),
         ingestion,
         discovery,
         profileDiscovery,

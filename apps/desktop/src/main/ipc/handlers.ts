@@ -18,6 +18,7 @@ import {
   type AppSettingsPatch,
   type AppSettings,
   type CvImportRequest,
+  type DirectoryCompany,
   type IngestStartRequest,
   type IpcChannel,
   type IpcRequest,
@@ -64,6 +65,8 @@ export interface IpcServices {
   repository: IngestRepository;
   /** How many companies have open jobs in the profile's places. */
   companySummary: () => Promise<{ withOffers: number }>;
+  /** The companies only a job directory gave, with their open jobs in the profile's places. */
+  directoryCompanies: () => Promise<DirectoryCompany[]>;
   ingestion: IngestionService;
   discovery: DiscoveryService;
   profileDiscovery: ProfileDiscovery;
@@ -150,6 +153,8 @@ export async function handleInvoke(
       return services.repository.listCompanies();
     case "companies:summary":
       return services.companySummary();
+    case "companies:directory":
+      return services.directoryCompanies();
     case "companies:excluded":
       return services.repository.listExcluded();
     case "companies:restore":

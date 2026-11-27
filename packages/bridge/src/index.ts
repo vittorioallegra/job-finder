@@ -36,6 +36,7 @@ import type { ScoreStartRequest, ScoreStartResult } from "./scoring";
 import type { JobDetail, JobDetailRequest, JobFlagRequest, JobsListRequest } from "./jobs";
 import type {
   CompanyRecord,
+  DirectoryCompany,
   ExcludedCompany,
   IngestEvent,
   IngestStartResult,
@@ -92,6 +93,8 @@ export interface JobFinderBridge {
     list(): Promise<CompanyRecord[]>;
     /** How many companies, followed or not, have open jobs in the profile's places. */
     summary(): Promise<{ withOffers: number }>;
+    /** The companies only a job directory gave, with their open jobs in the profile's places. */
+    directory(): Promise<DirectoryCompany[]>;
     /**
      * Removes a company from the sources: no more scans, its jobs leave the lists, and the company
      * search does not add it again. Resolves false when unknown.

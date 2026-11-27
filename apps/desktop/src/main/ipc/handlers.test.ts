@@ -151,6 +151,7 @@ function spyServices() {
     cvImport,
     repository,
     companySummary: async () => ({ withOffers: 0 }),
+    directoryCompanies: async () => [],
     ingestion,
     discovery,
     profileDiscovery: {
@@ -353,6 +354,7 @@ describe("IPC sender and payload guard", () => {
         "autofill:start",
         "companies:list",
         "companies:summary",
+        "companies:directory",
         "companies:excluded",
         "companies:remove",
         "companies:restore",

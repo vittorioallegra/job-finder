@@ -1,5 +1,5 @@
 // protects=the sources page finds companies for the profile's roles (also on ?discover=1) or points to the profile without roles, shows what the background reading is doing, lists each company with its last scan and country in a panel that starts closed with its count and failures, lets a company be excluded, lists the excluded ones with who excluded them and brings one back, and shows an error with a retry when the list cannot be read;
-// fails_when=a last scan is missing or wrong, the list starts open or hides its failures, a removed company stays listed, a failed read shows a blank page, or the page offers to add a company by hand;
+// fails_when=the directory companies are not listed or not searchable by name, the lists are not in name order, a last scan is missing or wrong, the list starts open or hides its failures, a removed company stays listed, a failed read shows a blank page, or the page offers to add a company by hand;
 // no_claim=layout, keyboard focus order and the real search sources are not checked here; the core discovery tests and the engine runtime tests cover the search;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -132,6 +132,70 @@ describe("companies screen", () => {
     await act(async () => {});
     expect(remove).toHaveBeenCalledWith(acme.id);
     expect(container.textContent).not.toContain(acme.careersUrl);
+  });
+
+  it("lists the followed and the excluded companies in name order, ignoring case", async () => {
+    const memory = createMemoryBridge({
+      companies: [
+        { ...acme, id: "c-z", name: "zeta" },
+        { ...acme, id: "c-a", name: "Alfa" },
+        { ...acme, id: "c-b", name: "beta" },
+      ],
+    });
+    const excludedRow = (id: string, name: string) => ({
+      id,
+      name,
+      careersUrl: `https://boards.greenhouse.io/${id}`,
+      ats: "greenhouse",
+      country: "US",
+      excludedAt: 5,
+      reason: "user" as const,
+    });
+    await render({
+      ...memory,
+      companies: {
+        ...memory.companies,
+        excluded: async () => [excludedRow("x2", "Omega"), excludedRow("x1", "delta")],
+      },
+    });
+    const text = container.textContent ?? "";
+    expect(text.indexOf("Alfa")).toBeLessThan(text.indexOf("beta"));
+    expect(text.indexOf("beta")).toBeLessThan(text.indexOf("zeta"));
+    const restoreOrder = [...container.querySelectorAll("button[aria-label^='Bring back']")].map(
+      (node) => node.getAttribute("aria-label"),
+    );
+    expect(restoreOrder).toEqual(["Bring back delta", "Bring back Omega"]);
+  });
+
+  it("lists the companies only a directory gave, by name, with a search by name", async () => {
+    const memory = createMemoryBridge({ companies: [] });
+    await render({
+      ...memory,
+      companies: {
+        ...memory.companies,
+        directory: async () => [
+          { id: "d1", name: "Pwc", country: "IT", openJobs: 75 },
+          { id: "d2", name: "Accenture", country: "IT", openJobs: 16 },
+          { id: "d3", name: "Zucchetti", country: "IT", openJobs: 1 },
+        ],
+      },
+    });
+    expect(container.textContent).toContain("3 companies from job directories");
+    const rows = () =>
+      [...container.querySelectorAll("section li")].map((node) => node.textContent ?? "");
+    expect(rows()[0]).toContain("Accenture");
+    expect(rows()[0]).toContain("16 open jobs");
+    expect(rows()[1]).toContain("Pwc");
+    expect(rows()[2]).toContain("1 open job");
+
+    const input = container.querySelector<HTMLInputElement>('input[type="search"]')!;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      setter.call(input, "ACCEN");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(rows()).toHaveLength(1);
+    expect(rows()[0]).toContain("Accenture");
   });
 
   it("lists the excluded companies with who excluded them, and brings one back", async () => {

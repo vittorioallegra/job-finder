@@ -1,5 +1,5 @@
 // protects=a company's site is read for its careers page (an embedded or linked ATS board becomes a board to scan, a careers page with no board stays a page, a fallback path counts only when it reads like careers, a site with none gives nothing), and the companies of a country come from DBpedia once per country, without job-list sites, with names cleaned, skipping followed and already read sites, a few sites at a time;
-// fails_when=a link to an ATS board is missed, an unrelated page is taken as careers, a company already followed is looked up again, a job site is returned as a company, a failing registry reads as an answer, or the same site is read twice in a session;
+// fails_when=an account or job-alert page is chosen over the job search, a careers subdomain of the same company is not followed, a "join us" page is missed, a link to an ATS board is missed, an unrelated page is taken as careers, a company already followed is looked up again, a job site is returned as a company, a failing registry reads as an answer, or the same site is read twice in a session;
 // no_claim=how much of a country DBpedia covers and the live sites, which only a live check shows; every page here is a small hand-written document;
 import { describe, expect, it } from "vitest";
 import { createHttpClient } from "../net";
@@ -188,5 +188,37 @@ describe("registry of companies by country", () => {
       candidates: [],
       answered: 0,
     });
+  });
+});
+
+describe("choosing among careers links", () => {
+  it("prefers the job search to an account page, follows a careers subdomain of the same company, and reads join-us", async () => {
+    const { http } = clientWith((url) => {
+      if (url.hostname === "staffing.example" && url.pathname === "/")
+        return html(
+          '<a href="/it/my-account/job-alerts">My Job Alerts</a><a href="/it/consigli">Consigli di carriera</a><a href="/it/ricerca-offerte">Offerte di lavoro</a>',
+        );
+      if (url.hostname === "staffing.example") return html("<p>Offerte</p>");
+      if (url.hostname === "www.consulting.example" && url.pathname === "/")
+        return html('<a href="/carriere">Carriere</a>');
+      if (url.hostname === "www.consulting.example")
+        return html(
+          '<a href="https://careers.consulting.example/">Candidati</a><a href="/carriere/x">Careers</a>',
+        );
+      if (url.hostname === "studio.example" && url.pathname === "/")
+        return html('<a href="/join-us">join us</a>');
+      if (url.hostname === "studio.example") return html("<p>We are hiring</p>");
+      return undefined;
+    });
+    const options = { http };
+    expect(
+      (await findCareersPage("Staffing", "https://staffing.example", options))?.careersUrl,
+    ).toBe("https://staffing.example/it/ricerca-offerte");
+    expect(
+      (await findCareersPage("Consulting", "https://www.consulting.example", options))?.careersUrl,
+    ).toBe("https://careers.consulting.example/");
+    expect((await findCareersPage("Studio", "https://studio.example", options))?.careersUrl).toBe(
+      "https://studio.example/join-us",
+    );
   });
 });

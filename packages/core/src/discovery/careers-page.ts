@@ -10,7 +10,14 @@ import type { DiscoveryCandidate } from "./types";
  * noi", Karriere, Stellenangebote, carrières, empleo, vacatures, kariera, carreira, jobb.
  */
 export const CAREERS_WORDS =
-  /career|carri[eè]re|carriere|\bjobs?\b|lavora[- ]?con[- ]?noi|lavora[- ]con|posizioni[- ]aperte|karriere|stellen|emploi|recrut|empleo|trabaja|vacature|werken[- ]bij|kariera|oferty[- ]pracy|carreira|trabalhe|ledige|rekry|ty[oö]paikat/i;
+  /career|carri[eè]re|carriere|\bjobs?\b|lavora[- ]?con[- ]?noi|lavora[- ]con|lavora[- ]in\b|posizioni[- ]aperte|ricerca[- ]offerte|offerte[- ]di[- ]lavoro|join[- ]?us|work[- ]with[- ]us|open[- ]positions|karriere|stellen|emploi|recrut|empleo|trabaja|vacature|werken[- ]bij|kariera|oferty[- ]pracy|carreira|trabalhe|ledige|rekry|ty[oö]paikat/i;
+
+/**
+ * Links that match a careers word without being the careers page: a candidate's account, its job
+ * alerts, career advice articles, news.
+ */
+const NOT_CAREERS_PAGE =
+  /my-account|account|alert|insight|consigli|advice|blog|news|press|risorse|resources|login|signin|newsletter|saved|mypage|my-page|profile|register|cookie|privacy|publish|post-a-job|post-job|use-cases|tailor|expiring|resume/i;
 
 /** Paths tried when a site's pages link no careers page. */
 const FALLBACK_PATHS = ["/careers", "/jobs", "/lavora-con-noi"];
@@ -51,6 +58,7 @@ export function careersLinks(html: string, base: string): string[] {
     // A link to an ATS board, or to the company's own site, beats a link to somewhere else.
     const own = url.hostname.replace(/^www\./, "") === new URL(base).hostname.replace(/^www\./, "");
     const score =
+      (NOT_CAREERS_PAGE.test(`${url.pathname} ${text}`) ? -6 : 0) +
       (detectAtsFromUrl(url.toString()) ? 5 : 0) +
       (own ? 2 : 0) +
       (inText ? 1 : 0) +
@@ -70,6 +78,39 @@ async function page(url: string, options: SearchOptions): Promise<string | undef
     maxBodyBytes: PAGE_MAX_BYTES,
   });
   return answer.ok ? answer.body : undefined;
+}
+
+/** "www.soprasteria.it" and "careers.soprasteria.it" share "soprasteria.it": the last two labels. */
+function baseDomain(host: string): string {
+  return host.split(".").slice(-2).join(".");
+}
+
+/**
+ * A careers page often only introduces the jobs and links the real board on a careers subdomain of
+ * the same company ("careers.soprasteria.it"): that link is the page to read.
+ */
+function careersSubdomain(html: string, page: string): string | undefined {
+  const home = new URL(page);
+  const $ = load(html);
+  let found: string | undefined;
+  $("a[href]").each((_, element) => {
+    if (found !== undefined) return;
+    let url: URL;
+    try {
+      url = new URL($(element).attr("href") ?? "", page);
+    } catch {
+      return;
+    }
+    if (
+      (url.protocol === "https:" || url.protocol === "http:") &&
+      url.hostname !== home.hostname &&
+      baseDomain(url.hostname) === baseDomain(home.hostname) &&
+      /^(careers?|jobs?|carriere|lavora|lavoraconnoi|recruiting|recruitment)\./i.test(url.hostname)
+    ) {
+      found = url.origin + url.pathname;
+    }
+  });
+  return found;
 }
 
 /**
@@ -113,7 +154,7 @@ export async function findCareersPage(
     // path must also say so in its text, or any site's "/jobs" would count.
     const text = load(html)("body").text().slice(0, 4000);
     if (links.length > 0 || CAREERS_WORDS.test(text)) {
-      return { ats: null, slug: null, careersUrl: url, name };
+      return { ats: null, slug: null, careersUrl: careersSubdomain(html, url) ?? url, name };
     }
   }
   return undefined;

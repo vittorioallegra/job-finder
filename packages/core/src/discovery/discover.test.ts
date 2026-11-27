@@ -129,7 +129,7 @@ describe("company discovery", () => {
     });
 
     expect(blocked.queries).toHaveLength(1);
-    expect(keyed.queries).toHaveLength(3);
+    expect(keyed.queries.filter((query) => !query.includes("-site:"))).toHaveLength(3);
     expect(outcome).toEqual({
       ok: true,
       searchBlocked: true,

@@ -124,6 +124,7 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
     },
     companies: {
       summary: async () => ({ withOffers: 0 }),
+      directory: async () => [],
       list: async () => structuredClone(companies),
       excluded: async () => [],
       restore: async () => false,
