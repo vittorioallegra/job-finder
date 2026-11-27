@@ -104,6 +104,9 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 26
+          # This job only runs a script: it installs no pnpm, and setup-node would otherwise try to
+          # find pnpm's cache from the packageManager field in package.json and fail without it.
+          package-manager-cache: false
       - uses: actions/download-artifact@v8
         with:
           pattern: installers-*
