@@ -210,10 +210,15 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
   function queueFor(host: string): PQueue {
     let queue = queues.get(host);
     if (!queue) {
+      const interval = options.hostIntervalMs?.[host] ?? intervalMs;
       queue = new PQueue({
         concurrency: 1,
-        interval: options.hostIntervalMs?.[host] ?? intervalMs,
+        interval,
         intervalCap: 1,
+        // A sliding window: with fixed windows, one request at the end of a window and the next at
+        // the start of the following one could leave a host with two requests a few milliseconds apart.
+        // No spacing at all (tests) leaves nothing to space out.
+        strict: interval > 0,
       });
       queues.set(host, queue);
     }
