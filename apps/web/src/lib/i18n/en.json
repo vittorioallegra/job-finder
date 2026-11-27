@@ -342,12 +342,10 @@
       "course": "Training course"
     },
     "review": {
-      "title": "Review of your profile",
-      "intro": "What could be better in your profile, checked against the postings for your roles. The advice is for you to apply by hand: nothing here changes your profile.",
+      "title": "Profile review",
       "loading": "Checking your profile…",
       "loadFailed": "The review could not be loaded.",
       "retry": "Try again",
-      "checks": "Checks",
       "noFindings": "The checks found nothing to fix.",
       "market": "Skills compared with {{count}} postings for your roles.",
       "severity": {
@@ -388,18 +386,15 @@
         "market-skill-missing": "{{skill}} is named in {{percent}}% of the postings for your roles ({{jobs}} postings) and nowhere in your profile. If you know it, add it; if not, it may be worth learning."
       },
       "ai": {
-        "title": "Written review",
-        "intro": "The AI reads your profile as a recruiter would and suggests what to change. Your name, email, phone and links are not sent.",
         "off": "The AI is off. Choose a provider in Settings to get a written review.",
         "openSettings": "Open Settings",
         "consentNote": "To write the review, your profile (without contact details) is sent to {{provider}}.",
         "consent": "I agree to send it to {{provider}}",
-        "start": "Review with the AI",
-        "again": "Review again",
         "running": "Reading your profile…",
         "reviewedAt": "Written on {{date}}. It is kept until your profile changes.",
         "noSuggestions": "No suggestions: the AI found nothing to change.",
-        "example": "For example:"
+        "example": "For example:",
+        "badge": "AI"
       },
       "failures": {
         "no-profile": "Save your profile first.",
@@ -413,7 +408,10 @@
         "timeout": "The model did not answer in time. Try again, or pick a lighter model in Settings.",
         "invalid-output": "The AI did not return a usable review. Try again.",
         "unknown": "The review could not be made."
-      }
+      },
+      "evaluate": "Evaluate",
+      "summary_one": "{{count}} finding",
+      "summary_other": "{{count}} findings"
     }
   },
   "onboarding": {

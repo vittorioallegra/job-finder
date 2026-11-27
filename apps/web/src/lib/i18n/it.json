@@ -342,12 +342,10 @@
       "course": "Corso di formazione"
     },
     "review": {
-      "title": "Valutazione del tuo profilo",
-      "intro": "Cosa si può migliorare nel tuo profilo, confrontato con le offerte per i tuoi ruoli. I consigli sono da applicare a mano: qui non cambia nulla nel tuo profilo.",
+      "title": "Valutazione del profilo",
       "loading": "Controllo il tuo profilo…",
       "loadFailed": "Non è stato possibile caricare la valutazione.",
       "retry": "Riprova",
-      "checks": "Controlli",
       "noFindings": "I controlli non hanno trovato nulla da sistemare.",
       "market": "Competenze confrontate con {{count}} offerte per i tuoi ruoli.",
       "severity": {
@@ -388,18 +386,15 @@
         "market-skill-missing": "{{skill}} compare nel {{percent}}% delle offerte per i tuoi ruoli ({{jobs}} offerte) e da nessuna parte nel tuo profilo. Se la conosci, aggiungila; se no, potrebbe valere la pena impararla."
       },
       "ai": {
-        "title": "Valutazione scritta",
-        "intro": "L'IA legge il tuo profilo come farebbe un selezionatore e suggerisce cosa cambiare. Nome, email, telefono e link non vengono inviati.",
         "off": "L'IA è disattivata. Scegli un provider nelle Impostazioni per avere una valutazione scritta.",
         "openSettings": "Apri le Impostazioni",
         "consentNote": "Per scrivere la valutazione il tuo profilo (senza i dati di contatto) viene inviato a {{provider}}.",
         "consent": "Accetto di inviarlo a {{provider}}",
-        "start": "Valuta con l'IA",
-        "again": "Valuta di nuovo",
         "running": "Leggo il tuo profilo…",
         "reviewedAt": "Scritta il {{date}}. Resta salvata finché il profilo non cambia.",
         "noSuggestions": "Nessun suggerimento: l'IA non ha trovato nulla da cambiare.",
-        "example": "Per esempio:"
+        "example": "Per esempio:",
+        "badge": "IA"
       },
       "failures": {
         "no-profile": "Salva prima il tuo profilo.",
@@ -413,7 +408,10 @@
         "timeout": "Il modello non ha risposto in tempo. Riprova, o scegli un modello più leggero nelle Impostazioni.",
         "invalid-output": "L'IA non ha restituito una valutazione utilizzabile. Riprova.",
         "unknown": "Non è stato possibile fare la valutazione."
-      }
+      },
+      "evaluate": "Valuta",
+      "summary_one": "{{count}} punto da guardare",
+      "summary_other": "{{count}} punti da guardare"
     }
   },
   "onboarding": {

@@ -105,18 +105,19 @@ describe("profile screen", () => {
   it("shows the checks with their sentences, counts and sections, and how many postings the skills were compared with", async () => {
     await render(() => createMemoryBridge({ profile: emptyProfile(), profileReview: view() }));
     const text = container.textContent ?? "";
-    expect(text).toContain("Review of your profile");
+    expect(text).toContain("Profile review");
     expect(text).toContain("The summary is only 17 characters.");
     expect(text).toContain(
       "Kubernetes is named in 70% of the postings for your roles (21 postings)",
     );
     expect(text).toContain("2 roles have no detail.");
     expect(text).toContain("Skills compared with 30 postings for your roles.");
+    expect(text).toContain("4 findings");
     expect(text).toContain("Important");
     expect(text).toContain("Minor");
   });
 
-  it("says the checks found nothing, and with the AI off points to Settings instead of offering a written review", async () => {
+  it("says the checks found nothing, and with the AI off points to Settings and the Evaluate button is disabled", async () => {
     await render(() =>
       createMemoryBridge({
         profile: emptyProfile(),
@@ -131,11 +132,10 @@ describe("profile screen", () => {
     expect(text).toContain("The checks found nothing to fix.");
     expect(text).toContain("The AI is off.");
     expect(container.querySelector('a[href="/settings"]')).not.toBeNull();
-    expect(
-      [...container.querySelectorAll("button")].some(
-        (node) => node.textContent === "Review with the AI",
-      ),
-    ).toBe(false);
+    const evaluate = [...container.querySelectorAll("button")].find(
+      (node) => node.textContent === "Evaluate",
+    );
+    expect(evaluate?.disabled).toBe(true);
   });
 
   it("asks for the agreement before sending the profile to a cloud provider, then shows the written review", async () => {
@@ -161,9 +161,7 @@ describe("profile screen", () => {
     }));
     await render(() => ({ ...memory, profile: { ...memory.profile, reviewAi } }));
     const start = () =>
-      [...container.querySelectorAll("button")].find(
-        (node) => node.textContent === "Review with the AI",
-      )!;
+      [...container.querySelectorAll("button")].find((node) => node.textContent === "Evaluate")!;
     expect(start().disabled).toBe(true);
     expect(container.textContent).toContain("is sent to Anthropic");
 
@@ -184,7 +182,6 @@ describe("profile screen", () => {
     expect(text).toContain("Add scale to the Acme role");
     expect(text).toContain("Cut latency by 40%.");
     expect(text).toContain("It is kept until your profile changes.");
-    expect(text).toContain("Review again");
   });
 
   it("shows why the written review failed", async () => {
@@ -198,7 +195,7 @@ describe("profile screen", () => {
     await render(() => memory);
     await act(async () =>
       [...container.querySelectorAll("button")]
-        .find((node) => node.textContent === "Review with the AI")!
+        .find((node) => node.textContent === "Evaluate")!
         .click(),
     );
     await act(async () => {});
