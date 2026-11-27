@@ -7,10 +7,16 @@ import { SecretClearRequestSchema, SecretSetRequestSchema } from "./secrets";
 import type {
   CvImportResult,
   ProfileRecord,
+  ProfileExportResult,
   ProfileReviewAiResult,
   ProfileReviewView,
 } from "./profile";
-import { CvImportRequestSchema, ProfileReviewAiRequestSchema, ProfileSchema } from "./profile";
+import {
+  CvImportRequestSchema,
+  ProfileExportRequestSchema,
+  ProfileReviewAiRequestSchema,
+  ProfileSchema,
+} from "./profile";
 import type {
   CompanyRecord,
   DirectoryCompany,
@@ -89,6 +95,7 @@ export const IPC_REQUEST_SCHEMAS = {
   "profile:cancel-import": z.undefined(),
   "profile:review": z.undefined(),
   "profile:review-ai": ProfileReviewAiRequestSchema,
+  "profile:export-cv": ProfileExportRequestSchema,
   "companies:list": z.undefined(),
   "companies:summary": z.undefined(),
   "companies:directory": z.undefined(),
@@ -142,6 +149,7 @@ export interface IpcResponses {
   "profile:cancel-import": void;
   "profile:review": ProfileReviewView;
   "profile:review-ai": ProfileReviewAiResult;
+  "profile:export-cv": ProfileExportResult;
   "companies:list": CompanyRecord[];
   "companies:summary": { withOffers: number };
   "companies:directory": DirectoryCompany[];

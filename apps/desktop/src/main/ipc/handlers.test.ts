@@ -101,6 +101,12 @@ function spyServices() {
       return { ok: false as const, code: "not-configured" as const };
     },
   };
+  const profileExport = {
+    exportCv: async () => {
+      calls.push("profileExport.exportCv");
+      return { ok: false as const, code: "cancelled" as const };
+    },
+  };
   const repository = {
     listExcluded: async () => [],
     restoreCompany: async () => true,
@@ -164,6 +170,7 @@ function spyServices() {
     ai,
     profile,
     profileReview,
+    profileExport,
     cvImport,
     repository,
     companySummary: async () => ({ withOffers: 0 }),
@@ -391,6 +398,7 @@ describe("IPC sender and payload guard", () => {
         "profile:cancel-import",
         "profile:review",
         "profile:review-ai",
+        "profile:export-cv",
         "profile:get",
         "profile:import-cv",
         "profile:save",

@@ -22,7 +22,11 @@
       "education": "Education",
       "skills": "Skills",
       "greeting": "Dear hiring team,",
-      "present": "Present"
+      "present": "Present",
+      "courses": "Courses",
+      "languages": "Languages",
+      "certifications": "Certifications",
+      "native": "Native speaker"
     },
     "export": {
       "dialogTitle": "Save PDF",
@@ -52,5 +56,12 @@
     "quit": "Quit",
     "cancel": "Cancel",
     "remember": "Remember my choice"
+  },
+  "profile": {
+    "export": {
+      "dialogTitle": "Save CV",
+      "pdfFilter": "PDF files",
+      "docxFilter": "Word documents"
+    }
   }
 }

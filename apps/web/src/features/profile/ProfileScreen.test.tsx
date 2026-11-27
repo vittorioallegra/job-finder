@@ -1,5 +1,5 @@
 // protects=the profile screen shows the saved profile for editing, links to onboarding when no profile exists, and shows an error with retry when the read fails;
-// fails_when=the review checks or the written review are not shown, a cloud provider is called without the agreement, the AI off offers a review, a saved profile is not shown, a missing profile shows an empty editor instead of the onboarding link, or a failed read shows a blank page;
+// fails_when=the export sends another language or format than picked, a closed dialog is reported, the review checks or the written review are not shown, a cloud provider is called without the agreement, the AI off offers a review, a saved profile is not shown, a missing profile shows an empty editor instead of the onboarding link, or a failed read shows a blank page;
 // no_claim=the layout of the screen and the stored version number are not checked here.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -7,6 +7,7 @@ import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_APP_SETTINGS,
+  DOCUMENT_LANGUAGES,
   aiConsentTarget,
   emptyProfile,
   type ProfileReviewView,
@@ -202,6 +203,54 @@ describe("profile screen", () => {
     expect(container.querySelector('[role="alert"]')?.textContent).toContain(
       "rejected the API key",
     );
+  });
+
+  it("exports the CV in the language and format picked, reports success and a failure, and says nothing when the dialog is closed", async () => {
+    const memory = createMemoryBridge({ profile: emptyProfile() });
+    const exportCv = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: false, code: "cancelled" })
+      .mockResolvedValueOnce({ ok: false, code: "export-failed" });
+    await render(() => ({ ...memory, profile: { ...memory.profile, exportCv } }));
+    const select = (label: string) =>
+      [...container.querySelectorAll("label")]
+        .find((node) => node.textContent === label)!
+        .parentElement!.querySelector("select")!;
+    const exportButton = () =>
+      [...container.querySelectorAll("button")].find((node) => node.textContent === "Export")!;
+
+    // The languages offered are the ones the documents support, nothing else.
+    expect([...select("Language").options].map((option) => option.value)).toEqual([
+      ...DOCUMENT_LANGUAGES,
+    ]);
+    // English UI: the language starts as English, the format as PDF.
+    expect(select("Language").value).toBe("en");
+    expect(select("Format").value).toBe("pdf");
+    await act(async () => {
+      const set = (element: HTMLSelectElement, value: string) => {
+        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!.call(
+          element,
+          value,
+        );
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+      set(select("Language"), "it");
+      set(select("Format"), "docx");
+    });
+    await act(async () => exportButton().click());
+    await act(async () => {});
+    expect(exportCv).toHaveBeenLastCalledWith({ language: "it", format: "docx" });
+    expect(container.textContent).toContain("CV saved.");
+
+    await act(async () => exportButton().click());
+    await act(async () => {});
+    expect(container.textContent).not.toContain("CV saved.");
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+
+    await act(async () => exportButton().click());
+    await act(async () => {});
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain("could not be saved");
   });
 
   function labelFor(text: string): string {

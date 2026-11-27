@@ -67,6 +67,7 @@ const api: JobFinderBridge = {
     cancelImport: () => invoke("profile:cancel-import"),
     review: () => invoke("profile:review"),
     reviewAi: (request) => invoke("profile:review-ai", request),
+    exportCv: (request) => invoke("profile:export-cv", request),
   },
   autofill: {
     start: (request) => invoke("autofill:start", request),

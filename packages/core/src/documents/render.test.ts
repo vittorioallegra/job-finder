@@ -1,5 +1,5 @@
 // protects=the rendered document is a plain single-column page whose every user value is escaped, with the profile's contact line and the labels passed in, stored dates shown as a CV writes them, and the letter opens with its greeting, the profile's links as escaped http(s) links, and a paper-sheet look on screen only;
-// fails_when=a value from the profile or the document reaches the page unescaped, a table or script is emitted, the headings or language attribute are not the ones given, or a section with no content still gets a heading;
+// fails_when=the headline is lost or the look differs from the exported CV, a value from the profile or the document reaches the page unescaped, a table or script is emitted, the headings or language attribute are not the ones given, or a section with no content still gets a heading;
 // no_claim=the page is not checked in a PDF engine or an applicant tracking system; only its HTML structure and escaping are asserted;
 import { describe, expect, it } from "vitest";
 import { emptyProfile } from "../profile/schema";
@@ -51,11 +51,13 @@ describe("renderDocumentHtml", () => {
     expect(html.startsWith("<!doctype html>")).toBe(true);
     expect(html).toContain('<html lang="en">');
     expect(html).toContain("<h1>Maria &lt;Rossi&gt;</h1>");
-    expect(html).toContain("maria@example.com · Milano");
+    expect(html).toContain("Milano | maria@example.com");
     expect(html).toContain("<h2>Experience</h2>");
-    expect(html).toContain("<h3>Senior &lt;Engineer&gt; — Acme</h3>");
+    expect(html).toContain('<h3>Senior &lt;Engineer&gt; — <span class="company">Acme</span></h3>');
     expect(html).toContain("<li>Cut &quot;billing&quot; latency by 40%</li>");
-    expect(html).toContain("<li>TypeScript</li>");
+    // The skills are one line of words, after the summary and before the experience.
+    expect(html).toContain("<p>TypeScript</p>");
+    expect(html.indexOf("<h2>Skills</h2>")).toBeLessThan(html.indexOf("<h2>Experience</h2>"));
     expect(html).toContain("<title>Maria &lt;Rossi&gt; — CV</title>");
   });
 
@@ -90,9 +92,17 @@ describe("renderDocumentHtml", () => {
       { ...labels, present: "Presente" },
       "it",
     );
-    expect(html).toContain("Milano · 03/2021 – Presente");
+    expect(html).toContain("Milano | 03/2021 – Presente");
     expect(html).toContain("<h3>MSc in Computer Science</h3>");
-    expect(html).toContain("Politecnico · 110/110 · 2012 – 2014");
+    expect(html).toContain("Politecnico | 110/110 | 2012 – 2014");
+  });
+
+  it("shows the profile's headline under the name, and the same look as the exported CV (navy rules, small capitals)", () => {
+    const html = renderDocumentHtml(cvContent, contact, labels, "en", [], " Backend engineer ");
+    expect(html).toContain('<p class="headline">Backend engineer</p>');
+    expect(html).toContain("text-transform: uppercase");
+    expect(html).toContain("#1b2a49");
+    expect(renderDocumentHtml(cvContent, contact, labels, "en")).not.toContain('class="headline"');
   });
 
   it("omits the headings of sections with no content", () => {
@@ -117,6 +127,9 @@ describe("renderDocumentHtml", () => {
     expect(html).toContain("<p>Dear hiring team,</p>");
     expect(html).toContain("<p>&lt;img src=x onerror=alert(1)&gt;</p>");
     expect(html).not.toContain("<img");
+    // A letter is set larger than a CV.
+    expect(html).toContain('<body class="letter">');
+    expect(renderDocumentHtml(cvContent, contact, labels, "en")).toContain("<body>");
   });
 
   it("leaves the contact line out when no contact detail is filled in", () => {
@@ -142,10 +155,11 @@ describe("escapeHtml", () => {
     };
     for (const content of [cvContent, letter]) {
       const html = renderDocumentHtml(content, contact, labels, "en", links);
+      // An address shows without its scheme, escaped, and stays a link.
       expect(html).toContain(
-        '<a href="https://maria.example/work?a=1&amp;b=2">Portfolio: https://maria.example/work?a=1&amp;b=2</a>',
+        '<a href="https://maria.example/work?a=1&amp;b=2">maria.example/work?a=1&amp;b=2</a>',
       );
-      expect(html).toContain('<a href="https://github.com/maria">https://github.com/maria</a>');
+      expect(html).toContain('<a href="https://github.com/maria">github.com/maria</a>');
       expect(html).not.toContain("javascript:");
     }
     // Without links nothing is added.

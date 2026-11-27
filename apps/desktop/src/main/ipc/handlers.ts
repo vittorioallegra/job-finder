@@ -25,6 +25,7 @@ import {
   type JobDetailRequest,
   type JobFlagRequest,
   type JobsListRequest,
+  type ProfileExportRequest,
   type ProfileReviewAiRequest,
   type ScoreStartRequest,
   type SecretName,
@@ -34,6 +35,7 @@ import type { AiConnectionService } from "../ai/connection";
 import type { IngestRepository } from "../ingest/repository";
 import type { IngestionService } from "../ingest/service";
 import type { CvImportService } from "../profile/cv-import";
+import type { ProfileExportService } from "../profile/export-cv";
 import type { ProfileReviewService } from "../profile/review";
 import type { DiscoveryService } from "../discovery/service";
 import type { ProfileDiscovery } from "../discovery/from-profile";
@@ -65,6 +67,7 @@ export interface IpcServices {
   profile: ProfileRepository;
   cvImport: CvImportService;
   profileReview: ProfileReviewService;
+  profileExport: ProfileExportService;
   repository: IngestRepository;
   /** How many companies have open jobs in the profile's places. */
   companySummary: () => Promise<{ withOffers: number }>;
@@ -151,6 +154,8 @@ export async function handleInvoke(
       return services.cvImport.importCv(payload as CvImportRequest);
     case "profile:review":
       return services.profileReview.get();
+    case "profile:export-cv":
+      return services.profileExport.exportCv(payload as ProfileExportRequest);
     case "profile:review-ai":
       return services.profileReview.reviewWithAi(payload as ProfileReviewAiRequest);
     case "profile:cancel-import":

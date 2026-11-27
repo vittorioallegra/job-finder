@@ -412,6 +412,23 @@
       "evaluate": "Valuta",
       "summary_one": "{{count}} punto da guardare",
       "summary_other": "{{count}} punti da guardare"
+    },
+    "export": {
+      "title": "Esporta il CV",
+      "hint": "Tutto il tuo profilo come CV. I titoli e le date seguono la lingua scelta; quello che hai scritto resta com'è.",
+      "language": "Lingua",
+      "format": "Formato",
+      "formats": {
+        "pdf": "PDF",
+        "docx": "Word (.docx)"
+      },
+      "action": "Esporta",
+      "working": "Esporto…",
+      "done": "CV salvato.",
+      "failures": {
+        "no-profile": "Salva prima il tuo profilo.",
+        "export-failed": "Non è stato possibile salvare il CV. Riprova."
+      }
     }
   },
   "onboarding": {

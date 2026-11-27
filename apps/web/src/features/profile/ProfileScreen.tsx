@@ -8,6 +8,7 @@ import { Button, buttonClass } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { ProfileEditor } from "./ProfileEditor";
+import { ProfileExport } from "./ProfileExport";
 import { ProfileReview } from "./ProfileReview";
 import { draftFromProfile } from "./profile-draft";
 
@@ -90,6 +91,8 @@ export function ProfileScreen() {
           </Link>
         </p>
       ) : null}
+
+      {state.status === "ready" ? <ProfileExport /> : null}
 
       {state.status === "ready" ? <ProfileReview key={state.record.version} /> : null}
 

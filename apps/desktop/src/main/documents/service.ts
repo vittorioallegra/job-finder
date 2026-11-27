@@ -121,6 +121,7 @@ export function createDocumentService(options: DocumentServiceOptions): Document
       labels,
       language,
       saved.profile.links,
+      saved.profile.headline,
     );
     // "Maria Rossi - Curriculum Vitae.pdf": a name that makes sense to the employer who receives it.
     const title = stored.content.kind === "cv" ? labels.cvTitle : labels.coverLetterTitle;

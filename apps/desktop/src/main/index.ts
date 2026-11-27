@@ -20,6 +20,8 @@ import { openAppDatabase, resolveMigrationsFolder, type AppDatabase } from "./db
 import { executeDbCalls, reconcileInterruptedRuns } from "./db/operations";
 import { newJobsSinceRun, scoringCandidateIds } from "./db/scoring-operations";
 import { marketJobTexts } from "./db/review-operations";
+import { createProfileExportService } from "./profile/export-cv";
+import { buildCvDocx } from "@job-finder/core/profile/cv-docx";
 import { createProfileReviewService } from "./profile/review";
 import { createProfileReviewStore } from "./profile/review-store";
 import { createAutoScoring, type AutoScoring } from "./scoring/auto";
@@ -328,6 +330,25 @@ if (gotSingleInstanceLock) {
       secrets: secretStore,
       engine: supervisor,
     });
+    const profileExport = createProfileExportService({
+      profile: profileRepository,
+      renderPdf: createPdfRenderer({ openWindow: openPdfWindow }),
+      buildDocx: buildCvDocx,
+      chooseFile: async (defaultName, format) => {
+        const result = await dialog.showSaveDialog({
+          title: t("profile.export.dialogTitle"),
+          defaultPath: defaultName,
+          filters: [
+            {
+              name: t(format === "pdf" ? "profile.export.pdfFilter" : "profile.export.docxFilter"),
+              extensions: [format],
+            },
+          ],
+        });
+        return result.canceled || result.filePath === undefined ? null : result.filePath;
+      },
+      writeFile: (path, bytes) => writeFile(path, bytes),
+    });
     const profileReview = createProfileReviewService({
       profile: profileRepository,
       settings: settingsRepository,
@@ -607,6 +628,7 @@ if (gotSingleInstanceLock) {
         profile: profileRepository,
         cvImport,
         profileReview,
+        profileExport,
         repository: ingestRepository,
         companySummary: async () => ({
           withOffers: await companiesWithOffers(

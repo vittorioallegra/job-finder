@@ -34,6 +34,8 @@ import type {
   CvImportRequest,
   CvImportResult,
   Profile,
+  ProfileExportRequest,
+  ProfileExportResult,
   ProfileRecord,
   ProfileReviewAiRequest,
   ProfileReviewAiResult,
@@ -99,6 +101,8 @@ export interface JobFinderBridge {
     review(): Promise<ProfileReviewView>;
     /** Asks the AI for a written review of the saved profile and keeps it until the profile changes. */
     reviewAi(request: ProfileReviewAiRequest): Promise<ProfileReviewAiResult>;
+    /** Saves the profile as a CV (PDF or Word, in English or Italian) where the user chooses. */
+    exportCv(request: ProfileExportRequest): Promise<ProfileExportResult>;
   };
   readonly companies: {
     /** Companies the engine scans, in the order they were added. */

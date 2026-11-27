@@ -34,7 +34,9 @@
     "./updates/version": "./src/updates/version.ts",
     "./profile/review": "./src/profile/review.ts",
     "./profile/review-types": "./src/profile/review-types.ts",
-    "./profile/review-ai": "./src/profile/review-ai.ts"
+    "./profile/review-ai": "./src/profile/review-ai.ts",
+    "./profile/cv": "./src/profile/cv.ts",
+    "./profile/cv-docx": "./src/profile/cv-docx.ts"
   },
   "scripts": {
     "typecheck": "node ../../node_modules/typescript7/bin/tsc --noEmit -p tsconfig.json"
@@ -45,6 +47,7 @@
     "@ai-sdk/openai-compatible": "3.0.94",
     "ai": "7.0.179",
     "cheerio": "1.2.0",
+    "docx": "9.15.3",
     "drizzle-orm": "0.45.4",
     "mammoth": "1.13.0",
     "ollama-ai-provider-v2": "4.1.0",
@@ -52,5 +55,8 @@
     "robots-parser": "3.1.1",
     "unpdf": "2.2.1",
     "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "jszip": "3.10.2"
   }
 }

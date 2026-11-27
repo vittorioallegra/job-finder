@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DOCUMENT_LANGUAGES } from "@job-finder/core/documents/language";
 import type { CvExtraction, Profile } from "@job-finder/core/profile";
 import type { AiProfileReview, RuleFinding } from "@job-finder/core/profile/review-types";
 
@@ -145,3 +146,16 @@ export const ProfileReviewAiRequestSchema = z.strictObject({
   consentTarget: z.string().max(600).optional(),
 });
 export type ProfileReviewAiRequest = z.infer<typeof ProfileReviewAiRequestSchema>;
+
+/** The formats a CV is exported in. Its languages are the ones the documents support (`DOCUMENT_LANGUAGES`). */
+export const CV_EXPORT_FORMATS = ["pdf", "docx"] as const;
+
+export const ProfileExportRequestSchema = z.strictObject({
+  language: z.enum(DOCUMENT_LANGUAGES),
+  format: z.enum(CV_EXPORT_FORMATS),
+});
+export type ProfileExportRequest = z.infer<typeof ProfileExportRequestSchema>;
+
+/** `cancelled`: the user closed the save dialog. */
+export type ProfileExportResult =
+  { ok: true } | { ok: false; code: "no-profile" | "cancelled" | "export-failed" };

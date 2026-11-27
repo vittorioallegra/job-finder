@@ -412,6 +412,23 @@
       "evaluate": "Evaluate",
       "summary_one": "{{count}} finding",
       "summary_other": "{{count}} findings"
+    },
+    "export": {
+      "title": "Export the CV",
+      "hint": "Your whole profile as a CV. The headings and dates follow the language you pick; what you wrote stays as you wrote it.",
+      "language": "Language",
+      "format": "Format",
+      "formats": {
+        "pdf": "PDF",
+        "docx": "Word (.docx)"
+      },
+      "action": "Export",
+      "working": "Exporting…",
+      "done": "CV saved.",
+      "failures": {
+        "no-profile": "Save your profile first.",
+        "export-failed": "The CV could not be saved. Try again."
+      }
     }
   },
   "onboarding": {

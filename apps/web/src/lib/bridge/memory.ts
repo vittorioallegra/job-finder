@@ -10,6 +10,7 @@ import {
   SECRET_NAMES,
   type AiTestResult,
   type ProfileDiscoveryResult,
+  type ProfileExportResult,
   type ProfileReviewAiResult,
   type ProfileReviewView,
   type AiModelsResult,
@@ -47,6 +48,8 @@ export interface MemoryBridgeOptions {
   profileReview?: ProfileReviewView;
   /** Outcome of the written review. Defaults to engine unavailable, since there is no engine here. */
   profileReviewAi?: ProfileReviewAiResult;
+  /** Outcome of exporting the CV. Defaults to done. */
+  profileExport?: ProfileExportResult;
   companies?: CompanyRecord[];
   jobs?: JobListItem[];
   /** Extra detail fields per job id; missing fields fall back to "unknown". */
@@ -148,6 +151,7 @@ export function createMemoryBridge(options: MemoryBridgeOptions = {}): JobFinder
             },
           },
         ),
+      exportCv: async () => structuredClone(options.profileExport ?? { ok: true }),
       reviewAi: async () =>
         structuredClone(options.profileReviewAi ?? { ok: false, code: "engine-unavailable" }),
     },

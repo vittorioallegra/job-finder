@@ -22,7 +22,11 @@
       "education": "Istruzione",
       "skills": "Competenze",
       "greeting": "Gentile responsabile delle assunzioni,",
-      "present": "Presente"
+      "present": "Presente",
+      "courses": "Corsi",
+      "languages": "Lingue",
+      "certifications": "Certificazioni",
+      "native": "Madrelingua"
     },
     "export": {
       "dialogTitle": "Salva PDF",
@@ -52,5 +56,12 @@
     "quit": "Esci",
     "cancel": "Annulla",
     "remember": "Ricorda la mia scelta"
+  },
+  "profile": {
+    "export": {
+      "dialogTitle": "Salva il CV",
+      "pdfFilter": "File PDF",
+      "docxFilter": "Documenti Word"
+    }
   }
 }
