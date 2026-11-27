@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Building2, ChevronRight } from "lucide-react";
 import { Link } from "react-router";
@@ -11,7 +11,6 @@ import type {
 import { useBridge } from "../../lib/bridge/BridgeContext";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { ProfileDiscovery } from "./ProfileDiscovery";
@@ -29,6 +28,47 @@ const NAME_ORDER = new Intl.Collator(undefined, { sensitivity: "base", numeric: 
 function byName<T extends { name: string }>(companies: readonly T[]): T[] {
   return [...companies].sort((a, b) => NAME_ORDER.compare(a.name, b.name));
 }
+
+/** One company on one compact line: name and badge, a line of details, the action on the right. */
+function CompanyRow({
+  name,
+  badge,
+  meta,
+  metaDanger = false,
+  title,
+  action,
+}: {
+  name: string;
+  badge?: ReactNode;
+  meta: string[];
+  metaDanger?: boolean;
+  title?: string;
+  action: ReactNode;
+}) {
+  return (
+    <li
+      title={title}
+      className="flex items-center justify-between gap-3 rounded-lg bg-app-sunken px-3 py-1.5"
+    >
+      <div className="min-w-0">
+        <p className="flex items-center gap-2">
+          <span className="truncate text-sm font-medium text-app-fg">{name}</span>
+          {badge}
+        </p>
+        {meta.length > 0 ? (
+          <p className={`truncate text-xs ${metaDanger ? "text-app-danger" : "text-app-muted"}`}>
+            {meta.join(" · ")}
+          </p>
+        ) : null}
+      </div>
+      <div className="shrink-0">{action}</div>
+    </li>
+  );
+}
+
+type FollowedItem =
+  | { kind: "scanned"; name: string; company: CompanyRecord }
+  | { kind: "directory"; name: string; company: DirectoryCompany };
 
 export function CompaniesScreen() {
   const { t, i18n } = useTranslation();
@@ -116,8 +156,17 @@ export function CompaniesScreen() {
     );
   }
 
+  async function reloadDirectory() {
+    try {
+      setDirectory(await bridge.companies.directory());
+    } catch {
+      // The directory companies keep their last list.
+    }
+  }
+
   /** Reads the list again, after the search from the profile added companies. */
   async function reloadCompanies() {
+    void reloadDirectory();
     try {
       const companies = await bridge.companies.list();
       setLoad((previous) => (previous.status === "ready" ? { ...previous, companies } : previous));
@@ -128,6 +177,7 @@ export function CompaniesScreen() {
 
   /** Reads both lists again, after a company was excluded or brought back. */
   async function reloadBoth() {
+    void reloadDirectory();
     const [companies, left] = await Promise.all([
       bridge.companies.list(),
       bridge.companies.excluded(),
@@ -159,9 +209,26 @@ export function CompaniesScreen() {
   }
 
   const folded = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
-  const shownDirectory = byName(
-    directory.filter((company) => folded(company.name).includes(folded(directoryQuery.trim()))),
-  ).slice(0, 300);
+  const needle = folded(directoryQuery.trim());
+  // One list: the companies scanned one by one and the ones a job directory gave, by name.
+  const followed: FollowedItem[] =
+    load.status === "ready"
+      ? byName([
+          ...load.companies.map((company): FollowedItem => ({
+            kind: "scanned",
+            company,
+            name: company.name,
+          })),
+          ...directory.map((company): FollowedItem => ({
+            kind: "directory",
+            company,
+            name: company.name,
+          })),
+        ])
+      : [];
+  const shownFollowed = followed.filter((item) => folded(item.name).includes(needle));
+  const excludedByYou = byName(excluded.filter((company) => company.reason === "user"));
+  const excludedByApp = byName(excluded.filter((company) => company.reason !== "user"));
 
   const failedCount =
     load.status === "ready"
@@ -234,7 +301,7 @@ export function CompaniesScreen() {
                 id="companies-list-title"
                 className="font-sans text-base font-semibold text-app-fg"
               >
-                {t("companies.list.summary", { count: load.companies.length })}
+                {t("companies.list.summary", { count: followed.length })}
               </h2>
               {failedCount > 0 ? (
                 <span className="text-sm text-app-danger">
@@ -252,98 +319,79 @@ export function CompaniesScreen() {
                   {t("companies.remove.failed")}
                 </p>
               ) : null}
-              {load.companies.length === 0 ? (
+              {followed.length === 0 ? (
                 <EmptyState
                   icon={<Building2 className="size-5" strokeWidth={1.8} aria-hidden="true" />}
                   title={t("companies.list.empty")}
                 />
               ) : (
-                <ul className="grid gap-3 md:grid-cols-2">
-                  {byName(load.companies).map((company) => (
-                    <Card as="li" key={company.id} className="flex flex-col gap-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="font-display text-lg font-semibold text-app-fg">
-                          {company.name}
-                        </p>
-                        <Badge tone={company.ats ? "neutral" : "accent"}>
-                          {company.ats
-                            ? t("companies.list.board", { ats: company.ats })
-                            : t("companies.list.careersPage")}
-                        </Badge>
-                      </div>
-                      <p className="text-xs break-all text-app-muted">{company.careersUrl}</p>
-                      <p className="text-sm text-app-muted">
-                        {company.country !== null
-                          ? t("companies.list.country", {
-                              country: new Intl.DisplayNames([i18n.language], {
-                                type: "region",
-                              }).of(company.country),
-                            })
-                          : t("companies.list.countryUnknown")}
-                      </p>
-                      <p
-                        className={`text-sm ${company.lastScan?.outcome === "failed" && company.lastScan.code !== "no-parseable-jobs" ? "text-app-danger" : "text-app-fg"}`}
-                      >
-                        {scanSummary(company.lastScan)}
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          aria-label={t("companies.remove.label", { name: company.name })}
-                          onClick={() => void removeCompany(company.id)}
-                        >
-                          {t("companies.remove.action")}
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
-                </ul>
+                <>
+                  <input
+                    type="search"
+                    value={directoryQuery}
+                    onChange={(event) => setDirectoryQuery(event.target.value)}
+                    aria-label={t("companies.list.search")}
+                    placeholder={t("companies.list.search")}
+                    className="rounded-xl border border-app-border bg-app-surface px-3 py-2 text-sm text-app-fg"
+                  />
+                  {shownFollowed.length === 0 ? (
+                    <p className="text-sm text-app-muted">{t("companies.list.none")}</p>
+                  ) : (
+                    <ul data-list="followed" className="flex flex-col gap-1.5">
+                      {shownFollowed.map((item) => {
+                        const { company } = item;
+                        const country =
+                          company.country !== null
+                            ? (new Intl.DisplayNames([i18n.language], { type: "region" }).of(
+                                company.country,
+                              ) ?? company.country)
+                            : t("companies.list.countryUnknownShort");
+                        const failed =
+                          item.kind === "scanned" &&
+                          item.company.lastScan?.outcome === "failed" &&
+                          item.company.lastScan.code !== "no-parseable-jobs";
+                        return (
+                          <CompanyRow
+                            key={company.id}
+                            name={company.name}
+                            badge={
+                              item.kind === "directory" ? (
+                                <Badge tone="neutral">{t("companies.list.directoryBadge")}</Badge>
+                              ) : (
+                                <Badge tone={item.company.ats ? "neutral" : "accent"}>
+                                  {item.company.ats
+                                    ? t("companies.list.board", { ats: item.company.ats })
+                                    : t("companies.list.careersPage")}
+                                </Badge>
+                              )
+                            }
+                            meta={[
+                              country,
+                              item.kind === "directory"
+                                ? t("companies.list.openJobs", { count: item.company.openJobs })
+                                : scanSummary(item.company.lastScan),
+                            ]}
+                            metaDanger={failed}
+                            title={item.kind === "scanned" ? item.company.careersUrl : undefined}
+                            action={
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                aria-label={t("companies.remove.label", { name: company.name })}
+                                onClick={() => void removeCompany(company.id)}
+                              >
+                                {t("companies.remove.action")}
+                              </Button>
+                            }
+                          />
+                        );
+                      })}
+                    </ul>
+                  )}
+                </>
               )}
             </section>
           </details>
-          {directory.length > 0 ? (
-            <details className="group rounded-2xl border border-app-border bg-app-surface shadow-card">
-              <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 select-none [&::-webkit-details-marker]:hidden">
-                <ChevronRight
-                  aria-hidden="true"
-                  className="size-4 text-app-muted transition-transform group-open:rotate-90"
-                  strokeWidth={1.8}
-                />
-                <h2 className="font-sans text-base font-semibold text-app-fg">
-                  {t("companies.directory.summary", { count: directory.length })}
-                </h2>
-              </summary>
-              <section className="flex flex-col gap-3 px-5 pb-5">
-                <p className="text-sm text-app-muted">{t("companies.directory.hint")}</p>
-                <input
-                  type="search"
-                  value={directoryQuery}
-                  onChange={(event) => setDirectoryQuery(event.target.value)}
-                  aria-label={t("companies.directory.search")}
-                  placeholder={t("companies.directory.search")}
-                  className="rounded-xl border border-app-border bg-app-surface px-3 py-2 text-sm text-app-fg"
-                />
-                {shownDirectory.length === 0 ? (
-                  <p className="text-sm text-app-muted">{t("companies.directory.none")}</p>
-                ) : (
-                  <ul className="flex flex-col gap-2">
-                    {shownDirectory.map((company) => (
-                      <li
-                        key={company.id}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-app-sunken p-3"
-                      >
-                        <p className="font-medium text-app-fg">{company.name}</p>
-                        <p className="text-sm text-app-muted">
-                          {t("companies.directory.openJobs", { count: company.openJobs })}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            </details>
-          ) : null}
           {excluded.length > 0 ? (
             <details className="group rounded-2xl border border-app-border bg-app-surface shadow-card">
               <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 select-none [&::-webkit-details-marker]:hidden">
@@ -358,29 +406,45 @@ export function CompaniesScreen() {
               </summary>
               <section className="flex flex-col gap-3 px-5 pb-5">
                 <p className="text-sm text-app-muted">{t("companies.excluded.hint")}</p>
-                <ul className="flex flex-col gap-2">
-                  {byName(excluded).map((company) => (
-                    <li
-                      key={company.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-app-sunken p-3"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-medium text-app-fg">{company.name}</p>
-                        <p className="text-sm text-app-muted">
-                          {t(`companies.excluded.reason.${company.reason}`)}
-                        </p>
-                      </div>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        aria-label={t("companies.excluded.restoreLabel", { name: company.name })}
-                        onClick={() => void restoreCompany(company.id)}
-                      >
-                        {t("companies.excluded.restore")}
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
+                {(
+                  [
+                    ["byYou", excludedByYou],
+                    ["byApp", excludedByApp],
+                  ] as const
+                ).map(([group, list]) =>
+                  list.length === 0 ? null : (
+                    <div key={group} className="flex flex-col gap-2">
+                      <h3 className="font-sans text-sm font-semibold text-app-fg">
+                        {t(`companies.excluded.${group}`, { count: list.length })}
+                      </h3>
+                      <ul data-list={group} className="flex flex-col gap-1.5">
+                        {list.map((company) => (
+                          <CompanyRow
+                            key={company.id}
+                            name={company.name}
+                            meta={
+                              company.reason === "user"
+                                ? []
+                                : [t(`companies.excluded.reason.${company.reason}`)]
+                            }
+                            action={
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                aria-label={t("companies.excluded.restoreLabel", {
+                                  name: company.name,
+                                })}
+                                onClick={() => void restoreCompany(company.id)}
+                              >
+                                {t("companies.excluded.restore")}
+                              </Button>
+                            }
+                          />
+                        ))}
+                      </ul>
+                    </div>
+                  ),
+                )}
               </section>
             </details>
           ) : null}

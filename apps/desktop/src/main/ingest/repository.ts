@@ -204,7 +204,7 @@ export function createIngestRepository(db: AppDb): IngestRepository {
       const rows = await db
         .select()
         .from(companies)
-        .where(and(isNotNull(companies.excludedAt), notLike(companies.careersUrl, "directory:%")))
+        .where(isNotNull(companies.excludedAt))
         .orderBy(desc(companies.excludedAt));
       return rows.map((row) => ({
         id: row.id,

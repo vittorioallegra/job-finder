@@ -592,8 +592,12 @@
       "summary_other": "{{count}} aziende seguite",
       "failedCount_one": "{{count}} non letta nell'ultima scansione",
       "failedCount_other": "{{count}} non lette nell'ultima scansione",
-      "country": "Con sede in {{country}}",
-      "countryUnknown": "Paese non ancora noto: nessuna offerta lo indica"
+      "countryUnknownShort": "Paese non noto",
+      "directoryBadge": "Dalle directory di lavoro",
+      "openJobs_one": "{{count}} offerta aperta",
+      "openJobs_other": "{{count}} offerte aperte",
+      "search": "Cerca per nome",
+      "none": "Nessuna azienda corrisponde."
     },
     "scan": {
       "never": "Non ancora analizzata.",
@@ -632,16 +636,9 @@
         "engine-unavailable": "Il motore in background non è in esecuzione. Riprova tra poco."
       }
     },
-    "directory": {
-      "summary_one": "{{count}} azienda dalle directory di lavoro",
-      "summary_other": "{{count}} aziende dalle directory di lavoro",
-      "hint": "Le directory e i feed di offerte hanno dato le offerte di queste aziende nei tuoi luoghi. Non vengono scansionate una per una, quindi qui non c'è nulla da gestire: cercane una per nome per controllare che sia coperta.",
-      "search": "Cerca per nome",
-      "openJobs_one": "{{count}} offerta aperta",
-      "openJobs_other": "{{count}} offerte aperte",
-      "none": "Nessuna azienda corrisponde."
-    },
     "excluded": {
+      "byYou": "Escluse da te ({{count}})",
+      "byApp": "Escluse dall'app ({{count}})",
       "summary_one": "{{count}} azienda esclusa",
       "summary_other": "{{count}} aziende escluse",
       "hint": "Non vengono più cercate né scansionate. Riattivandone una, torna tra quelle seguite e ci resta.",

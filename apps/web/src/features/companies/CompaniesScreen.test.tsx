@@ -1,5 +1,5 @@
 // protects=the sources page finds companies for the profile's roles (also on ?discover=1) or points to the profile without roles, shows what the background reading is doing, lists each company with its last scan and country in a panel that starts closed with its count and failures, lets a company be excluded, lists the excluded ones with who excluded them and brings one back, and shows an error with a retry when the list cannot be read;
-// fails_when=the directory companies are not listed or not searchable by name, the lists are not in name order, a last scan is missing or wrong, the list starts open or hides its failures, a removed company stays listed, a failed read shows a blank page, or the page offers to add a company by hand;
+// fails_when=the directory companies are not in the same list as the scanned ones or not searchable by name, the excluded ones are not split between you and the app, the lists are not in name order, a last scan is missing or wrong, the list starts open or hides its failures, a removed company stays listed, a failed read shows a blank page, or the page offers to add a company by hand;
 // no_claim=layout, keyboard focus order and the real search sources are not checked here; the core discovery tests and the engine runtime tests cover the search;
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -104,8 +104,8 @@ describe("companies screen", () => {
 
     expect(container.textContent).toContain("Job page on greenhouse");
     // Where each company is based, or that it is not known yet.
-    expect(container.textContent).toContain("Based in Italy");
-    expect(container.textContent).toContain("Country not known yet");
+    expect(container.textContent).toContain("Italy · Last scan");
+    expect(container.textContent).toContain("Country not known · Not scanned yet");
     expect(container.textContent).toContain("Last scan: 4 postings read, 1 closed.");
     expect(container.textContent).toContain("No parseable jobs in the last scan.");
     expect(container.textContent).toContain("Last scan failed: the site answered with an error.");
@@ -167,8 +167,8 @@ describe("companies screen", () => {
     expect(restoreOrder).toEqual(["Bring back delta", "Bring back Omega"]);
   });
 
-  it("lists the companies only a directory gave, by name, with a search by name", async () => {
-    const memory = createMemoryBridge({ companies: [] });
+  it("lists the scanned and the directory companies in one list by name, with a search", async () => {
+    const memory = createMemoryBridge({ companies: [acme] });
     await render({
       ...memory,
       companies: {
@@ -180,13 +180,16 @@ describe("companies screen", () => {
         ],
       },
     });
-    expect(container.textContent).toContain("3 companies from job directories");
+    expect(container.textContent).toContain("4 companies followed");
     const rows = () =>
-      [...container.querySelectorAll("section li")].map((node) => node.textContent ?? "");
-    expect(rows()[0]).toContain("Accenture");
+      [...container.querySelectorAll('ul[data-list="followed"] > li')].map(
+        (node) => node.textContent ?? "",
+      );
+    expect(rows().map((row) => row.slice(0, 4))).toEqual(["Acce", "Acme", "PwcF", "Zucc"]);
     expect(rows()[0]).toContain("16 open jobs");
-    expect(rows()[1]).toContain("Pwc");
-    expect(rows()[2]).toContain("1 open job");
+    expect(rows()[0]).toContain("From job directories");
+    expect(rows()[1]).toContain("greenhouse");
+    expect(rows()[3]).toContain("1 open job");
 
     const input = container.querySelector<HTMLInputElement>('input[type="search"]')!;
     await act(async () => {
@@ -196,6 +199,36 @@ describe("companies screen", () => {
     });
     expect(rows()).toHaveLength(1);
     expect(rows()[0]).toContain("Accenture");
+  });
+
+  it("splits the excluded companies into those excluded by you and by the app", async () => {
+    const memory = createMemoryBridge({ companies: [] });
+    const row = (id: string, name: string, reason: "user" | "auto" | "gone") => ({
+      id,
+      name,
+      careersUrl: `https://boards.greenhouse.io/${id}`,
+      ats: "greenhouse",
+      country: "US",
+      excludedAt: 5,
+      reason,
+    });
+    await render({
+      ...memory,
+      companies: {
+        ...memory.companies,
+        excluded: async () => [
+          row("x1", "Mine", "user"),
+          row("x2", "Far", "auto"),
+          row("x3", "Gone", "gone"),
+        ],
+      },
+    });
+    const headings = [...container.querySelectorAll("h3")].map((node) => node.textContent);
+    expect(headings).toEqual(["Excluded by you (1)", "Excluded by the app (2)"]);
+    const text = container.textContent ?? "";
+    expect(text.indexOf("Mine")).toBeLessThan(text.indexOf("Far"));
+    expect(text).toContain("no job in your places");
+    expect(text).toContain("its job page no longer exists");
   });
 
   it("lists the excluded companies with who excluded them, and brings one back", async () => {

@@ -1,5 +1,5 @@
 // protects=a company is stored with its supported board or as a generic careers page, one board or careers URL is stored once, the job list shows only open jobs ordered by affinity for the current profile version with unscored jobs last, the latest run comes back with its log in order, each company shows its most recent scan, a removed company leaves the sources and the lists, stays saved with who excluded it, is listed apart, and comes back kept;
-// fails_when=a board or careers URL already stored is stored again, a supported careers URL is stored without its board, a closed job is listed, a score of an older profile version orders a job, the run log is returned out of order or without its kinds, or a company shows an older scan than its latest;
+// fails_when=an excluded directory company is missing from the excluded list or is scanned, a board or careers URL already stored is stored again, a supported careers URL is stored without its board, a closed job is listed, a score of an older profile version orders a job, the run log is returned out of order or without its kinds, or a company shows an older scan than its latest;
 // no_claim=the careers URL is checked by its shape only, without a request, so a board that does not exist is still stored; the database schema is covered by the migration tests.
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -319,6 +319,28 @@ describe("ingest repository", () => {
     expect((await repository.listCompanies()).map((c) => c.id)).toEqual(["co-2"]);
     const [row] = await database.db.select().from(companies).where(eq(companies.id, "co-2"));
     expect(row).toMatchObject({ excludedAt: null, excludedReason: null, origin: "manual" });
+    database.close();
+  });
+
+  it("lists an excluded directory company among the excluded, and never among the scanned ones", async () => {
+    const database = await openDatabase();
+    const repository = createIngestRepository(database.db);
+    await database.db.insert(companies).values({
+      id: "dir-1",
+      name: "Accenture",
+      careersUrl: "directory:accenture",
+      ats: null,
+      slug: null,
+      createdAt: 1,
+      country: "IT",
+      origin: "discovery",
+    });
+    expect(await repository.removeCompany("dir-1", 30)).toBe(true);
+
+    expect(await repository.listCompanies()).toEqual([]);
+    expect((await repository.listExcluded()).map((c) => [c.name, c.reason])).toEqual([
+      ["Accenture", "user"],
+    ]);
     database.close();
   });
 });

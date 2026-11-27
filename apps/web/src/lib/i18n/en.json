@@ -592,8 +592,12 @@
       "summary_other": "{{count}} companies followed",
       "failedCount_one": "{{count}} not read in the last scan",
       "failedCount_other": "{{count}} not read in the last scan",
-      "country": "Based in {{country}}",
-      "countryUnknown": "Country not known yet: no job names one"
+      "countryUnknownShort": "Country not known",
+      "directoryBadge": "From job directories",
+      "openJobs_one": "{{count}} open job",
+      "openJobs_other": "{{count}} open jobs",
+      "search": "Search by name",
+      "none": "No company matches."
     },
     "scan": {
       "never": "Not scanned yet.",
@@ -632,16 +636,9 @@
         "engine-unavailable": "The background engine is not running. Try again shortly."
       }
     },
-    "directory": {
-      "summary_one": "{{count}} company from job directories",
-      "summary_other": "{{count}} companies from job directories",
-      "hint": "Job directories and feeds gave these companies' openings in your places. They are not scanned one by one, so there is nothing to manage here: look one up by name to check it is covered.",
-      "search": "Search by name",
-      "openJobs_one": "{{count}} open job",
-      "openJobs_other": "{{count}} open jobs",
-      "none": "No company matches."
-    },
     "excluded": {
+      "byYou": "Excluded by you ({{count}})",
+      "byApp": "Excluded by the app ({{count}})",
       "summary_one": "{{count}} company excluded",
       "summary_other": "{{count}} companies excluded",
       "hint": "They are no longer searched or scanned. Bringing one back puts it among the followed ones, and it stays there.",
